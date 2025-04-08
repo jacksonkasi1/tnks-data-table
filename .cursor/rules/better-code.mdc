@@ -1,0 +1,84 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+You are an expert Senior Full Stack Developer. Below is a short summary of Developer Best Practices. Follow these guidelines whenever you write code:
+
+- Code Style and Structure:
+  - Write clear, modular TypeScript code with proper type definitions.
+  - Follow functional programming patterns; avoid classes.
+  - Use descriptive variable names (e.g., isLoading, hasPermission).
+  - Organize files logically (popup, background, content scripts, utils).
+  - Implement error handling, logging, and JSDoc documentation.
+
+- Group Import Order:
+  - Core Packages (e.g., React, React Router)
+  - Assets (images, SVGs, icons)
+  - Third-Party Libraries
+  - Components (shared then module-specific)
+  - Sub-Pages/Sections
+  - Config & State (configuration files then state management)
+  - Utilities & Hooks (custom hooks and helpers)
+  - APIs (API functions or services)
+  - Always use import aliases instead of complex relative paths.
+
+- Naming Conventions:
+  - Use camelCase for object keys, functions, variables, and React state (firstName, lastName, paymentId).
+  - Name hooks with a "use" prefix (useLocalStorage, useClickOutside).
+  - Use clear action names for functions (handleChange, handleSubmit).
+  - Use PascalCase for classes, React components, and types (UserProfile).
+  - Use snake_case for database tables and fields (tbl_users, first_name).
+  - Write constants and environment variables in UPPER_CASE_SNAKE_CASE (MAX_RETRY_COUNT, DATABASE_URL).
+  - Use kebab-case for CSS class names, file names, and URL slugs (btn-primary, auth-pages).
+  - Ensure folder names are clear and consistent; prefer kebab-case (components, utilities).
+
+- Efficient Code Structure in React Components:
+  - Declare constants and variables first.
+  - Initialize state management hooks (Redux, Context) next.
+  - Define local state hooks (useState, useReducer) after.
+  - Place useEffect hooks after state declarations.
+  - Define event handlers and other functions following hooks.
+  - Group similar hooks together; allow flexibility for custom hooks.
+
+- Effective Color Management:
+  - Avoid inline color definitions.
+  - Define global colors with CSS variables in :root and for dark mode.
+  - Configure a consistent color palette in Tailwind (tailwind.config.js).
+  - Use Tailwind utility classes and CSS variables in JSX for theming.
+  - Centralize color definitions and validate contrast for accessibility.
+
+- Code Documentation and Formatting:
+  - Use JSDoc for functions, parameters, and return types.
+  - Write detailed multi-line comments for complex logic.
+  - Avoid redundant comments that merely restate the code.
+  - Maintain consistent indentation and formatting across the project.
+
+- Code Splitting:
+  - Avoid monolithic files that mix components, utilities, types, and logic.
+  - Organize components, utilities, types, API calls, and custom hooks into separate files/directories.
+  - A modular structure enhances readability, maintainability, and prevents naming conflicts.
+
+- Mastering TypeScript:
+  - Define clear, specific types and avoid using 'any'.
+  - Use interfaces for object shapes instead of inline types.
+  - Leverage union types for flexibility without overcomplicating them.
+  - Address compiler warnings and maintain consistent naming.
+  - Embrace TypeScript’s type system for better IDE support and safer code.
+
+- Optimizing Code Logic:
+  - Choose optimal algorithms (e.g., quickSort over slowSort).
+  - Use mapping objects instead of switch statements for cleaner logic.
+  - Encapsulate complex conditions with design patterns (e.g., strategy pattern).
+  - Optimize recursive functions with tail recursion.
+  - Balance clarity with performance using modular, maintainable code.
+
+- Secure Coding Practices:
+  - Prevent SQL Injection with parameterized queries.
+  - Protect against XSS by escaping or sanitizing user input.
+  - Mitigate CSRF with proper token generation/validation.
+  - Regularly update and scan dependencies (npm audit, Snyk).
+  - Manage secrets securely using .env files or secure storage.
+  - Implement rate limiting, secure headers, and server-side parameter validation.
+  - Follow security guidelines (e.g., OWASP Top Ten).
