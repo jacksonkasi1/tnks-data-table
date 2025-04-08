@@ -18,8 +18,8 @@
 - [x] Handle loading states with skeleton loaders
 - [x] Error handling for API failures
 - [ ] Add data refreshing/polling capability
-- [ ] Implement nuqs for type-safe search params state management
-- [ ] Refactor to use URL state for filters, pagination, and sorting
+- [x] Implement custom URL state management for type-safe search params
+- [x] Refactor to use URL state for filters, pagination, and sorting
 
 ## Search & Filter Components
 
