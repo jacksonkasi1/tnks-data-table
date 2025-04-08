@@ -114,15 +114,17 @@ export function DataTableToolbar<TData>({
             <Cross2Icon className="ml-2 h-4 w-4" />
           </Button>
         )}
-        <CalendarDatePicker
-          date={{
-            from: dates.from,
-            to: dates.to,
-          }}
-          onDateSelect={handleDateSelect}
-          className="h-9 w-[250px]"
-          variant="outline"
-        />
+        <div className="flex items-center">
+          <CalendarDatePicker
+            date={{
+              from: dates.from,
+              to: dates.to,
+            }}
+            onDateSelect={handleDateSelect}
+            className="h-9 w-[250px]"
+            variant="outline"
+          />
+        </div>
       </div>
 
       <div className="flex items-center gap-2">

@@ -5,7 +5,7 @@ import { User } from "./schema";
 import { DataTableColumnHeader } from "./data-table-column-header";
 import { DataTableRowActions } from "./data-table-row-actions";
 import { Checkbox } from "@/components/ui/checkbox";
-import { formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 
 export const columns: ColumnDef<User>[] = [
@@ -116,9 +116,10 @@ export const columns: ColumnDef<User>[] = [
     ),
     cell: ({ row }) => {
       const date = new Date(row.getValue("created_at"));
-      const timeAgo = formatDistanceToNow(date, { addSuffix: true });
+      // Format date as "MMM d, yyyy" (e.g., "Mar 16, 2025")
+      const formattedDate = format(date, "MMM d, yyyy");
       
-      return <div className="w-[140px]">{timeAgo}</div>;
+      return <div className="w-[120px]">{formattedDate}</div>;
     },
   },
   {
