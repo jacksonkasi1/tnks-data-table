@@ -84,4 +84,40 @@ export async function fetchUserExpenses({
  */
 export function formatDate(date: Date): string {
   return date.toISOString().split('T')[0];
+}
+
+/**
+ * Fetch specific users by their IDs
+ */
+export async function fetchUsersByIds(userIds: number[]): Promise<User[]> {
+  if (userIds.length === 0) {
+    return [];
+  }
+  
+  // Fetch each user in parallel
+  const promises = userIds.map(async (userId) => {
+    try {
+      // Fetch individual user 
+      const params = new URLSearchParams();
+      params.append("id", userId.toString());
+      const response = await fetch(`${API_BASE_URL}/users?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch user ${userId}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      const parsedData = usersResponseSchema.parse(data);
+      
+      // Return the first user from the result (should be only one if filtering by ID)
+      return parsedData.data[0] || null;
+    } catch (error) {
+      console.error(`Error fetching user ${userId}:`, error);
+      return null;
+    }
+  });
+  
+  // Wait for all requests to complete and filter out any nulls
+  const results = await Promise.all(promises);
+  return results.filter((user): user is User => user !== null);
 } 
