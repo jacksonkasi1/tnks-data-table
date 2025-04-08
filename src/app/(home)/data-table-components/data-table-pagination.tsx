@@ -19,16 +19,18 @@ import {
   interface DataTablePaginationProps<TData> {
     table: Table<TData>;
     totalItems?: number; // Total number of items from API
+    totalSelectedItems?: number; // Total selected items across all pages
   }
   
   export function DataTablePagination<TData>({
     table,
     totalItems = 0,
+    totalSelectedItems = 0,
   }: DataTablePaginationProps<TData>) {
     return (
       <div className="flex w-full flex-col items-center justify-between gap-4 overflow-auto px-2 py-1 sm:flex-row sm:gap-8">
         <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {totalSelectedItems > 0 ? totalSelectedItems : table.getFilteredSelectedRowModel().rows.length} of{" "}
           {totalItems > 0 ? totalItems : table.getFilteredRowModel().rows.length}{" "}
           row(s) selected.
         </div>

@@ -16,12 +16,16 @@ interface DataTableToolbarProps<TData> {
   table: Table<TData>;
   setSearch: (value: string) => void;
   setDateRange: (range: { from_date: string; to_date: string }) => void;
+  totalSelectedItems?: number;
+  clearSelection?: () => void;
 }
 
 export function DataTableToolbar<TData>({
   table,
   setSearch,
   setDateRange,
+  totalSelectedItems = 0,
+  clearSelection,
 }: DataTableToolbarProps<TData>) {
   const tableFiltered = table.getState().columnFilters.length > 0;
 
@@ -120,10 +124,10 @@ export function DataTableToolbar<TData>({
       </div>
 
       <div className="flex items-center gap-2">
-        {table.getFilteredSelectedRowModel().rows.length > 0 ? (
-          <Button variant="outline" size="sm">
+        {totalSelectedItems > 0 ? (
+          <Button variant="outline" size="sm" onClick={clearSelection}>
             <TrashIcon className="mr-2 size-4" aria-hidden="true" />
-            Delete ({table.getFilteredSelectedRowModel().rows.length})
+            Delete ({totalSelectedItems})
           </Button>
         ) : null}
         <DataTableViewOptions table={table} />

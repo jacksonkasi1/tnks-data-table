@@ -14,6 +14,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
+  Row,
 } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 
@@ -33,14 +34,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { User } from "./schema";
+import { getColumns } from "./columns";
 
 interface DataTableProps {
-  columns: ColumnDef<User, any>[];
+  // The component no longer needs columns as a prop
 }
 
-export function DataTable({
-  columns,
-}: DataTableProps) {
+export function DataTable({}: DataTableProps) {
   // States for API parameters
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
@@ -52,6 +52,10 @@ export function DataTable({
   const [sortBy, setSortBy] = React.useState<string>("created_at");
   const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("desc");
 
+  // Store persistent row selection across pages
+  // Use userId as the key instead of the row index
+  const [selectedUserIds, setSelectedUserIds] = React.useState<Record<number, boolean>>({});
+  
   // Table states
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
@@ -72,6 +76,97 @@ export function DataTable({
     }),
   });
 
+  // When data loads, sync rowSelection with selected user IDs
+  React.useEffect(() => {
+    if (data?.data) {
+      const newRowSelection: Record<string, boolean> = {};
+      
+      // Map the current page's rows to their selection state
+      data.data.forEach((user, index) => {
+        if (selectedUserIds[user.id]) {
+          newRowSelection[index] = true;
+        }
+      });
+      
+      setRowSelection(newRowSelection);
+    }
+  }, [data?.data, selectedUserIds]);
+
+  // Custom handler for row selection changes
+  const handleRowSelectionChange = (updaterOrValue: any) => {
+    let newRowSelection: Record<string, boolean>;
+    
+    if (typeof updaterOrValue === 'function') {
+      newRowSelection = updaterOrValue(rowSelection);
+    } else {
+      newRowSelection = updaterOrValue;
+    }
+    
+    setRowSelection(newRowSelection);
+    
+    // Update the selectedUserIds based on the new row selection
+    if (data?.data) {
+      const newSelectedUserIds = { ...selectedUserIds };
+      
+      // First identify rows that were deselected in the current page
+      // and remove them from newSelectedUserIds
+      const currentPageUserIds = data.data.map(user => user.id);
+      const selectedIndices = Object.keys(newRowSelection).map(idx => parseInt(idx, 10));
+      
+      // For each user in the current page
+      data.data.forEach((user, index) => {
+        // If the row index is not in the selected indices, remove the user from selectedUserIds
+        if (!selectedIndices.includes(index)) {
+          delete newSelectedUserIds[user.id];
+        }
+      });
+      
+      // Now add newly selected rows
+      Object.entries(newRowSelection).forEach(([rowIndex, isSelected]) => {
+        const index = parseInt(rowIndex, 10);
+        const user = data.data[index];
+        
+        if (user && isSelected) {
+          newSelectedUserIds[user.id] = true;
+        }
+      });
+      
+      setSelectedUserIds(newSelectedUserIds);
+    }
+  };
+  
+  // Get the total number of selected items across all pages
+  const totalSelectedItems = Object.keys(selectedUserIds).length;
+
+  // Function to handle clearing all selections
+  const clearAllSelections = () => {
+    setSelectedUserIds({});
+    setRowSelection({});
+  };
+
+  // Function to handle individual row deselection
+  const handleRowDeselection = (rowId: string) => {
+    if (data?.data) {
+      const rowIndex = parseInt(rowId, 10);
+      const user = data.data[rowIndex];
+      
+      if (user) {
+        // Remove from selectedUserIds
+        const newSelectedUserIds = { ...selectedUserIds };
+        delete newSelectedUserIds[user.id];
+        setSelectedUserIds(newSelectedUserIds);
+        
+        // Update rowSelection
+        const newRowSelection = { ...rowSelection } as Record<string, boolean>;
+        delete newRowSelection[rowId];
+        setRowSelection(newRowSelection);
+      }
+    }
+  };
+
+  // Get columns with the deselection handler
+  const columns = getColumns(handleRowDeselection);
+
   // Set up the table
   const table = useReactTable({
     data: data?.data || [],
@@ -91,7 +186,7 @@ export function DataTable({
     manualPagination: true,
     manualSorting: true,
     manualFiltering: true,
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: handleRowSelectionChange,
     onSortingChange: (updater) => {
       const newSorting = typeof updater === "function" ? updater(sorting) : updater;
       setSorting(newSorting);
@@ -142,7 +237,9 @@ export function DataTable({
       <DataTableToolbar 
         table={table} 
         setSearch={setSearch} 
-        setDateRange={setDateRange} 
+        setDateRange={setDateRange}
+        totalSelectedItems={totalSelectedItems}
+        clearSelection={clearAllSelections}
       />
       
       <div className="overflow-y-auto rounded-md border">
@@ -214,6 +311,7 @@ export function DataTable({
       <DataTablePagination 
         table={table} 
         totalItems={data?.pagination.total_items || 0} 
+        totalSelectedItems={totalSelectedItems}
       />
     </div>
   );

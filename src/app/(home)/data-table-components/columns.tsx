@@ -8,7 +8,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 
-export const columns: ColumnDef<User>[] = [
+export const getColumns = (
+  handleRowDeselection?: (rowId: string) => void
+): ColumnDef<User>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -25,7 +27,17 @@ export const columns: ColumnDef<User>[] = [
     cell: ({ row }) => (
       <Checkbox
         checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        onCheckedChange={(value) => {
+          if (value) {
+            row.toggleSelected(true);
+          } else {
+            row.toggleSelected(false);
+            // If we have a deselection handler, use it for better cross-page tracking
+            if (handleRowDeselection) {
+              handleRowDeselection(row.id);
+            }
+          }
+        }}
         aria-label="Select row"
         className="translate-y-0.5"
       />

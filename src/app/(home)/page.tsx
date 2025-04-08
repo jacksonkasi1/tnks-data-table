@@ -1,4 +1,3 @@
-import { columns } from "./data-table-components/columns";
 import { DataTable } from "./data-table-components/data-table";
 import { UserNav } from "./data-table-components/user-nav";
 
@@ -16,7 +15,7 @@ export default function Home() {
           <UserNav />
         </div>
       </div>
-      <DataTable columns={columns} />
+      <DataTable />
     </div>
   );
 }
