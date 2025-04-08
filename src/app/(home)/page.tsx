@@ -1,36 +1,22 @@
-import { Metadata } from "next";
-import fs from "fs";
-import path from "path";
-import { DataTable } from "./data-table-components/data-table";
 import { columns } from "./data-table-components/columns";
+import { DataTable } from "./data-table-components/data-table";
+import { UserNav } from "./data-table-components/user-nav";
 
-export const metadata: Metadata = {
-  title: "Expenses",
-  description: "A Expense tracker build using Tanstack Table."
-};
-
-async function getData() {
-  const filePath = path.join(
-    process.cwd(),
-    "src/app/(home)/data-table-components",
-    "data.json"
-  );
-  const data = fs.readFileSync(filePath, "utf8");
-  return JSON.parse(data);
-}
-
-export default async function Page() {
-  const data = await getData();
-  console.log("data", data);
-
+export default function Home() {
   return (
-    <div className="h-full flex-1 flex-col space-y-2 p-8 md:flex">
-      <div className="flex items-center justify-between">
-        <p className="text-muted-foreground">
-          Here&apos;s a list of your expenses for this month!
-        </p>
+    <div className="h-full flex-1 flex-col space-y-8 p-8 md:flex">
+      <div className="flex items-center justify-between space-y-2">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Users & Expenses Dashboard</h2>
+          <p className="text-muted-foreground">
+            View and manage user data and their associated expenses
+          </p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <UserNav />
+        </div>
       </div>
-      <DataTable data={data} columns={columns} />
+      <DataTable columns={columns} />
     </div>
   );
 }
