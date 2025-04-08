@@ -442,6 +442,46 @@ export function DataTable({ config = {} }: DataTableProps) {
     getFacetedUniqueValues: getFacetedUniqueValues(),
   });
 
+
+  // Initialize default column sizes when columns are available and no saved sizes exist
+  React.useEffect(() => {
+    if (columns.length > 0 && Object.keys(columnSizing).length === 0) {
+      // Create a map of column id to its default size
+      const defaultSizing: Record<string, number> = {};
+      columns.forEach(column => {
+        if ('id' in column && column.id && 'size' in column && typeof column.size === 'number') {
+          defaultSizing[column.id] = column.size;
+        } else if ('accessorKey' in column && typeof column.accessorKey === 'string' && 'size' in column && typeof column.size === 'number') {
+          defaultSizing[column.accessorKey] = column.size;
+        }
+      });
+      
+      // Only set if we have sizes to apply
+      if (Object.keys(defaultSizing).length > 0) {
+        setColumnSizing(defaultSizing);
+      }
+    }
+  }, [columns, columnSizing, setColumnSizing]);
+
+  // Add/remove 'resizing' class on body to prevent text selection during column resize
+  React.useEffect(() => {
+    const isResizingAny = 
+      table.getHeaderGroups().some(headerGroup => 
+        headerGroup.headers.some(header => header.column.getIsResizing())
+      );
+    
+    if (isResizingAny) {
+      document.body.classList.add('resizing');
+    } else {
+      document.body.classList.remove('resizing');
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('resizing');
+    };
+  }, [table]);
+
   // Validate URL parameters to ensure proper format
   React.useEffect(() => {
     // Validate column filters

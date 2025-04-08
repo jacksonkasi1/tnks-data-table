@@ -241,3 +241,41 @@ input[type="week"] {
     white-space: nowrap;
   }
 }
+
+/* Table column resizing styles */
+.resizable-table .resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 5px;
+  background: rgba(0, 0, 0, 0.05);
+  cursor: col-resize;
+  user-select: none;
+  touch-action: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.resizable-table .resizer:hover,
+.resizable-table .resizer.isResizing {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.resizable-table th {
+  position: relative;
+  overflow: hidden;
+  transition: width 0.2s ease;
+}
+
+/* Add visible indicator for resizable columns */
+.resizable-table th:hover .resizer {
+  opacity: 1;
+}
+
+/* When resizing is happening, apply this to the body to prevent text selection */
+body.resizing {
+  cursor: col-resize;
+  user-select: none;
+}

@@ -21,6 +21,7 @@ export const getColumns = (
       cell: ({ row }) => (
         <div className="font-medium">{row.getValue("name")}</div>
       ),
+      size: 200,
     },
     {
       accessorKey: "email",
@@ -36,6 +37,7 @@ export const getColumns = (
           </div>
         );
       },
+      size: 250,
     },
     {
       accessorKey: "phone",
@@ -49,6 +51,7 @@ export const getColumns = (
           </div>
         );
       },
+      size: 150,
     },
     {
       accessorKey: "age",
@@ -58,6 +61,7 @@ export const getColumns = (
       cell: ({ row }) => {
         return <div className="w-[80px] text-center">{row.getValue("age")}</div>;
       },
+      size: 80,
     },
     {
       accessorKey: "expense_count",
@@ -72,6 +76,7 @@ export const getColumns = (
           </div>
         );
       },
+      size: 100,
     },
     {
       accessorKey: "total_expenses",
@@ -88,6 +93,7 @@ export const getColumns = (
         
         return <div className="w-[120px] text-right font-medium">{formatted}</div>;
       },
+      size: 150,
     },
     {
       accessorKey: "created_at",
@@ -101,6 +107,7 @@ export const getColumns = (
         
         return <div className="w-[120px]">{formattedDate}</div>;
       },
+      size: 120,
     },
     {
       id: "actions",
@@ -108,6 +115,7 @@ export const getColumns = (
         <DataTableColumnHeader column={column} title="Actions" />
       ),
       cell: ({ row }) => <DataTableRowActions row={row} />,
+      size: 100,
     },
   ];
 
@@ -147,6 +155,7 @@ export const getColumns = (
         ),
         enableSorting: false,
         enableHiding: false,
+        size: 50,
       },
       ...baseColumns
     ];
