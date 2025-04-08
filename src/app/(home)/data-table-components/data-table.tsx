@@ -41,6 +41,7 @@ import { getColumns } from "./columns";
 import { useUrlState } from "./url-state";
 import { useTableConfig, TableConfig } from "./table-config";
 import { useTableColumnResize } from "./use-table-column-resize";
+import { DataTableResizer } from "./data-table-resizer";
 
 interface DataTableProps {
   // Allow overriding the table configuration
@@ -463,7 +464,7 @@ export function DataTable({ config = {} }: DataTableProps) {
     }
   }, [columns, columnSizing, setColumnSizing]);
 
-  // Add/remove 'resizing' class on body to prevent text selection during column resize
+  // Update to use data attribute instead of class for better performance
   React.useEffect(() => {
     const isResizingAny = 
       table.getHeaderGroups().some(headerGroup => 
@@ -471,14 +472,14 @@ export function DataTable({ config = {} }: DataTableProps) {
       );
     
     if (isResizingAny) {
-      document.body.classList.add('resizing');
+      document.body.setAttribute('data-resizing', 'true');
     } else {
-      document.body.classList.remove('resizing');
+      document.body.removeAttribute('data-resizing');
     }
     
     // Cleanup on unmount
     return () => {
-      document.body.classList.remove('resizing');
+      document.body.removeAttribute('data-resizing');
     };
   }, [table]);
 
@@ -567,7 +568,7 @@ export function DataTable({ config = {} }: DataTableProps) {
               >
                 {headerGroup.headers.map((header) => (
                   <TableHead
-                    className="px-4 py-2 group relative"
+                    className="px-4 py-2 group/th relative"
                     key={header.id}
                     colSpan={header.colSpan}
                     role="columnheader"
@@ -575,6 +576,7 @@ export function DataTable({ config = {} }: DataTableProps) {
                     style={{
                       width: header.getSize(),
                     }}
+                    data-column-resizing={header.column.getIsResizing() ? "true" : undefined}
                   >
                     {header.isPlaceholder
                       ? null
@@ -583,11 +585,7 @@ export function DataTable({ config = {} }: DataTableProps) {
                           header.getContext(),
                         )}
                     {tableConfig.enableColumnResizing && header.column.getCanResize() && (
-                      <div
-                        onMouseDown={header.getResizeHandler()}
-                        onTouchStart={header.getResizeHandler()}
-                        className={`resizer ${header.column.getIsResizing() ? 'isResizing' : ''}`}
-                      />
+                      <DataTableResizer header={header} table={table} />
                     )}
                   </TableHead>
                 ))}

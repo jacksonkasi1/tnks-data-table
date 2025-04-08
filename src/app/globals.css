@@ -242,40 +242,97 @@ input[type="week"] {
   }
 }
 
-/* Table column resizing styles */
-.resizable-table .resizer {
-  position: absolute;
-  right: 0;
-  top: 0;
-  height: 100%;
-  width: 5px;
-  background: rgba(0, 0, 0, 0.05);
-  cursor: col-resize;
-  user-select: none;
-  touch-action: none;
-  opacity: 0;
-  transition: opacity 0.2s;
+/* Table column resizing styles - ENHANCED VERSION */
+@layer components {
+  /* Prevent layout shifts during resize */
+  .resizable-table {
+    table-layout: fixed;
+    width: 100%;
+    will-change: contents;
+  }
+  
+  /* Use hardware acceleration for smoother transitions */
+  .resizable-table th {
+    position: relative;
+    overflow: hidden;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    transition: width 0ms linear;
+  }
+  
+  /* Prevent text selection when resizing */
+  body[data-resizing="true"] {
+    cursor: col-resize !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    touch-action: none !important;
+    pointer-events: none !important;
+  }
+  
+  body[data-resizing="true"] * {
+    cursor: col-resize !important;
+  }
+  
+  /* Remove transition during active resize for instant feedback */
+  .resizable-table th[data-column-resizing="true"] {
+    transition: none !important;
+  }
+  
+  /* Better hover interaction for resize handles */
+  .resizable-table th:hover [data-resizing] {
+    opacity: 0.8;
+  }
+  
+  /* Enhanced visual feedback during resize */
+  .resizable-table [data-resizing="true"] {
+    opacity: 1 !important;
+  }
 }
 
-.resizable-table .resizer:hover,
-.resizable-table .resizer.isResizing {
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.2);
+/* Custom cursor for column resizing */
+@layer components {
+  /* Better cursor for column resize */
+  .cursor-col-resize {
+    cursor: col-resize;
+  }
+  
+  /* Apply the cursor to the resize handle and its children */
+  [data-resizing],
+  [data-resizing] * {
+    cursor: col-resize !important;
+  }
+  
+  /* Ensure the resize handle is always on top */
+  [data-resizing] {
+    z-index: 10;
+  }
 }
 
-.resizable-table th {
-  position: relative;
-  overflow: hidden;
-  transition: width 0.2s ease;
-}
-
-/* Add visible indicator for resizable columns */
-.resizable-table th:hover .resizer {
-  opacity: 1;
-}
-
-/* When resizing is happening, apply this to the body to prevent text selection */
-body.resizing {
-  cursor: col-resize;
-  user-select: none;
+/* Custom hover and interaction styles for the resizer */
+@layer components {
+  /* Resize handle hover effects */
+  .resizable-table [data-resizing] {
+    transition: opacity 0.15s ease, transform 0.1s ease;
+  }
+  
+  .resizable-table [data-resizing]:hover {
+    transform: scaleX(1.5);
+    opacity: 1 !important;
+  }
+  
+  /* Active state during resize */
+  .resizable-table [data-resizing="true"] {
+    transform: scaleX(1.5) !important;
+  }
+  
+  /* Ensure the grip icon is positioned correctly */
+  .resizable-table [data-resizing] svg {
+    transition: opacity 0.15s ease, color 0.15s ease;
+  }
+  
+  .resizable-table [data-resizing]:hover svg {
+    opacity: 1 !important;
+    color: hsl(var(--primary)) !important;
+  }
 }
