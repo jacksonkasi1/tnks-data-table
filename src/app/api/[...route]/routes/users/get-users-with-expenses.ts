@@ -56,6 +56,30 @@ router.get("/", async (c) => {
       );
     }
     
+    // Date filtering based on user created_at
+    if (from_date && to_date) {
+      // Date range filter
+      filters.push(
+        between(
+          users.created_at,
+          new Date(from_date),
+          new Date(to_date)
+        )
+      );
+    } else if (from_date) {
+      // Single date filter: users created on or after specific date
+      const fromDateTime = new Date(from_date);
+      filters.push(
+        sql`${users.created_at} >= ${fromDateTime}`
+      );
+    } else if (to_date) {
+      // Users created on or before specific date
+      const toDateTime = new Date(to_date);
+      filters.push(
+        sql`${users.created_at} <= ${toDateTime}`
+      );
+    }
+    
     // Get users with expense aggregations
     const usersWithExpenses = await db
       .select({
@@ -75,7 +99,7 @@ router.get("/", async (c) => {
       .orderBy(
         sort_by === "total_expenses" 
           ? sort_order === "asc" 
-            ? asc(sql`sum(${expenses.amount})`)
+            ? asc(sql`sum(${expenses.amount})`) 
             : desc(sql`sum(${expenses.amount})`)
           : sort_by === "name"
             ? sort_order === "asc" ? asc(users.name) : desc(users.name)
@@ -85,76 +109,6 @@ router.get("/", async (c) => {
       )
       .limit(limit)
       .offset((page - 1) * limit);
-
-    // If date filtering is applied, we need to get the detailed expenses with filter
-    if (from_date || to_date) {
-      // Handle single date case
-      const dateFilters = [];
-      
-      if (from_date && !to_date) {
-        // Single date filter: expenses on specific date
-        const fromDateTime = new Date(from_date);
-        const nextDay = new Date(fromDateTime);
-        nextDay.setDate(nextDay.getDate() + 1);
-        
-        dateFilters.push(
-          between(
-            expenses.expense_date,
-            fromDateTime,
-            nextDay
-          )
-        );
-      } else if (from_date && to_date) {
-        // Date range filter
-        dateFilters.push(
-          between(
-            expenses.expense_date,
-            new Date(from_date),
-            new Date(to_date)
-          )
-        );
-      }
-      
-      // Get user IDs from the first query
-      const userIds = usersWithExpenses.map(user => user.id);
-      
-      if (userIds.length > 0) {
-        // Get filtered expenses for these users using inArray instead of ANY
-        const filteredExpenses = await db
-          .select({
-            user_id: expenses.user_id,
-            expense_count: count(expenses.id),
-            total_expenses: sql<string>`cast(sum(${expenses.amount}) as text)`,
-          })
-          .from(expenses)
-          .where(
-            and(
-              ...dateFilters,
-              // Use inArray instead of raw SQL
-              inArray(expenses.user_id, userIds)
-            )
-          )
-          .groupBy(expenses.user_id);
-        
-        // Create a lookup map for the filtered expense data
-        const expenseLookup = new Map(
-          filteredExpenses.map(item => [item.user_id, item])
-        );
-        
-        // Update the user data with the filtered expense information
-        for (const user of usersWithExpenses) {
-          const filteredData = expenseLookup.get(user.id);
-          if (filteredData) {
-            user.expense_count = filteredData.expense_count;
-            user.total_expenses = filteredData.total_expenses;
-          } else {
-            // No expenses in the date range
-            user.expense_count = 0;
-            user.total_expenses = "0";
-          }
-        }
-      }
-    }
     
     // Count total users (for pagination)
     const [{ count: totalUsers }] = await db
