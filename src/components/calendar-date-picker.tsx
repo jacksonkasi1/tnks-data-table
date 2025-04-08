@@ -537,7 +537,7 @@ export const CalendarDatePicker = React.forwardRef<
                     </>
                   )
                 ) : (
-                  <span>Pick a date</span>
+                  <span>Select a date</span>
                 )}
               </span>
             </Button>
