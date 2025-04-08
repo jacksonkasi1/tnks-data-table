@@ -1,18 +1,28 @@
 import { Hono } from "hono";
 import { handle } from "hono/vercel";
+import { cors } from "hono/cors";
+
 export const dynamic = "force-dynamic";
 
 // ** Routes
 import { router } from "./routes";
 
-// Create the Hono app with base path
 const app = new Hono().basePath("/api");
+app.use("*", cors());
 
-// Mount API routes - each route handler defines its own path structure
+// Mount API routes directly at the root
 app.route("/", router);
 
+// Health check endpoint
+app.get("/health", (c) => {
+  return c.json({
+    status: "ok",
+    version: process.env.npm_package_version,
+  });
+});
+
 // Root API endpoint with documentation
-app.get("/", (c) => {
+app.get("/doc", (c) => {
   return c.json({
     success: true,
     message: "API is running",
