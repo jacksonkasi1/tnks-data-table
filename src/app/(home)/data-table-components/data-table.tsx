@@ -15,6 +15,7 @@ import {
   getSortedRowModel,
   useReactTable,
   Row,
+  ColumnResizeMode,
 } from "@tanstack/react-table";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -39,6 +40,7 @@ import { User } from "./schema";
 import { getColumns } from "./columns";
 import { useUrlState } from "./url-state";
 import { useTableConfig, TableConfig } from "./table-config";
+import { useTableColumnResize } from "./use-table-column-resize";
 
 interface DataTableProps {
   // Allow overriding the table configuration
@@ -48,6 +50,15 @@ interface DataTableProps {
 export function DataTable({ config = {} }: DataTableProps) {
   // Load table configuration with any overrides
   const tableConfig = useTableConfig(config);
+  
+  // Table ID for localStorage storage - generate a default if not provided
+  const tableId = tableConfig.columnResizingTableId || 'data-table-default';
+  
+  // Use our custom hook for column resizing
+  const { columnSizing, setColumnSizing, resetColumnSizing } = useTableColumnResize(
+    tableId,
+    tableConfig.enableColumnResizing
+  );
   
   // Function to preprocess search term before using in API calls
   const preprocessSearch = (searchTerm: string): string => {
@@ -408,9 +419,13 @@ export function DataTable({ config = {} }: DataTableProps) {
       rowSelection,
       columnFilters,
       pagination,
+      columnSizing,
     },
+    columnResizeMode: 'onChange' as ColumnResizeMode,
+    onColumnSizingChange: setColumnSizing,
     pageCount: data?.pagination.total_pages || 0,
     enableRowSelection: tableConfig.enableRowSelection,
+    enableColumnResizing: tableConfig.enableColumnResizing,
     manualPagination: true,
     manualSorting: true,
     manualFiltering: true,
@@ -476,16 +491,24 @@ export function DataTable({ config = {} }: DataTableProps) {
 
   return (
     <div className="space-y-4">
-      <DataTableToolbar 
-        table={table} 
-        setSearch={setSearch} 
-        setDateRange={setDateRange}
-        totalSelectedItems={totalSelectedItems}
-        clearSelection={clearAllSelections}
-        getSelectedUsers={getSelectedUsers}
-        getAllUsers={getAllUsers}
-        config={tableConfig}
-      />
+      {tableConfig.enableToolbar && (
+        <DataTableToolbar
+          table={table}
+          setSearch={setSearch}
+          setDateRange={setDateRange}
+          totalSelectedItems={totalSelectedItems}
+          clearSelection={
+            () => {
+              table.resetRowSelection();
+              setSelectedUserIds({});
+            }
+          }
+          getSelectedUsers={getSelectedUsers}
+          getAllUsers={getAllUsers}
+          config={tableConfig}
+          resetColumnSizing={resetColumnSizing}
+        />
+      )}
       
       <div 
         ref={tableContainerRef} 
@@ -495,7 +518,7 @@ export function DataTable({ config = {} }: DataTableProps) {
         aria-label="Data table"
         onKeyDown={tableConfig.enableKeyboardNavigation ? handleKeyDown : undefined}
       >
-        <Table>
+        <Table className={tableConfig.enableColumnResizing ? "resizable-table" : ""}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow 
@@ -504,11 +527,14 @@ export function DataTable({ config = {} }: DataTableProps) {
               >
                 {headerGroup.headers.map((header) => (
                   <TableHead
-                    className="px-4 py-2"
+                    className="px-4 py-2 group relative"
                     key={header.id}
                     colSpan={header.colSpan}
                     role="columnheader"
                     tabIndex={-1}
+                    style={{
+                      width: header.getSize(),
+                    }}
                   >
                     {header.isPlaceholder
                       ? null
@@ -516,11 +542,20 @@ export function DataTable({ config = {} }: DataTableProps) {
                           header.column.columnDef.header,
                           header.getContext(),
                         )}
+                    {tableConfig.enableColumnResizing && header.column.getCanResize() && (
+                      <div
+                        onMouseDown={header.getResizeHandler()}
+                        onTouchStart={header.getResizeHandler()}
+                        className={`resizer ${header.column.getIsResizing() ? 'isResizing' : ''}`}
+                      />
+                    )}
                   </TableHead>
                 ))}
               </TableRow>
             ))}
           </TableHeader>
+          
+          {/* Keep the rest of the table body as it was */}
           <TableBody>
             {isLoading ? (
               // Loading state

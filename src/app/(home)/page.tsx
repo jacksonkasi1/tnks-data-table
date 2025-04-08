@@ -21,6 +21,7 @@ export default function Home() {
           enableColumnFilters: false, // Disable column filters
           enableColumnVisibility: true, // Enable column visibility options
           enableUrlState: true, // Enable URL state persistence
+          columnResizingTableId: "user-table",
         }}
       />
     </main>

@@ -34,6 +34,16 @@ export interface TableConfig {
   
   // Enable/disable URL state persistence
   enableUrlState: boolean;
+  
+  // Enable/disable column resizing
+  enableColumnResizing: boolean;
+  
+  // Enable/disable toolbar
+  enableToolbar: boolean;
+  
+  // Unique ID for storing column sizing in localStorage
+  // This allows multiple tables to have independent sizing states
+  columnResizingTableId?: string;
 }
 
 // Default configuration
@@ -48,6 +58,9 @@ const defaultConfig: TableConfig = {
   enableColumnVisibility: true,   // Column visibility options enabled by default
   enableExport: true,             // Data export enabled by default
   enableUrlState: true,           // URL state persistence enabled by default
+  enableColumnResizing: true,     // Column resizing enabled by default
+  enableToolbar: true,            // Toolbar enabled by default
+  columnResizingTableId: undefined, // No table ID by default
 };
 
 /**
