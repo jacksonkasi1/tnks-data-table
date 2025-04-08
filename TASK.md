@@ -96,7 +96,7 @@
 - [ ] Add expandable rows for detail view
 - [ ] Create nested tables
 - [ ] Add drag-and-drop column reordering
-- [ ] Implement column resizing
+- [ ] Implement column resizing and save the state of each table independently in localStorage.
 - [ ] Add sticky headers/columns
 - [ ] Create state persistence (URL or localStorage)
 
