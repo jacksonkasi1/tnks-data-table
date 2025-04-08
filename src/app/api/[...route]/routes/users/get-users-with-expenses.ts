@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 
 // ** Drizzle
-import { and, asc, between, count, desc, eq, ilike, or, sql, sum } from "drizzle-orm";
+import { and, asc, between, count, desc, eq, ilike, or, sql, sum, inArray } from "drizzle-orm";
 
 // ** Database
 import { db } from "@/db";
@@ -75,7 +75,7 @@ router.get("/", async (c) => {
       .orderBy(
         sort_by === "total_expenses" 
           ? sort_order === "asc" 
-            ? asc(sql`sum(${expenses.amount})`) 
+            ? asc(sql`sum(${expenses.amount})`)
             : desc(sql`sum(${expenses.amount})`)
           : sort_by === "name"
             ? sort_order === "asc" ? asc(users.name) : desc(users.name)
@@ -85,7 +85,7 @@ router.get("/", async (c) => {
       )
       .limit(limit)
       .offset((page - 1) * limit);
-    
+
     // If date filtering is applied, we need to get the detailed expenses with filter
     if (from_date || to_date) {
       // Handle single date case
@@ -119,7 +119,7 @@ router.get("/", async (c) => {
       const userIds = usersWithExpenses.map(user => user.id);
       
       if (userIds.length > 0) {
-        // Get filtered expenses for these users
+        // Get filtered expenses for these users using inArray instead of ANY
         const filteredExpenses = await db
           .select({
             user_id: expenses.user_id,
@@ -130,8 +130,8 @@ router.get("/", async (c) => {
           .where(
             and(
               ...dateFilters,
-              // Only include expenses for users in our result set
-              sql`${expenses.user_id} = ANY(ARRAY[${userIds.join(',')}]::int[])`
+              // Use inArray instead of raw SQL
+              inArray(expenses.user_id, userIds)
             )
           )
           .groupBy(expenses.user_id);
@@ -177,6 +177,7 @@ router.get("/", async (c) => {
     return c.json({
       success: false,
       error: "Failed to fetch users with expenses",
+      details: error instanceof Error ? error.message : String(error),
     }, 500);
   }
 });
