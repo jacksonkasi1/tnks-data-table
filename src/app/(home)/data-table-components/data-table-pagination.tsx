@@ -45,12 +45,12 @@ import {
                 table.setPageSize(Number(value));
               }}
             >
-              <SelectTrigger className="h-8 w-[70px]">
+              <SelectTrigger className="h-8 w-[70px] cursor-pointer">
                 <SelectValue placeholder={table.getState().pagination.pageSize} />
               </SelectTrigger>
-              <SelectContent side="top">
+              <SelectContent side="top" className="cursor-pointer">
                 {[10, 20, 30, 40, 50].map((pageSize) => (
-                  <SelectItem key={pageSize} value={`${pageSize}`}>
+                  <SelectItem key={pageSize} value={`${pageSize}`} className="cursor-pointer">
                     {pageSize}
                   </SelectItem>
                 ))}
@@ -65,7 +65,7 @@ import {
             <Button
               aria-label="Go to first page"
               variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
+              className="hidden h-8 w-8 p-0 lg:flex cursor-pointer"
               onClick={() => table.setPageIndex(0)}
               disabled={!table.getCanPreviousPage()}
             >
@@ -74,7 +74,7 @@ import {
             <Button
               aria-label="Go to previous page"
               variant="outline"
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 cursor-pointer"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
@@ -83,7 +83,7 @@ import {
             <Button
               aria-label="Go to next page"
               variant="outline"
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 cursor-pointer"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
             >
@@ -92,7 +92,7 @@ import {
             <Button
               aria-label="Go to last page"
               variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
+              className="hidden h-8 w-8 p-0 lg:flex cursor-pointer"
               onClick={() => table.setPageIndex(table.getPageCount() - 1)}
               disabled={!table.getCanNextPage()}
             >

@@ -21,7 +21,7 @@ export const getColumns = (
         }
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
         aria-label="Select all"
-        className="translate-y-0.5"
+        className="translate-y-0.5 cursor-pointer"
       />
     ),
     cell: ({ row }) => (
@@ -39,7 +39,7 @@ export const getColumns = (
           }
         }}
         aria-label="Select row"
-        className="translate-y-0.5"
+        className="translate-y-0.5 cursor-pointer"
       />
     ),
     enableSorting: false,

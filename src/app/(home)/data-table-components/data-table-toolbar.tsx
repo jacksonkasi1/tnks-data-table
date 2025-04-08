@@ -117,7 +117,7 @@ export function DataTableToolbar<TData>({
               to: dates.to,
             }}
             onDateSelect={handleDateSelect}
-            className="h-9 w-[250px]"
+            className="h-9 w-[250px] cursor-pointer"
             variant="outline"
           />
         </div>

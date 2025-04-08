@@ -120,3 +120,93 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom cursor pointer for interactive elements in the data table */
+button, 
+.rdp-button,
+.rdp-day, 
+select,
+input[type="checkbox"],
+input[type="radio"],
+[role="button"],
+[role="tab"],
+.react-day-picker button,
+[data-slot="select-trigger"],
+[data-slot="checkbox"],
+.day-range-start,
+.day-range-end,
+.day-range-middle,
+[data-radix-collection-item],
+[data-slot="button"],
+[data-slot="day"],
+[data-slot="select-item"] {
+  cursor: pointer !important;
+}
+
+/* Fix specifically for calendar date picker buttons and elements */
+.rdp-button,
+.rdp-nav_button,
+.rdp-month-dropdown-button,
+.rdp-dropdown_option,
+[data-testid="rdp-nav-button-previous"],
+[data-testid="rdp-nav-button-next"],
+[data-slot="day"],
+[data-slot="day_button"],
+[data-slot="day_selected"],
+[data-slot="day_range"],
+[data-slot="day_today"],
+[data-slot="day_outside"],
+[data-slot="day_disabled"],
+[data-slot="day_hidden"],
+.day-outside, 
+.day-range-start, 
+.day-range-end, 
+.day-selected,
+div[data-testid="calendar"] button {
+  cursor: pointer !important;
+}
+
+/* Fix for pagination buttons and components */
+.flex-1 button,
+.h-8.w-8.p-0,
+nav button,
+[data-state="active"],
+[data-state="inactive"],
+[data-orientation="horizontal"],
+[data-orientation="vertical"] {
+  cursor: pointer !important;
+}
+
+/* Fixes for Select elements and dropdowns */
+[data-radix-select-trigger],
+[data-radix-popper-content-wrapper] *,
+[data-state="open"] *,
+[data-radix-collection-item],
+[data-value],
+[role="combobox"],
+[role="listbox"],
+[role="option"] {
+  cursor: pointer !important;
+}
+
+/* Fix for checkbox in table rows and other inputs */
+[data-state="checked"],
+[data-state="unchecked"],
+[data-state="indeterminate"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="time"],
+input[type="week"] {
+  cursor: pointer !important;
+}
+
+/* Fix for calendar date picker component specifically */
+[id^="calendar-date-picker"],
+[id^="calendar-date-picker"] *,
+[id="rdp-1"],
+[id="rdp-1"] *,
+[id="rdp-2"],
+[id="rdp-2"] * {
+  cursor: pointer !important;
+}
