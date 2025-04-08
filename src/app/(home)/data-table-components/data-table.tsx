@@ -377,6 +377,15 @@ export function DataTable({ config = {} }: DataTableProps) {
     setPageSize(newPagination.pageSize);
   }, [setPage, setPageSize, page, pageSize]);
 
+  // Handler for column sizing changes
+  const handleColumnSizingChange = React.useCallback((updaterOrValue: any) => {
+    // Handle both direct values and updater functions
+    const newSizing = typeof updaterOrValue === 'function'
+      ? updaterOrValue(columnSizing)
+      : updaterOrValue;
+    setColumnSizing(newSizing);
+  }, [columnSizing, setColumnSizing]);
+
   // Get columns with the deselection handler (memoize to avoid recreation on render)
   // IMPORTANT: Now we define columns AFTER handleRowDeselection is defined
   const columns = React.useMemo(() => {
@@ -423,7 +432,7 @@ export function DataTable({ config = {} }: DataTableProps) {
       columnSizing,
     },
     columnResizeMode: 'onChange' as ColumnResizeMode,
-    onColumnSizingChange: setColumnSizing,
+    onColumnSizingChange: handleColumnSizingChange,
     pageCount: data?.pagination.total_pages || 0,
     enableRowSelection: tableConfig.enableRowSelection,
     enableColumnResizing: tableConfig.enableColumnResizing,
@@ -457,12 +466,22 @@ export function DataTable({ config = {} }: DataTableProps) {
         }
       });
       
-      // Only set if we have sizes to apply
+      // Only set if we have sizes to apply and there are no saved sizes in localStorage
       if (Object.keys(defaultSizing).length > 0) {
-        setColumnSizing(defaultSizing);
+        // Check localStorage first
+        try {
+          const savedSizing = localStorage.getItem(`table-column-sizing-${tableId}`);
+          if (!savedSizing) {
+            // Only apply defaults if no saved sizing exists
+            setColumnSizing(defaultSizing);
+          }
+        } catch (error) {
+          // If localStorage fails, apply defaults
+          setColumnSizing(defaultSizing);
+        }
       }
     }
-  }, [columns, columnSizing, setColumnSizing]);
+  }, [columns, columnSizing, setColumnSizing, tableId]);
 
   // Update to use data attribute instead of class for better performance
   React.useEffect(() => {
@@ -547,7 +566,13 @@ export function DataTable({ config = {} }: DataTableProps) {
           getSelectedUsers={getSelectedUsers}
           getAllUsers={getAllUsers}
           config={tableConfig}
-          resetColumnSizing={resetColumnSizing}
+          resetColumnSizing={() => {
+            resetColumnSizing();
+            // Force a small delay and then refresh the UI
+            setTimeout(() => {
+              window.dispatchEvent(new Event('resize'));
+            }, 100);
+          }}
         />
       )}
       
