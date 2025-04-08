@@ -49,6 +49,26 @@ export function DataTable({ config = {} }: DataTableProps) {
   // Load table configuration with any overrides
   const tableConfig = useTableConfig(config);
   
+  // Function to preprocess search term before using in API calls
+  const preprocessSearch = (searchTerm: string): string => {
+    if (!searchTerm) return "";
+    
+    // Trim whitespace
+    let processed = searchTerm.trim();
+    
+    // Remove excessive whitespace within the search term
+    processed = processed.replace(/\s+/g, ' ');
+    
+    // Check for minimum length after processing (e.g., if it's just spaces)
+    if (processed.length < 1) return "";
+    
+    // Basic sanitization for API safety
+    // Remove any potentially harmful characters for the backend
+    processed = processed.replace(/[<>]/g, '');
+    
+    return processed;
+  };
+  
   // Create a wrapper for useUrlState that respects the enableUrlState config
   const useConditionalUrlState = <T,>(key: string, defaultValue: T, options = {}) => {
     const [state, setState] = React.useState<T>(defaultValue);
@@ -135,11 +155,12 @@ export function DataTable({ config = {} }: DataTableProps) {
 
   // Fetch users data from API using React Query
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["users", page, pageSize, search, dateRange, sortBy, sortOrder],
+    // Use the preprocessed search in the query key to prevent redundant fetches
+    queryKey: ["users", page, pageSize, preprocessSearch(search), dateRange, sortBy, sortOrder],
     queryFn: () => fetchUsers({
       page,
       limit: pageSize,
-      search,
+      search: preprocessSearch(search),
       from_date: dateRange.from_date,
       to_date: dateRange.to_date,
       sort_by: sortBy,

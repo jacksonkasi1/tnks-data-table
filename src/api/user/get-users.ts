@@ -24,9 +24,12 @@ export async function fetchUsers({
   page?: number;
   limit?: number;
 }) {
+  // Process search term - trim and sanitize
+  const processedSearch = search ? search.trim().replace(/\s+/g, ' ') : "";
+  
   // Build query parameters
   const params = new URLSearchParams();
-  if (search) params.append("search", search);
+  if (processedSearch) params.append("search", processedSearch);
   if (from_date) params.append("from_date", from_date);
   if (to_date) params.append("to_date", to_date);
   params.append("sort_by", sort_by);

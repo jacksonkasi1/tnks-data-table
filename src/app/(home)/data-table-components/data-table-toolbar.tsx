@@ -107,14 +107,16 @@ export function DataTableToolbar<TData>({
   // Determine if any filters are active
   const isFiltered = tableFiltered || !!localSearch || datesModified;
 
-  // Handle search with debounce
+  // Handle search with debounce and trim whitespace
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setLocalSearch(value);
 
     // Debounce search to reduce API calls
     const timeoutId = setTimeout(() => {
-      setSearch(value);
+      // Trim whitespace before sending to backend API
+      const trimmedValue = value.trim();
+      setSearch(trimmedValue);
     }, 500);
     
     return () => clearTimeout(timeoutId);
