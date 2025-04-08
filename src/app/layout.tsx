@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Providers } from "@/lib/providers";
 import { Toaster } from "@/components/ui/sonner";
+import { Header } from "@/components/header";
+import { Providers } from "@/lib/providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "User Expenses Dashboard",
-  description: "Track and analyze user expenses",
+  title: "DataTable Pro",
+  description: "Advanced data table with powerful features",
 };
 
 export default function RootLayout({
@@ -20,9 +21,12 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <Providers>
-          {children}
+          <Header />
+          <div className="relative min-h-screen flex flex-col">
+            <main className="flex-1">{children}</main>
+          </div>
+          <Toaster />
         </Providers>
-        <Toaster />
       </body>
     </html>
   );
