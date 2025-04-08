@@ -15,6 +15,7 @@ import {
   getSortedRowModel,
   useReactTable,
   Row,
+  ColumnResizeMode,
 } from "@tanstack/react-table";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -39,6 +40,8 @@ import { User } from "./schema";
 import { getColumns } from "./columns";
 import { useUrlState } from "./url-state";
 import { useTableConfig, TableConfig } from "./table-config";
+import { useTableColumnResize } from "./use-table-column-resize";
+import { DataTableResizer } from "./data-table-resizer";
 
 interface DataTableProps {
   // Allow overriding the table configuration
@@ -48,6 +51,15 @@ interface DataTableProps {
 export function DataTable({ config = {} }: DataTableProps) {
   // Load table configuration with any overrides
   const tableConfig = useTableConfig(config);
+  
+  // Table ID for localStorage storage - generate a default if not provided
+  const tableId = tableConfig.columnResizingTableId || 'data-table-default';
+  
+  // Use our custom hook for column resizing
+  const { columnSizing, setColumnSizing, resetColumnSizing } = useTableColumnResize(
+    tableId,
+    tableConfig.enableColumnResizing
+  );
   
   // Function to preprocess search term before using in API calls
   const preprocessSearch = (searchTerm: string): string => {
@@ -365,6 +377,15 @@ export function DataTable({ config = {} }: DataTableProps) {
     setPageSize(newPagination.pageSize);
   }, [setPage, setPageSize, page, pageSize]);
 
+  // Handler for column sizing changes
+  const handleColumnSizingChange = React.useCallback((updaterOrValue: any) => {
+    // Handle both direct values and updater functions
+    const newSizing = typeof updaterOrValue === 'function'
+      ? updaterOrValue(columnSizing)
+      : updaterOrValue;
+    setColumnSizing(newSizing);
+  }, [columnSizing, setColumnSizing]);
+
   // Get columns with the deselection handler (memoize to avoid recreation on render)
   // IMPORTANT: Now we define columns AFTER handleRowDeselection is defined
   const columns = React.useMemo(() => {
@@ -408,9 +429,13 @@ export function DataTable({ config = {} }: DataTableProps) {
       rowSelection,
       columnFilters,
       pagination,
+      columnSizing,
     },
+    columnResizeMode: 'onChange' as ColumnResizeMode,
+    onColumnSizingChange: handleColumnSizingChange,
     pageCount: data?.pagination.total_pages || 0,
     enableRowSelection: tableConfig.enableRowSelection,
+    enableColumnResizing: tableConfig.enableColumnResizing,
     manualPagination: true,
     manualSorting: true,
     manualFiltering: true,
@@ -426,6 +451,56 @@ export function DataTable({ config = {} }: DataTableProps) {
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
   });
+
+
+  // Initialize default column sizes when columns are available and no saved sizes exist
+  React.useEffect(() => {
+    if (columns.length > 0 && Object.keys(columnSizing).length === 0) {
+      // Create a map of column id to its default size
+      const defaultSizing: Record<string, number> = {};
+      columns.forEach(column => {
+        if ('id' in column && column.id && 'size' in column && typeof column.size === 'number') {
+          defaultSizing[column.id] = column.size;
+        } else if ('accessorKey' in column && typeof column.accessorKey === 'string' && 'size' in column && typeof column.size === 'number') {
+          defaultSizing[column.accessorKey] = column.size;
+        }
+      });
+      
+      // Only set if we have sizes to apply and there are no saved sizes in localStorage
+      if (Object.keys(defaultSizing).length > 0) {
+        // Check localStorage first
+        try {
+          const savedSizing = localStorage.getItem(`table-column-sizing-${tableId}`);
+          if (!savedSizing) {
+            // Only apply defaults if no saved sizing exists
+            setColumnSizing(defaultSizing);
+          }
+        } catch (error) {
+          // If localStorage fails, apply defaults
+          setColumnSizing(defaultSizing);
+        }
+      }
+    }
+  }, [columns, columnSizing, setColumnSizing, tableId]);
+
+  // Update to use data attribute instead of class for better performance
+  React.useEffect(() => {
+    const isResizingAny = 
+      table.getHeaderGroups().some(headerGroup => 
+        headerGroup.headers.some(header => header.column.getIsResizing())
+      );
+    
+    if (isResizingAny) {
+      document.body.setAttribute('data-resizing', 'true');
+    } else {
+      document.body.removeAttribute('data-resizing');
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.removeAttribute('data-resizing');
+    };
+  }, [table]);
 
   // Validate URL parameters to ensure proper format
   React.useEffect(() => {
@@ -476,16 +551,30 @@ export function DataTable({ config = {} }: DataTableProps) {
 
   return (
     <div className="space-y-4">
-      <DataTableToolbar 
-        table={table} 
-        setSearch={setSearch} 
-        setDateRange={setDateRange}
-        totalSelectedItems={totalSelectedItems}
-        clearSelection={clearAllSelections}
-        getSelectedUsers={getSelectedUsers}
-        getAllUsers={getAllUsers}
-        config={tableConfig}
-      />
+      {tableConfig.enableToolbar && (
+        <DataTableToolbar
+          table={table}
+          setSearch={setSearch}
+          setDateRange={setDateRange}
+          totalSelectedItems={totalSelectedItems}
+          clearSelection={
+            () => {
+              table.resetRowSelection();
+              setSelectedUserIds({});
+            }
+          }
+          getSelectedUsers={getSelectedUsers}
+          getAllUsers={getAllUsers}
+          config={tableConfig}
+          resetColumnSizing={() => {
+            resetColumnSizing();
+            // Force a small delay and then refresh the UI
+            setTimeout(() => {
+              window.dispatchEvent(new Event('resize'));
+            }, 100);
+          }}
+        />
+      )}
       
       <div 
         ref={tableContainerRef} 
@@ -495,7 +584,7 @@ export function DataTable({ config = {} }: DataTableProps) {
         aria-label="Data table"
         onKeyDown={tableConfig.enableKeyboardNavigation ? handleKeyDown : undefined}
       >
-        <Table>
+        <Table className={tableConfig.enableColumnResizing ? "resizable-table" : ""}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow 
@@ -504,11 +593,15 @@ export function DataTable({ config = {} }: DataTableProps) {
               >
                 {headerGroup.headers.map((header) => (
                   <TableHead
-                    className="px-4 py-2"
+                    className="px-4 py-2 group/th relative"
                     key={header.id}
                     colSpan={header.colSpan}
                     role="columnheader"
                     tabIndex={-1}
+                    style={{
+                      width: header.getSize(),
+                    }}
+                    data-column-resizing={header.column.getIsResizing() ? "true" : undefined}
                   >
                     {header.isPlaceholder
                       ? null
@@ -516,11 +609,16 @@ export function DataTable({ config = {} }: DataTableProps) {
                           header.column.columnDef.header,
                           header.getContext(),
                         )}
+                    {tableConfig.enableColumnResizing && header.column.getCanResize() && (
+                      <DataTableResizer header={header} table={table} />
+                    )}
                   </TableHead>
                 ))}
               </TableRow>
             ))}
           </TableHeader>
+          
+          {/* Keep the rest of the table body as it was */}
           <TableBody>
             {isLoading ? (
               // Loading state

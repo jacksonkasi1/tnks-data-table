@@ -27,6 +27,7 @@ interface DataTableToolbarProps<TData> {
   getSelectedUsers?: () => Promise<User[]>;
   getAllUsers?: () => User[];
   config: TableConfig;
+  resetColumnSizing?: () => void;
 }
 
 export function DataTableToolbar<TData>({
@@ -38,6 +39,7 @@ export function DataTableToolbar<TData>({
   getSelectedUsers,
   getAllUsers,
   config,
+  resetColumnSizing,
 }: DataTableToolbarProps<TData>) {
   // Get router and pathname for URL state reset
   const router = useRouter();
@@ -226,6 +228,17 @@ export function DataTableToolbar<TData>({
         
         {config.enableColumnVisibility && (
           <DataTableViewOptions table={table} />
+        )}
+        
+        {config.enableColumnResizing && resetColumnSizing && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={resetColumnSizing}
+            className="ml-2"
+          >
+            Reset Columns
+          </Button>
         )}
       </div>
     </div>
