@@ -210,3 +210,34 @@ input[type="week"] {
 [id="rdp-2"] * {
   cursor: pointer !important;
 }
+
+/* Table column resizer styles */
+@layer components {
+  .resizer {
+    @apply absolute right-0 top-0 h-full w-1.5 cursor-col-resize select-none touch-none opacity-0 hover:opacity-100 hover:bg-primary/50 group-hover:block;
+  }
+  
+  .resizer.isResizing {
+    @apply opacity-100 bg-primary;
+  }
+  
+  table {
+    width: 100%;
+  }
+  
+  .resizable-table {
+    @apply table-fixed relative;
+  }
+  
+  .resizable-table th {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .resizable-table th,
+  .resizable-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
