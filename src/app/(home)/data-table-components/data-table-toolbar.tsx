@@ -11,6 +11,8 @@ import { useState, useEffect } from "react";
 import { DataTableViewOptions } from "./data-table-view-options";
 import { TrashIcon } from "lucide-react";
 import { formatDate } from "@/api/user/get-users";
+import { DataTableExport } from "./data-table-export";
+import { User } from "./schema";
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
@@ -18,6 +20,8 @@ interface DataTableToolbarProps<TData> {
   setDateRange: (range: { from_date: string; to_date: string }) => void;
   totalSelectedItems?: number;
   clearSelection?: () => void;
+  getSelectedUsers?: () => Promise<User[]>;
+  getAllUsers?: () => User[];
 }
 
 export function DataTableToolbar<TData>({
@@ -26,6 +30,8 @@ export function DataTableToolbar<TData>({
   setDateRange,
   totalSelectedItems = 0,
   clearSelection,
+  getSelectedUsers,
+  getAllUsers,
 }: DataTableToolbarProps<TData>) {
   const tableFiltered = table.getState().columnFilters.length > 0;
 
@@ -47,7 +53,7 @@ export function DataTableToolbar<TData>({
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setLocalSearch(value);
-    
+
     // Debounce search to reduce API calls
     const timeoutId = setTimeout(() => {
       setSearch(value);
@@ -91,6 +97,13 @@ export function DataTableToolbar<TData>({
     });
   };
 
+  // Get selected users data for export - this is now just for the UI indication
+  // The actual data fetching happens in the export component
+  const selectedUsers = totalSelectedItems > 0 ? new Array(totalSelectedItems).fill({} as User) : [];
+  
+  // Get all available users data for export
+  const allUsers = getAllUsers ? getAllUsers() : [];
+
   return (
     <div className="flex flex-wrap items-center justify-between">
       <div className="flex flex-1 flex-wrap items-center gap-2">
@@ -130,6 +143,12 @@ export function DataTableToolbar<TData>({
             Delete ({totalSelectedItems})
           </Button>
         ) : null}
+        <DataTableExport 
+          table={table as any} 
+          data={allUsers}
+          selectedData={selectedUsers}
+          getSelectedUsers={getSelectedUsers}
+        />
         <DataTableViewOptions table={table} />
       </div>
     </div>

@@ -16,7 +16,7 @@ import {
   useReactTable,
   Row,
 } from "@tanstack/react-table";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   Table,
@@ -29,7 +29,7 @@ import {
 
 import { DataTablePagination } from "./data-table-pagination";
 import { DataTableToolbar } from "./data-table-toolbar";
-import { fetchUsers } from "@/api/user/get-users";
+import { fetchUsers, fetchUsersByIds } from "@/api/user/get-users";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
@@ -61,6 +61,9 @@ export function DataTable({}: DataTableProps) {
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = React.useState<SortingState>([]);
+
+  // Access the query client for fetching all data
+  const queryClient = useQueryClient();
 
   // Fetch users data from API using React Query
   const { data, isLoading, isError, error } = useQuery({
@@ -95,7 +98,7 @@ export function DataTable({}: DataTableProps) {
   // Custom handler for row selection changes
   const handleRowSelectionChange = (updaterOrValue: any) => {
     let newRowSelection: Record<string, boolean>;
-    
+
     if (typeof updaterOrValue === 'function') {
       newRowSelection = updaterOrValue(rowSelection);
     } else {
@@ -162,6 +165,57 @@ export function DataTable({}: DataTableProps) {
         setRowSelection(newRowSelection);
       }
     }
+  };
+
+  // Get selected users data from all available data
+  const getSelectedUsers = async (): Promise<User[]> => {
+    // If nothing is selected, return empty array
+    if (totalSelectedItems === 0) return [];
+    
+    const selectedIds = Object.keys(selectedUserIds).map(id => parseInt(id));
+    
+    // For IDs not in the current page, we need to fetch their data
+    // First, filter out the users that are on the current page
+    const usersInCurrentPage = data?.data.filter(user => selectedUserIds[user.id]) || [];
+    const idsInCurrentPage = usersInCurrentPage.map(user => user.id);
+    
+    // Identify IDs that need to be fetched
+    const idsToFetch = selectedIds.filter(id => !idsInCurrentPage.includes(id));
+    
+    if (idsToFetch.length === 0) {
+      // All selected users are on the current page
+      return usersInCurrentPage;
+    }
+    
+    try {
+      // Fetch data for all missing users in a single batch
+      const fetchedUsers = await fetchUsersByIds(idsToFetch);
+      
+      // Combine with users from current page
+      return [...usersInCurrentPage, ...fetchedUsers];
+    } catch (error) {
+      console.error("Error fetching selected users:", error);
+      
+      // Fall back to returning current page + placeholder data for errors
+      const placeholderData = idsToFetch.map(id => ({
+        id,
+        name: `User ${id}`,
+        email: "",
+        phone: "",
+        age: 0,
+        created_at: "",
+        expense_count: 0,
+        total_expenses: "0",
+      } as User));
+      
+      return [...usersInCurrentPage, ...placeholderData];
+    }
+  };
+
+  // Get all available users data for export
+  const getAllUsers = (): User[] => {
+    // Return current page data
+    return data?.data || [];
   };
 
   // Get columns with the deselection handler
@@ -240,6 +294,8 @@ export function DataTable({}: DataTableProps) {
         setDateRange={setDateRange}
         totalSelectedItems={totalSelectedItems}
         clearSelection={clearAllSelections}
+        getSelectedUsers={getSelectedUsers}
+        getAllUsers={getAllUsers}
       />
       
       <div className="overflow-y-auto rounded-md border">
