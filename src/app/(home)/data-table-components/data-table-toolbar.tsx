@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter";
 import { CalendarDatePicker } from "@/components/calendar-date-picker";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DataTableViewOptions } from "./data-table-view-options";
 import { TrashIcon } from "lucide-react";
 import { formatDate } from "@/api/user/get-users";
@@ -23,13 +23,25 @@ export function DataTableToolbar<TData>({
   setSearch,
   setDateRange,
 }: DataTableToolbarProps<TData>) {
-  const isFiltered = table.getState().columnFilters.length > 0;
+  const tableFiltered = table.getState().columnFilters.length > 0;
 
   const [localSearch, setLocalSearch] = useState("");
+  
+  // Default dates for initialization and reset
+  const defaultFromDate = new Date(new Date().getFullYear(), 0, 1);
+  const defaultToDate = new Date();
+  
+  // Date state with defaults
   const [dates, setDates] = useState<{ from: Date; to: Date }>({
-    from: new Date(new Date().getFullYear(), 0, 1),
-    to: new Date(),
+    from: defaultFromDate,
+    to: defaultToDate,
   });
+  
+  // Track if user has explicitly changed dates
+  const [datesModified, setDatesModified] = useState(false);
+  
+  // Determine if any filters are active
+  const isFiltered = tableFiltered || !!localSearch || datesModified;
 
   // Handle search with debounce
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,10 +60,38 @@ export function DataTableToolbar<TData>({
   const handleDateSelect = ({ from, to }: { from: Date; to: Date }) => {
     setDates({ from, to });
     
+    // Mark dates as modified by user
+    const isDefault = 
+      from.getTime() === defaultFromDate.getTime() && 
+      to.getTime() === defaultToDate.getTime();
+    
+    setDatesModified(!isDefault);
+    
     // Convert dates to strings in YYYY-MM-DD format for the API
     setDateRange({
       from_date: formatDate(from),
       to_date: formatDate(to),
+    });
+  };
+  
+  // Reset all filters
+  const handleResetFilters = () => {
+    // Reset table filters
+    table.resetColumnFilters();
+    
+    // Reset search
+    setLocalSearch("");
+    setSearch("");
+    
+    // Reset dates to defaults
+    setDates({ 
+      from: defaultFromDate, 
+      to: defaultToDate 
+    });
+    setDatesModified(false);
+    setDateRange({
+      from_date: formatDate(defaultFromDate),
+      to_date: formatDate(defaultToDate),
     });
   };
 
@@ -67,11 +107,7 @@ export function DataTableToolbar<TData>({
         {isFiltered && (
           <Button
             variant="ghost"
-            onClick={() => {
-              table.resetColumnFilters();
-              setSearch("");
-              setLocalSearch("");
-            }}
+            onClick={handleResetFilters}
             className="h-8 px-2 lg:px-3"
           >
             Reset
