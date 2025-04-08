@@ -17,6 +17,7 @@ import {
   Row,
 } from "@tanstack/react-table";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import {
   Table,
@@ -170,40 +171,66 @@ export function DataTable({}: DataTableProps) {
   // Get selected users data from all available data
   const getSelectedUsers = async (): Promise<User[]> => {
     // If nothing is selected, return empty array
-    if (totalSelectedItems === 0) return [];
+    if (totalSelectedItems === 0 || Object.keys(selectedUserIds).length === 0) {
+      return [];
+    }
     
+    // Get array of selected IDs from the selection object
     const selectedIds = Object.keys(selectedUserIds).map(id => parseInt(id));
     
-    // For IDs not in the current page, we need to fetch their data
-    // First, filter out the users that are on the current page
+    // First, get users from the current page that are selected
     const usersInCurrentPage = data?.data.filter(user => selectedUserIds[user.id]) || [];
     const idsInCurrentPage = usersInCurrentPage.map(user => user.id);
     
-    // Identify IDs that need to be fetched
+    // Find which IDs need to be fetched from the server
     const idsToFetch = selectedIds.filter(id => !idsInCurrentPage.includes(id));
     
     if (idsToFetch.length === 0) {
-      // All selected users are on the current page
+      // All selected users are on the current page, no need for API call
       return usersInCurrentPage;
     }
     
     try {
+      // Show loading state for user
+      toast.loading("Preparing export data...", {
+        description: `Fetching data for ${idsToFetch.length} selected users...`,
+        id: "fetch-selected-users",
+        duration: 3000, // Auto dismiss after 3 seconds if not manually dismissed
+      });
+      
       // Fetch data for all missing users in a single batch
       const fetchedUsers = await fetchUsersByIds(idsToFetch);
       
+      // Dismiss loading toast immediately after fetch completes
+      toast.dismiss("fetch-selected-users");
+      
       // Combine with users from current page
-      return [...usersInCurrentPage, ...fetchedUsers];
+      const combinedUsers = [...usersInCurrentPage, ...fetchedUsers];
+      
+      // Verify we got all the users we expected
+      if (combinedUsers.length !== selectedIds.length) {
+        console.warn(`Expected ${selectedIds.length} users but got ${combinedUsers.length}`);
+      }
+      
+      return combinedUsers;
     } catch (error) {
       console.error("Error fetching selected users:", error);
+      
+      // Dismiss loading toast
+      toast.dismiss("fetch-selected-users");
+      
+      toast.error("Error fetching user data", {
+        description: "Some user data could not be retrieved. The export may be incomplete.",
+      });
       
       // Fall back to returning current page + placeholder data for errors
       const placeholderData = idsToFetch.map(id => ({
         id,
         name: `User ${id}`,
-        email: "",
+        email: "(data unavailable)",
         phone: "",
         age: 0,
-        created_at: "",
+        created_at: new Date().toISOString(),
         expense_count: 0,
         total_expenses: "0",
       } as User));
@@ -365,7 +392,7 @@ export function DataTable({}: DataTableProps) {
       </div>
       
       <DataTablePagination 
-        table={table} 
+        table={table}
         totalItems={data?.pagination.total_items || 0} 
         totalSelectedItems={totalSelectedItems}
       />
