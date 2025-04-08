@@ -1,21 +1,28 @@
 import { DataTable } from "./data-table-components/data-table";
-import { UserNav } from "./data-table-components/user-nav";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Data Table Example",
+};
 
 export default function Home() {
   return (
-    <div className="h-full flex-1 flex-col space-y-8 p-8 md:flex">
-      <div className="flex items-center justify-between space-y-2">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Users & Expenses Dashboard</h2>
-          <p className="text-muted-foreground">
-            View and manage user data and their associated expenses
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <UserNav />
-        </div>
-      </div>
-      <DataTable />
-    </div>
+    <main className="container mx-auto py-10">
+      <h1 className="text-xl font-bold mb-4">Users</h1>
+
+      {/* DataTable with custom configuration */}
+      <DataTable
+        config={{
+          enableRowSelection: true, // Enable row selection
+          enableClickRowSelect: false, // Disable clicking rows to select them
+          enableKeyboardNavigation: true, // Enable keyboard navigation
+          enableSearch: true, // Enable search functionality
+          enableDateFilter: true, // Enable date filter
+          enableColumnFilters: false, // Disable column filters
+          enableColumnVisibility: true, // Enable column visibility options
+          enableUrlState: true, // Enable URL state persistence
+        }}
+      />
+    </main>
   );
 }

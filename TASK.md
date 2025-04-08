@@ -18,8 +18,8 @@
 - [x] Handle loading states with skeleton loaders
 - [x] Error handling for API failures
 - [ ] Add data refreshing/polling capability
-- [ ] Implement nuqs for type-safe search params state management
-- [ ] Refactor to use URL state for filters, pagination, and sorting
+- [x] Implement custom URL state management for type-safe search params
+- [x] Refactor to use URL state for filters, pagination, and sorting
 
 ## Search & Filter Components
 
@@ -96,7 +96,7 @@
 - [ ] Add expandable rows for detail view
 - [ ] Create nested tables
 - [ ] Add drag-and-drop column reordering
-- [ ] Implement column resizing
+- [ ] Implement column resizing and save the state of each table independently in localStorage.
 - [ ] Add sticky headers/columns
 - [ ] Create state persistence (URL or localStorage)
 
