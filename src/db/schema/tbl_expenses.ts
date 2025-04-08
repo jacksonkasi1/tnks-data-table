@@ -15,7 +15,7 @@ export const expenses = pgTable("tbl_expenses", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   user_id: integer("user_id")
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: "cascade" }),
   expense_name: varchar("expense_name", { length: 255 }).notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   expense_date: timestamp("expense_date").notNull().defaultNow(),
