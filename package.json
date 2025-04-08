@@ -9,7 +9,8 @@
     "lint": "next lint",
     "push": "drizzle-kit push",
     "generate": "drizzle-kit generate",
-    "studio": "drizzle-kit studio"
+    "studio": "drizzle-kit studio",
+    "seed": "tsx src/scripts/seed.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.0",
@@ -42,6 +43,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@faker-js/faker": "^9.6.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

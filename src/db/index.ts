@@ -7,12 +7,7 @@ import * as schema from "./schema";
 // ** Env
 import { env } from "@/env";
 
-export function createDb() {
-  const sql = neon(env.DATABASE_URL);
-  const db = drizzle(sql, {
-    schema,
-  });
-  return db;
-}
-
-export type DbInstance = ReturnType<typeof createDb>;
+const sql = neon(env.DATABASE_URL);
+export const db = drizzle(sql, {
+  schema,
+});
