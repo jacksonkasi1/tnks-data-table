@@ -14,7 +14,7 @@ export default function Home() {
       <DataTable
         config={{
           enableRowSelection: true, // Enable row selection
-          enableClickRowSelect: true, // Enable clicking rows to select them
+          enableClickRowSelect: false, // Disable clicking rows to select them
           enableKeyboardNavigation: true, // Enable keyboard navigation
           enableSearch: true, // Enable search functionality
           enableDateFilter: true, // Enable date filter
