@@ -8,6 +8,13 @@
       "when": 1744097616416,
       "tag": "0000_public_vindicator",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1744100978664,
+      "tag": "0001_gigantic_goliath",
+      "breakpoints": true
     }
   ]
 }
