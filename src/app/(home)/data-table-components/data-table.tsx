@@ -16,10 +16,9 @@ import {
   useReactTable,
   Row,
 } from "@tanstack/react-table";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useRef } from "react";
-import { useTableNav } from "@table-nav/react";
 
 import {
   Table,
@@ -39,12 +38,17 @@ import { AlertCircle } from "lucide-react";
 import { User } from "./schema";
 import { getColumns } from "./columns";
 import { useUrlState } from "./url-state";
+import { useTableConfig, TableConfig } from "./table-config";
 
 interface DataTableProps {
-  // The component no longer needs columns as a prop
+  // Allow overriding the table configuration
+  config?: Partial<TableConfig>;
 }
 
-export function DataTable({}: DataTableProps) {
+export function DataTable({ config = {} }: DataTableProps) {
+  // Load table configuration with any overrides
+  const tableConfig = useTableConfig(config);
+  
   // States for API parameters using URL state
   const [page, setPage] = useUrlState("page", 1);
   const [pageSize, setPageSize] = useUrlState("pageSize", 10);
@@ -113,11 +117,6 @@ export function DataTable({}: DataTableProps) {
     }
   }, []);
   
-  // Set up table navigation using @table-nav/react
-  const { listeners, tableNav } = useTableNav({
-    debug: true // Always enable debug mode for now to help troubleshooting
-  });
-
   // Access the query client for fetching all data
   const queryClient = useQueryClient();
 
@@ -374,7 +373,7 @@ export function DataTable({}: DataTableProps) {
       pagination,
     },
     pageCount: data?.pagination.total_pages || 0,
-    enableRowSelection: true,
+    enableRowSelection: tableConfig.enableRowSelection,
     manualPagination: true,
     manualSorting: true,
     manualFiltering: true,
@@ -456,8 +455,7 @@ export function DataTable({}: DataTableProps) {
         role="grid"
         tabIndex={0}
         aria-label="Data table"
-        {...listeners}
-        onKeyDown={handleKeyDown}
+        onKeyDown={tableConfig.enableKeyboardNavigation ? handleKeyDown : undefined}
       >
         <Table>
           <TableHeader>
@@ -517,7 +515,7 @@ export function DataTable({}: DataTableProps) {
                   tabIndex={0}
                   role="row"
                   aria-selected={row.getIsSelected()}
-                  onClick={() => row.toggleSelected()}
+                  onClick={tableConfig.enableClickRowSelect ? () => row.toggleSelected() : undefined}
                   onFocus={(e) => {
                     // Add a data attribute to the currently focused row
                     // Remove it from all other rows first
@@ -544,17 +542,12 @@ export function DataTable({}: DataTableProps) {
               ))
             ) : (
               // No results
-              <TableRow
-                role="row"
-                tabIndex={-1}
-              >
+              <TableRow>
                 <TableCell
                   colSpan={columns.length}
                   className="h-24 text-center"
-                  role="gridcell"
-                  tabIndex={-1}
                 >
-                  No results found.
+                  No results.
                 </TableCell>
               </TableRow>
             )}
@@ -562,11 +555,12 @@ export function DataTable({}: DataTableProps) {
         </Table>
       </div>
       
-      <DataTablePagination 
-        table={table}
-        totalItems={data?.pagination.total_items || 0} 
-        totalSelectedItems={totalSelectedItems}
-      />
+      {tableConfig.enablePagination && (
+        <DataTablePagination 
+          table={table} 
+          totalItems={data?.pagination.total_items || 0}
+        />
+      )}
     </div>
   );
 }
