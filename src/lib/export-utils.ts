@@ -1,5 +1,6 @@
 import { User } from "@/app/(home)/data-table-components/schema";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 // Define column headers for User exports
 const USER_EXPORT_HEADERS = [
@@ -83,7 +84,7 @@ export function exportToCSV(data: User[], filename: string): boolean {
 }
 
 /**
- * Export data to Excel file (CSV with .xlsx extension)
+ * Export data to Excel file using xlsx package
  */
 export function exportToExcel(data: User[], filename: string): boolean {
   if (data.length === 0) {
@@ -92,8 +93,48 @@ export function exportToExcel(data: User[], filename: string): boolean {
   }
 
   try {
-    const csvContent = convertToCSV(data, USER_EXPORT_HEADERS);
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    // Create a worksheet
+    const worksheet = XLSX.utils.json_to_sheet(
+      data.map(user => ({
+        ID: user.id,
+        Name: user.name,
+        Email: user.email,
+        Phone: user.phone,
+        Age: user.age,
+        "Created At": user.created_at,
+        "Expense Count": user.expense_count,
+        "Total Expenses": user.total_expenses
+      }))
+    );
+
+    // Set column widths
+    const columnWidths = [
+      { wch: 10 }, // ID
+      { wch: 20 }, // Name
+      { wch: 30 }, // Email
+      { wch: 15 }, // Phone
+      { wch: 8 },  // Age
+      { wch: 20 }, // Created At
+      { wch: 15 }, // Expense Count
+      { wch: 15 }  // Total Expenses
+    ];
+    worksheet["!cols"] = columnWidths;
+
+    // Create a workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+
+    // Generate Excel file
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array"
+    });
+
+    // Create blob and download
+    const blob = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    });
+    
     downloadFile(blob, `${filename}.xlsx`);
     return true;
   } catch (error) {
