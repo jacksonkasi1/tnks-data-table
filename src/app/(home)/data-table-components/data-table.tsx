@@ -49,15 +49,28 @@ export function DataTable({ config = {} }: DataTableProps) {
   // Load table configuration with any overrides
   const tableConfig = useTableConfig(config);
   
-  // States for API parameters using URL state
-  const [page, setPage] = useUrlState("page", 1);
-  const [pageSize, setPageSize] = useUrlState("pageSize", 10);
-  const [search, setSearch] = useUrlState("search", "");
-  const [dateRange, setDateRange] = useUrlState<{ from_date: string; to_date: string }>("dateRange", { from_date: "", to_date: "" });
-  const [sortBy, setSortBy] = useUrlState("sortBy", "created_at");
-  const [sortOrder, setSortOrder] = useUrlState<"asc" | "desc">("sortOrder", "desc");
-  const [columnVisibility, setColumnVisibility] = useUrlState<Record<string, boolean>>("columnVisibility", {});
-  const [columnFilters, setColumnFilters] = useUrlState<Array<{ id: string; value: any }>>("columnFilters", []);
+  // Create a wrapper for useUrlState that respects the enableUrlState config
+  const useConditionalUrlState = <T,>(key: string, defaultValue: T, options = {}) => {
+    const [state, setState] = React.useState<T>(defaultValue);
+    
+    // Only use URL state if enabled in config
+    if (tableConfig.enableUrlState) {
+      return useUrlState<T>(key, defaultValue, options);
+    }
+    
+    // Otherwise use regular React state
+    return [state, setState] as const;
+  };
+  
+  // States for API parameters using conditional URL state
+  const [page, setPage] = useConditionalUrlState("page", 1);
+  const [pageSize, setPageSize] = useConditionalUrlState("pageSize", 10);
+  const [search, setSearch] = useConditionalUrlState("search", "");
+  const [dateRange, setDateRange] = useConditionalUrlState<{ from_date: string; to_date: string }>("dateRange", { from_date: "", to_date: "" });
+  const [sortBy, setSortBy] = useConditionalUrlState("sortBy", "created_at");
+  const [sortOrder, setSortOrder] = useConditionalUrlState<"asc" | "desc">("sortOrder", "desc");
+  const [columnVisibility, setColumnVisibility] = useConditionalUrlState<Record<string, boolean>>("columnVisibility", {});
+  const [columnFilters, setColumnFilters] = useConditionalUrlState<Array<{ id: string; value: any }>>("columnFilters", []);
 
   // Convert the sorting from URL to the format TanStack Table expects
   const sorting: SortingState = React.useMemo(() => {

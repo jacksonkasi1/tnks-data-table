@@ -154,8 +154,10 @@ export function DataTableToolbar<TData>({
       to_date: "",
     });
     
-    // Reset URL state by removing all query parameters
-    resetUrlState(router, pathname);
+    // Reset URL state by removing all query parameters, but only if URL state is enabled
+    if (config.enableUrlState) {
+      resetUrlState(router, pathname);
+    }
   };
 
   // Get selected users data for export - this is now just for the UI indication
