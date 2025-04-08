@@ -32,14 +32,15 @@ import { fetchUsers } from "@/api/user/get-users";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { User } from "./schema";
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
+interface DataTableProps {
+  columns: ColumnDef<User, any>[];
 }
 
-export function DataTable<TData, TValue>({
+export function DataTable({
   columns,
-}: Omit<DataTableProps<TData, TValue>, "data">) {
+}: DataTableProps) {
   // States for API parameters
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
