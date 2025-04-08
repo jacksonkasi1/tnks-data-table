@@ -14,15 +14,16 @@ export default function Home() {
       <DataTable
         config={{
           enableRowSelection: true,      // Enable row selection
-          enableClickRowSelect: false,    // Enable clicking rows to select them
+          enableClickRowSelect: false,    // Disable clicking rows to select them
           enableKeyboardNavigation: true, // Enable keyboard navigation
           enablePagination: true,        // Enable pagination
-          enableSearch: false,            // Enable search
-          enableColumnFilters: false,     // Enable column filters
-          enableDateFilter: false,        // Enable date filter
-          enableColumnVisibility: false,  // Enable column visibility
-
-        }} 
+          enableSearch: true,            // Enable search
+          enableColumnFilters: true,     // Enable column filters
+          enableDateFilter: true,        // Enable date filter
+          enableColumnVisibility: true,  // Enable column visibility
+          enableExport: true,            // Enable export
+          enableUrlState: false,          // Enable url state
+        }}
       />
     </main>
   );

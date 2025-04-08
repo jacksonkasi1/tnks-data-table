@@ -10,12 +10,13 @@ import { Input } from "@/components/ui/input";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter";
 import { CalendarDatePicker } from "@/components/calendar-date-picker";
 import { DataTableViewOptions } from "./data-table-view-options";
-import { TrashIcon, RotateCcwIcon } from "lucide-react";
+import { TrashIcon } from "lucide-react";
 import { formatDate } from "@/api/user/get-users";
 import { DataTableExport } from "./data-table-export";
 import { User } from "./schema";
 import { resetUrlState } from "./utils";
 import { parseDateFromUrl } from "./url-state";
+import { TableConfig } from "./table-config";
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
@@ -25,6 +26,7 @@ interface DataTableToolbarProps<TData> {
   clearSelection?: () => void;
   getSelectedUsers?: () => Promise<User[]>;
   getAllUsers?: () => User[];
+  config: TableConfig;
 }
 
 export function DataTableToolbar<TData>({
@@ -35,6 +37,7 @@ export function DataTableToolbar<TData>({
   clearSelection,
   getSelectedUsers,
   getAllUsers,
+  config,
 }: DataTableToolbarProps<TData>) {
   // Get router and pathname for URL state reset
   const router = useRouter();
@@ -165,12 +168,15 @@ export function DataTableToolbar<TData>({
   return (
     <div className="flex flex-wrap items-center justify-between">
       <div className="flex flex-1 flex-wrap items-center gap-2">
-        <Input
-          placeholder="Search users..."
-          value={localSearch}
-          onChange={handleSearchChange}
-          className="h-8 w-[150px] lg:w-[250px]"
-        />
+        {config.enableSearch && (
+          <Input
+            placeholder="Search users..."
+            value={localSearch}
+            onChange={handleSearchChange}
+            className="h-8 w-[150px] lg:w-[250px]"
+          />
+        )}
+        
         {isFiltered && (
           <Button
             variant="ghost"
@@ -181,33 +187,42 @@ export function DataTableToolbar<TData>({
             <Cross2Icon className="ml-2 h-4 w-4" />
           </Button>
         )}
-        <div className="flex items-center">
-          <CalendarDatePicker
-            date={{
-              from: dates.from,
-              to: dates.to,
-            }}
-            onDateSelect={handleDateSelect}
-            className="h-9 w-[250px] cursor-pointer"
-            variant="outline"
-          />
-        </div>
+        
+        {config.enableDateFilter && (
+          <div className="flex items-center">
+            <CalendarDatePicker
+              date={{
+                from: dates.from,
+                to: dates.to,
+              }}
+              onDateSelect={handleDateSelect}
+              className="h-9 w-[250px] cursor-pointer"
+              variant="outline"
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
-        {totalSelectedItems > 0 ? (
+        {config.enableRowSelection && totalSelectedItems > 0 ? (
           <Button variant="outline" size="sm" onClick={clearSelection}>
             <TrashIcon className="mr-2 size-4" aria-hidden="true" />
             Delete ({totalSelectedItems})
           </Button>
         ) : null}
-        <DataTableExport 
-          table={table as any} 
-          data={allUsers}
-          selectedData={selectedUsers}
-          getSelectedUsers={getSelectedUsers}
-        />
-        <DataTableViewOptions table={table} />
+        
+        {config.enableExport && (
+          <DataTableExport 
+            table={table as any} 
+            data={allUsers}
+            selectedData={selectedUsers}
+            getSelectedUsers={getSelectedUsers}
+          />
+        )}
+        
+        {config.enableColumnVisibility && (
+          <DataTableViewOptions table={table} />
+        )}
       </div>
     </div>
   );

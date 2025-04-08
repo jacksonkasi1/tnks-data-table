@@ -333,7 +333,10 @@ export function DataTable({ config = {} }: DataTableProps) {
 
   // Get columns with the deselection handler (memoize to avoid recreation on render)
   // IMPORTANT: Now we define columns AFTER handleRowDeselection is defined
-  const columns = React.useMemo(() => getColumns(handleRowDeselection), [handleRowDeselection]);
+  const columns = React.useMemo(() => {
+    // If row selection is disabled, pass null as the handler which will hide the checkbox column
+    return getColumns(tableConfig.enableRowSelection ? handleRowDeselection : null);
+  }, [handleRowDeselection, tableConfig.enableRowSelection]);
 
   // Reset selection when URL params change (pagination, filters, etc.)
   React.useEffect(() => {
@@ -447,6 +450,7 @@ export function DataTable({ config = {} }: DataTableProps) {
         clearSelection={clearAllSelections}
         getSelectedUsers={getSelectedUsers}
         getAllUsers={getAllUsers}
+        config={tableConfig}
       />
       
       <div 
