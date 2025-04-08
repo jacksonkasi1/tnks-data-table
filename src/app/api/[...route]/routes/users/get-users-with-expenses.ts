@@ -57,7 +57,8 @@ router.get("/", async (c) => {
     }
     
     // Date filtering based on user created_at
-    if (from_date && to_date) {
+    // Only apply if there are non-empty values
+    if (from_date && to_date && from_date.trim() !== "" && to_date.trim() !== "") {
       // Date range filter
       filters.push(
         between(
@@ -66,19 +67,20 @@ router.get("/", async (c) => {
           new Date(to_date)
         )
       );
-    } else if (from_date) {
+    } else if (from_date && from_date.trim() !== "") {
       // Single date filter: users created on or after specific date
       const fromDateTime = new Date(from_date);
       filters.push(
         sql`${users.created_at} >= ${fromDateTime}`
       );
-    } else if (to_date) {
+    } else if (to_date && to_date.trim() !== "") {
       // Users created on or before specific date
       const toDateTime = new Date(to_date);
       filters.push(
         sql`${users.created_at} <= ${toDateTime}`
       );
     }
+    // If both are empty or undefined, no date filter will be applied
     
     // Get users with expense aggregations
     const usersWithExpenses = await db

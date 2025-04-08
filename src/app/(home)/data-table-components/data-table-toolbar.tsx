@@ -27,14 +27,10 @@ export function DataTableToolbar<TData>({
 
   const [localSearch, setLocalSearch] = useState("");
   
-  // Default dates for initialization and reset
-  const defaultFromDate = new Date(new Date().getFullYear(), 0, 1);
-  const defaultToDate = new Date();
-  
-  // Date state with defaults
-  const [dates, setDates] = useState<{ from: Date; to: Date }>({
-    from: defaultFromDate,
-    to: defaultToDate,
+  // Initial state with empty date values
+  const [dates, setDates] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined,
   });
   
   // Track if user has explicitly changed dates
@@ -60,17 +56,13 @@ export function DataTableToolbar<TData>({
   const handleDateSelect = ({ from, to }: { from: Date; to: Date }) => {
     setDates({ from, to });
     
-    // Mark dates as modified by user
-    const isDefault = 
-      from.getTime() === defaultFromDate.getTime() && 
-      to.getTime() === defaultToDate.getTime();
-    
-    setDatesModified(!isDefault);
+    // Mark dates as modified when actual dates are selected
+    setDatesModified(true);
     
     // Convert dates to strings in YYYY-MM-DD format for the API
     setDateRange({
-      from_date: formatDate(from),
-      to_date: formatDate(to),
+      from_date: from ? formatDate(from) : "",
+      to_date: to ? formatDate(to) : "",
     });
   };
   
@@ -83,15 +75,15 @@ export function DataTableToolbar<TData>({
     setLocalSearch("");
     setSearch("");
     
-    // Reset dates to defaults
+    // Reset dates to undefined (no filter)
     setDates({ 
-      from: defaultFromDate, 
-      to: defaultToDate 
+      from: undefined, 
+      to: undefined 
     });
     setDatesModified(false);
     setDateRange({
-      from_date: formatDate(defaultFromDate),
-      to_date: formatDate(defaultToDate),
+      from_date: "",
+      to_date: "",
     });
   };
 
