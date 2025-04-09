@@ -2,7 +2,7 @@
 
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { Table } from "@tanstack/react-table";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useState, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Settings, Undo2, TrashIcon, ColumnsIcon, EyeOff, CheckSquare } from "lucide-react";
 
@@ -59,21 +59,34 @@ export function DataTableToolbar<TData>({
   // Initialize local search state with URL value or table state
   const [localSearch, setLocalSearch] = useState(searchParamFromUrl || currentSearchFromTable);
   
+  // Track if the search is being updated locally
+  const isLocallyUpdatingSearch = useRef(false);
+  
   // Update local search when URL param changes
   useEffect(() => {
+    // Skip if local update is in progress
+    if (isLocallyUpdatingSearch.current) {
+      return;
+    }
+    
     const searchFromUrl = searchParams.get('search') || '';
     if (searchFromUrl !== localSearch) {
       setLocalSearch(searchFromUrl);
     }
-  }, [searchParams, setLocalSearch]);
+  }, [searchParams, setLocalSearch, localSearch]);
   
   // Also update local search when table globalFilter changes
   useEffect(() => {
+    // Skip if local update is in progress
+    if (isLocallyUpdatingSearch.current) {
+      return;
+    }
+    
     const tableSearch = table.getState().globalFilter as string || "";
     if (tableSearch !== localSearch && tableSearch !== '') {
       setLocalSearch(tableSearch);
     }
-  }, [table.getState().globalFilter, setLocalSearch]);
+  }, [table.getState().globalFilter, setLocalSearch, localSearch]);
   
   // Get date range from URL if available
   const getInitialDates = (): { from: Date | undefined; to: Date | undefined } => {
@@ -111,19 +124,45 @@ export function DataTableToolbar<TData>({
   // Determine if any filters are active
   const isFiltered = tableFiltered || !!localSearch || datesModified;
 
-  // Handle search with debounce and trim whitespace
+  // Create a ref to store the debounce timer
+  const searchDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Cleanup timers when component unmounts
+  useEffect(() => {
+    return () => {
+      // Clear debounce timer
+      if (searchDebounceTimerRef.current) {
+        clearTimeout(searchDebounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Handle search with improved debounce to prevent character loss
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    
+    // Mark that search is being updated locally
+    isLocallyUpdatingSearch.current = true;
     setLocalSearch(value);
 
-    // Debounce search to reduce API calls
-    const timeoutId = setTimeout(() => {
+    // Clear any existing timer to prevent race conditions
+    if (searchDebounceTimerRef.current) {
+      clearTimeout(searchDebounceTimerRef.current);
+    }
+
+    // Set a new debounce timer to update the actual search state
+    searchDebounceTimerRef.current = setTimeout(() => {
       // Trim whitespace before sending to backend API
       const trimmedValue = value.trim();
       setSearch(trimmedValue);
+      searchDebounceTimerRef.current = null;
+      
+      // Reset the local update flag after a short delay
+      // This ensures URL changes don't override the input immediately
+      setTimeout(() => {
+        isLocallyUpdatingSearch.current = false;
+      }, 100);
     }, 500);
-    
-    return () => clearTimeout(timeoutId);
   };
 
   // Handle date selection for filtering
@@ -231,7 +270,7 @@ export function DataTableToolbar<TData>({
         {config.enableColumnVisibility && (
           <DataTableViewOptions table={table} />
         )}
-        
+
         <Popover>
           <PopoverTrigger asChild>
             <Button
