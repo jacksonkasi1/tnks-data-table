@@ -4,13 +4,15 @@ import { Cross2Icon } from "@radix-ui/react-icons";
 import { Table } from "@tanstack/react-table";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Settings, Undo2, TrashIcon, ColumnsIcon, EyeOff, CheckSquare } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter";
 import { CalendarDatePicker } from "@/components/calendar-date-picker";
 import { DataTableViewOptions } from "./data-table-view-options";
-import { TrashIcon } from "lucide-react";
 import { formatDate } from "@/api/user/get-users";
 import { DataTableExport } from "./data-table-export";
 import { User } from "./schema";
@@ -230,16 +232,70 @@ export function DataTableToolbar<TData>({
           <DataTableViewOptions table={table} />
         )}
         
-        {config.enableColumnResizing && resetColumnSizing && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={resetColumnSizing}
-            className="ml-2"
-          >
-            Reset Columns
-          </Button>
-        )}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Table Settings"
+            >
+              <Settings className="h-4 w-4" />
+              <span className="sr-only">Open table settings</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-60" align="end">
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <h4 className="font-medium leading-none">Table Settings</h4>
+                <p className="text-sm text-muted-foreground">
+                  Configure the table appearance and behavior.
+                </p>
+              </div>
+              <Separator />
+              <div className="grid gap-2">
+                {config.enableColumnResizing && resetColumnSizing && (
+                  <Button
+                    variant="outline" 
+                    size="sm"
+                    className="justify-start"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      resetColumnSizing();
+                    }}
+                  >
+                    <Undo2 className="mr-2 h-4 w-4" />
+                    Reset Column Sizes
+                  </Button>
+                )}
+
+                {config.enableRowSelection && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="justify-start"
+                    onClick={() => table.resetRowSelection()}
+                  >
+                    <CheckSquare className="mr-2 h-4 w-4" />
+                    Clear Selection
+                  </Button>
+                )}
+                
+                {!table.getIsAllColumnsVisible() && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="justify-start"
+                    onClick={() => table.resetColumnVisibility()}
+                  >
+                    <EyeOff className="mr-2 h-4 w-4" />
+                    Show All Columns
+                  </Button>
+                )}
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );
