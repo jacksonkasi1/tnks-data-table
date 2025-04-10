@@ -121,10 +121,12 @@
   }
 }
 
+/* ------------------ TABLE STYLES ------------------ */
+
 /* Custom cursor pointer for interactive elements in the data table */
 button,
 .rdp-button,
-.rdp-day, 
+.rdp-day,
 select,
 input[type="checkbox"],
 input[type="radio"],
@@ -158,9 +160,9 @@ input[type="radio"],
 [data-slot="day_outside"],
 [data-slot="day_disabled"],
 [data-slot="day_hidden"],
-.day-outside, 
-.day-range-start, 
-.day-range-end, 
+.day-outside,
+.day-range-start,
+.day-range-end,
 .day-selected,
 div[data-testid="calendar"] button {
   cursor: pointer !important;
@@ -216,24 +218,24 @@ input[type="week"] {
   .resizer {
     @apply absolute right-0 top-0 h-full w-1.5 cursor-col-resize select-none touch-none opacity-0 hover:opacity-100 hover:bg-primary/50 group-hover:block;
   }
-  
+
   .resizer.isResizing {
     @apply opacity-100 bg-primary;
   }
-  
+
   table {
     width: 100%;
   }
-  
+
   .resizable-table {
     @apply table-fixed relative;
   }
-  
+
   .resizable-table th {
     position: relative;
     overflow: hidden;
   }
-  
+
   .resizable-table th,
   .resizable-table td {
     overflow: hidden;
@@ -250,7 +252,7 @@ input[type="week"] {
     width: 100%;
     will-change: contents;
   }
-  
+
   /* Use hardware acceleration for smoother transitions */
   .resizable-table th {
     position: relative;
@@ -260,7 +262,7 @@ input[type="week"] {
     perspective: 1000px;
     transition: width 0ms linear;
   }
-  
+
   /* Prevent text selection when resizing */
   body[data-resizing="true"] {
     cursor: col-resize !important;
@@ -269,21 +271,21 @@ input[type="week"] {
     touch-action: none !important;
     pointer-events: none !important;
   }
-  
+
   body[data-resizing="true"] * {
     cursor: col-resize !important;
   }
-  
+
   /* Remove transition during active resize for instant feedback */
   .resizable-table th[data-column-resizing="true"] {
     transition: none !important;
   }
-  
+
   /* Better hover interaction for resize handles */
   .resizable-table th:hover [data-resizing] {
     opacity: 0.8;
   }
-  
+
   /* Enhanced visual feedback during resize */
   .resizable-table [data-resizing="true"] {
     opacity: 1 !important;
@@ -296,13 +298,13 @@ input[type="week"] {
   .cursor-col-resize {
     cursor: col-resize;
   }
-  
+
   /* Apply the cursor to the resize handle and its children */
   [data-resizing],
   [data-resizing] * {
     cursor: col-resize !important;
   }
-  
+
   /* Ensure the resize handle is always on top */
   [data-resizing] {
     z-index: 10;
@@ -320,17 +322,17 @@ input[type="week"] {
     transform: scaleX(1.5);
     opacity: 1 !important;
   }
-  
+
   /* Active state during resize */
   .resizable-table [data-resizing="true"] {
     transform: scaleX(1.5) !important;
   }
-  
+
   /* Ensure the grip icon is positioned correctly */
   .resizable-table [data-resizing] svg {
     transition: opacity 0.15s ease, color 0.15s ease;
   }
-  
+
   .resizable-table [data-resizing]:hover svg {
     opacity: 1 !important;
     color: hsl(var(--primary)) !important;
