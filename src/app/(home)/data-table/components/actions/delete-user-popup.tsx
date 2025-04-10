@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 
 // ** Import 3rd Party Libs
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
 
 // ** Import UI Components
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ interface DeleteUserPopupProps {
   onOpenChange: (open: boolean) => void;
   userId: number;
   userName: string;
+  resetSelection?: () => void;
 }
 
 export function DeleteUserPopup({
@@ -33,6 +34,7 @@ export function DeleteUserPopup({
   onOpenChange,
   userId,
   userName,
+  resetSelection,
 }: DeleteUserPopupProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -46,7 +48,14 @@ export function DeleteUserPopup({
       if (response.success) {
         toast.success("User deleted successfully");
         onOpenChange(false);
-        router.refresh(); // Refresh the page to show updated data
+        
+        // Reset the selection state if the function is provided
+        if (resetSelection) {
+          resetSelection();
+        }
+        
+        // Refresh data
+        router.refresh();
         await queryClient.invalidateQueries({ queryKey: ["users"] });
       } else {
         toast.error(response.error || "Failed to delete user");

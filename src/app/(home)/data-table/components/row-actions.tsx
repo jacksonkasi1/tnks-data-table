@@ -25,16 +25,23 @@ import { DeleteUserPopup } from "./actions/delete-user-popup";
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
+  table: any; // Table instance
 }
 
 export function DataTableRowActions<TData>({
   row,
+  table,
 }: DataTableRowActionsProps<TData>) {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const user = userSchema.parse(row.original);
 
   const handleEdit = () => {
     console.log(user);
+  };
+
+  // Function to reset all selections
+  const resetSelection = () => {
+    table.resetRowSelection();
   };
 
   return (
@@ -66,6 +73,7 @@ export function DataTableRowActions<TData>({
         onOpenChange={setDeleteDialogOpen}
         userId={user.id}
         userName={user.name}
+        resetSelection={resetSelection}
       />
     </>
   );

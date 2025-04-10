@@ -127,7 +127,7 @@ export const getColumns = (
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Actions" />
       ),
-      cell: ({ row }) => <DataTableRowActions row={row} />,
+      cell: ({ row, table }) => <DataTableRowActions row={row} table={table} />,
       size: 100,
     },
   ];
