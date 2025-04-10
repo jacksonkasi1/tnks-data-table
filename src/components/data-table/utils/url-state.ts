@@ -1,6 +1,6 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState, useEffect, useRef } from "react";
-import { isDeepEqual } from "../hooks/deep-utils";
+import { isDeepEqual } from "../deep-utils";
 
 /**
  * Custom hook for managing URL-based state
