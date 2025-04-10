@@ -288,13 +288,6 @@ export function DataTableToolbar<TData>({
       <div className="flex items-center gap-2">
         {customToolbarComponent}
 
-        {config.enableRowSelection && totalSelectedItems > 0 ? (
-          <Button variant="outline" size="sm" onClick={deleteSelection}>
-            <TrashIcon className="mr-2 size-4" aria-hidden="true" />
-            Delete ({totalSelectedItems})
-          </Button>
-        ) : null}
-
         {config.enableExport && (
           <DataTableExport
             table={table as any}
@@ -354,7 +347,14 @@ export function DataTableToolbar<TData>({
                     variant="outline"
                     size="sm"
                     className="justify-start"
-                    onClick={() => table.resetRowSelection()}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      table.resetRowSelection();
+                      // Also call the parent component's deleteSelection function if available
+                      if (deleteSelection) {
+                        deleteSelection();
+                      }
+                    }}
                   >
                     <CheckSquare className="mr-2 h-4 w-4" />
                     Clear Selection
