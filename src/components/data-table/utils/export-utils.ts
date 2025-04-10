@@ -1,35 +1,27 @@
-import { User } from "@/app/(home)/data-table-components/schema";
+
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
-// Define column headers for User exports
-const USER_EXPORT_HEADERS = [
-  "id",
-  "name",
-  "email",
-  "phone",
-  "age",
-  "created_at",
-  "expense_count",
-  "total_expenses"
-];
+
+// Generic type for exportable data - should have string keys and values that can be converted to string
+export type ExportableData = Record<string, any>;
 
 /**
  * Convert array of objects to CSV string
  */
-function convertToCSV(data: User[], headers: string[]): string {
+function convertToCSV<T extends ExportableData>(data: T[], headers: string[]): string {
   if (data.length === 0) {
     throw new Error("No data to export");
   }
-  
+
   // Create CSV header row
   let csvContent = headers.join(",") + "\n";
   
   // Add data rows
-  data.forEach(user => {
+  data.forEach(item => {
     const row = headers.map(header => {
       // Get the value for this header
-      const value = user[header as keyof User];
+      const value = item[header as keyof T];
       
       // Convert all values to string and properly escape for CSV
       const cellValue = value === null || value === undefined ? "" : String(value);
@@ -66,14 +58,18 @@ function downloadFile(blob: Blob, filename: string) {
 /**
  * Export data to CSV file
  */
-export function exportToCSV(data: User[], filename: string): boolean {
+export function exportToCSV<T extends ExportableData>(
+  data: T[], 
+  filename: string, 
+  headers: string[] = Object.keys(data[0] || {})
+): boolean {
   if (data.length === 0) {
     console.error("No data to export");
     return false;
   }
 
   try {
-    const csvContent = convertToCSV(data, USER_EXPORT_HEADERS);
+    const csvContent = convertToCSV(data, headers);
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     downloadFile(blob, `${filename}.csv`);
     return true;
@@ -86,43 +82,45 @@ export function exportToCSV(data: User[], filename: string): boolean {
 /**
  * Export data to Excel file using xlsx package
  */
-export function exportToExcel(data: User[], filename: string): boolean {
+export function exportToExcel<T extends ExportableData>(
+  data: T[], 
+  filename: string,
+  columnMapping?: Record<string, string>, // Optional mapping of data keys to display names
+  columnWidths?: Array<{ wch: number }>
+): boolean {
   if (data.length === 0) {
     console.error("No data to export");
     return false;
   }
 
   try {
-    // Create a worksheet
-    const worksheet = XLSX.utils.json_to_sheet(
-      data.map(user => ({
-        ID: user.id,
-        Name: user.name,
-        Email: user.email,
-        Phone: user.phone,
-        Age: user.age,
-        "Created At": user.created_at,
-        "Expense Count": user.expense_count,
-        "Total Expenses": user.total_expenses
-      }))
-    );
+    // If no column mapping is provided, create one from the data keys
+    const mapping = columnMapping || 
+      Object.keys(data[0] || {}).reduce((acc, key) => {
+        acc[key] = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+        return acc;
+      }, {} as Record<string, string>);
+    
+    // Map data to worksheet format
+    const worksheetData = data.map(item => {
+      const row: Record<string, any> = {};
+      Object.entries(mapping).forEach(([key, displayName]) => {
+        row[displayName] = item[key];
+      });
+      return row;
+    });
 
-    // Set column widths
-    const columnWidths = [
-      { wch: 10 }, // ID
-      { wch: 20 }, // Name
-      { wch: 30 }, // Email
-      { wch: 15 }, // Phone
-      { wch: 8 },  // Age
-      { wch: 20 }, // Created At
-      { wch: 15 }, // Expense Count
-      { wch: 15 }  // Total Expenses
-    ];
-    worksheet["!cols"] = columnWidths;
+    // Create a worksheet
+    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+
+    // Set column widths if provided
+    if (columnWidths) {
+      worksheet["!cols"] = columnWidths;
+    }
 
     // Create a workbook
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
 
     // Generate Excel file
     const excelBuffer = XLSX.write(workbook, {
@@ -146,11 +144,17 @@ export function exportToExcel(data: User[], filename: string): boolean {
 /**
  * Unified export function that handles loading states and error handling
  */
-export async function exportData(
+export async function exportData<T extends ExportableData>(
   type: "csv" | "excel",
-  getData: () => Promise<User[]>,
+  getData: () => Promise<T[]>,
   onLoadingStart?: () => void,
-  onLoadingEnd?: () => void
+  onLoadingEnd?: () => void,
+  options?: {
+    headers?: string[];
+    columnMapping?: Record<string, string>;
+    columnWidths?: Array<{ wch: number }>;
+    entityName?: string;
+  }
 ): Promise<boolean> {
   try {
     // Start loading
@@ -166,7 +170,7 @@ export async function exportData(
     
     // Clear all loading toasts
     toast.dismiss(loadingToast);
-    toast.dismiss("fetch-selected-users");
+    toast.dismiss("fetch-selected-items");
     toast.dismiss("export-loading");
     
     if (exportData.length === 0) {
@@ -176,24 +180,27 @@ export async function exportData(
       return false;
     }
     
+    // Get entity name for display in notifications
+    const entityName = options?.entityName || "items";
+    
     // Generate timestamp for filename
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const filename = `users-export-${timestamp}`;
+    const filename = `${entityName}-export-${timestamp}`;
     
     // Export based on type
     let success = false;
     if (type === "csv") {
-      success = exportToCSV(exportData, filename);
+      success = exportToCSV(exportData, filename, options?.headers);
       if (success) {
         toast.success("Export successful", {
-          description: `Exported ${exportData.length} user(s) to CSV.`,
+          description: `Exported ${exportData.length} ${entityName} to CSV.`,
         });
       }
     } else {
-      success = exportToExcel(exportData, filename);
+      success = exportToExcel(exportData, filename, options?.columnMapping, options?.columnWidths);
       if (success) {
         toast.success("Export successful", {
-          description: `Exported ${exportData.length} user(s) to Excel.`,
+          description: `Exported ${exportData.length} ${entityName} to Excel.`,
         });
       }
     }
@@ -202,7 +209,7 @@ export async function exportData(
   } catch (error) {
     console.error("Error exporting data:", error);
     // Clear all loading toasts in case of error too
-    toast.dismiss("fetch-selected-users");
+    toast.dismiss("fetch-selected-items");
     toast.dismiss("export-loading");
     
     toast.error("Export failed", {
@@ -213,4 +220,4 @@ export async function exportData(
     // End loading regardless of result
     if (onLoadingEnd) onLoadingEnd();
   }
-} 
+}

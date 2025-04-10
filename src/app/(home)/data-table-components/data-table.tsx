@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/table";
 
 import { DataTablePagination } from "@/components/data-table/pagination";
-import { DataTableToolbar } from "./data-table-toolbar";
+import { DataTableToolbar } from "@/components/data-table/toolbar";
 import { fetchUsers, fetchUsersByIds } from "@/api/user/get-users";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -162,6 +162,46 @@ export function DataTable({ config = {} }: DataTableProps) {
     }
   }, []);
   
+  // Define column mappings and widths for export
+  const exportColumnMapping = React.useMemo(() => {
+    return {
+      id: "ID",
+      name: "Name",
+      email: "Email",
+      phone: "Phone",
+      age: "Age",
+      created_at: "Created At",
+      expense_count: "Expense Count",
+      total_expenses: "Total Expenses"
+    };
+  }, []);
+  
+  const exportColumnWidths = React.useMemo(() => {
+    return [
+      { wch: 10 }, // ID
+      { wch: 20 }, // Name
+      { wch: 30 }, // Email
+      { wch: 15 }, // Phone
+      { wch: 8 },  // Age
+      { wch: 20 }, // Created At
+      { wch: 15 }, // Expense Count
+      { wch: 15 }  // Total Expenses
+    ];
+  }, []);
+  
+  const exportHeaders = React.useMemo(() => {
+    return [
+      "id",
+      "name",
+      "email",
+      "phone",
+      "age",
+      "created_at",
+      "expense_count",
+      "total_expenses"
+    ];
+  }, []);
+  
   // Access the query client for fetching all data
   const queryClient = useQueryClient();
 
@@ -257,10 +297,46 @@ export function DataTable({ config = {} }: DataTableProps) {
       // Dismiss loading toast immediately after fetch completes
       toast.dismiss("fetch-selected-users");
       
-      // Combine with users from current page
-      const combinedUsers = [...usersInCurrentPage, ...fetchedUsers];
+      // Create a new array to track unique users by ID
+      const userMap = new Map<number, User>();
       
-      return combinedUsers;
+      // Add users from current page to the map 
+      usersInCurrentPage.forEach(user => {
+        userMap.set(user.id, user);
+      });
+      
+      // Add fetched users to the map (this will overwrite any duplicates)
+      fetchedUsers.forEach(user => {
+        userMap.set(user.id, user);
+      });
+      
+      // Convert map values back to array
+      const uniqueUsers = Array.from(userMap.values());
+      
+      // Verify that all selected IDs are present
+      const foundIds = uniqueUsers.map(user => user.id);
+      const missingIds = selectedIds.filter(id => !foundIds.includes(id));
+      
+      // If there are missing IDs, create placeholder data
+      if (missingIds.length > 0) {
+        console.warn(`Missing user data for IDs: ${missingIds.join(', ')}`);
+        const placeholderData = missingIds.map(id => ({
+          id,
+          name: `User ${id}`,
+          email: "(data unavailable)",
+          phone: "",
+          age: 0,
+          created_at: new Date().toISOString(),
+          expense_count: 0,
+          total_expenses: "0",
+        } as User));
+        
+        // Add placeholders to the results
+        uniqueUsers.push(...placeholderData);
+      }
+      
+      // Ensure we only have users that were actually selected
+      return uniqueUsers.filter(user => selectedUserIds[user.id]);
     } catch (error) {
       console.error("Error fetching selected users:", error);
       
@@ -283,7 +359,21 @@ export function DataTable({ config = {} }: DataTableProps) {
         total_expenses: "0",
       } as User));
       
-      return [...usersInCurrentPage, ...placeholderData];
+      // Create a map to ensure uniqueness by ID
+      const userMap = new Map<number, User>();
+      
+      // Add users from current page
+      usersInCurrentPage.forEach(user => {
+        userMap.set(user.id, user);
+      });
+      
+      // Add placeholder data
+      placeholderData.forEach(user => {
+        userMap.set(user.id, user);
+      });
+      
+      // Convert map values back to array
+      return Array.from(userMap.values());
     }
   }, [data?.data, selectedUserIds, totalSelectedItems]);
 
@@ -530,7 +620,7 @@ export function DataTable({ config = {} }: DataTableProps) {
     if (typeof page !== 'number' || page < 1) {
       console.warn('Invalid page number:', page);
     }
-    
+
     if (typeof pageSize !== 'number' || pageSize < 1) {
       console.warn('Invalid page size:', pageSize);
     }
@@ -563,8 +653,8 @@ export function DataTable({ config = {} }: DataTableProps) {
               setSelectedUserIds({});
             }
           }
-          getSelectedUsers={getSelectedUsers}
-          getAllUsers={getAllUsers}
+          getSelectedItems={getSelectedUsers}
+          getAllItems={getAllUsers}
           config={tableConfig}
           resetColumnSizing={() => {
             resetColumnSizing();
@@ -573,6 +663,10 @@ export function DataTable({ config = {} }: DataTableProps) {
               window.dispatchEvent(new Event('resize'));
             }, 100);
           }}
+          entityName="users"
+          columnMapping={exportColumnMapping}
+          columnWidths={exportColumnWidths}
+          headers={exportHeaders}
         />
       )}
       
