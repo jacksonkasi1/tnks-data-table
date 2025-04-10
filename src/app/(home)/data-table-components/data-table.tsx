@@ -82,7 +82,7 @@ export function DataTable({ config = {} }: DataTableProps) {
   };
   
   // Create a wrapper for useUrlState that respects the enableUrlState config
-  const useConditionalUrlState = <T,>(key: string, defaultValue: T, options = {}) => {
+  const useConditionalUrlState = <T,>(key: string, defaultValue: T, options = {}): readonly [T, React.Dispatch<React.SetStateAction<T>>] => {
     const [state, setState] = React.useState<T>(defaultValue);
     
     // Only use URL state if enabled in config
