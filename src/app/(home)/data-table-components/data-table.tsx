@@ -557,7 +557,7 @@ export function DataTable({ config = {} }: DataTableProps) {
           setSearch={setSearch}
           setDateRange={setDateRange}
           totalSelectedItems={totalSelectedItems}
-          clearSelection={
+          deleteSelection={
             () => {
               table.resetRowSelection();
               setSelectedUserIds({});
