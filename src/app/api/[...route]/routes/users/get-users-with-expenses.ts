@@ -92,8 +92,8 @@ router.get("/", async (c) => {
         phone: users.phone,
         age: users.age,
         created_at: users.created_at,
-        expense_count: count(expenses.id),
-        total_expenses: sql<string>`cast(sum(${expenses.amount}) as text)`,
+        expense_count: sql<number>`cast(coalesce(count(${expenses.id}), 0) as integer)`,
+        total_expenses: sql<string>`coalesce(cast(sum(${expenses.amount}) as text), '0')`,
       })
       .from(users)
       .leftJoin(expenses, eq(users.id, expenses.user_id))
@@ -102,8 +102,8 @@ router.get("/", async (c) => {
       .orderBy(
         sort_by === "total_expenses" 
           ? sort_order === "asc" 
-            ? asc(sql`sum(${expenses.amount})`) 
-            : desc(sql`sum(${expenses.amount})`)
+            ? asc(sql`coalesce(sum(${expenses.amount}), 0)`) 
+            : desc(sql`coalesce(sum(${expenses.amount}), 0)`)
           : sort_by === "name"
             ? sort_order === "asc" ? asc(users.name) : desc(users.name)
             : sort_by === "email"
