@@ -22,7 +22,7 @@ import { parseDateFromUrl } from "@/components/data-table/utils/url-state";
 import { TableConfig } from "@/components/data-table/table-config";
 import { formatDate } from "@/components/data-table/utils/date-formate";
 
-interface DataTableToolbarProps<TData extends Record<string, any>> {
+interface DataTableToolbarProps<TData> {
   table: Table<TData>;
   setSearch: (value: string | ((prev: string) => string)) => void;
   setDateRange: (
@@ -45,7 +45,7 @@ interface DataTableToolbarProps<TData extends Record<string, any>> {
   headers?: string[];
 }
 
-export function DataTableToolbar<TData extends Record<string, any>>({
+export function DataTableToolbar<TData>({
   table,
   setSearch,
   setDateRange,

@@ -13,7 +13,7 @@ import { exportData, ExportableData } from "@/components/data-table/utils/export
 import { useState } from "react";
 import { toast } from "sonner";
 
-interface DataTableExportProps<TData extends ExportableData> {
+interface DataTableExportProps<TData> {
   table: Table<TData>;
   data: TData[];
   selectedData?: TData[];
@@ -24,7 +24,7 @@ interface DataTableExportProps<TData extends ExportableData> {
   headers?: string[];
 }
 
-export function DataTableExport<TData extends ExportableData>({
+export function DataTableExport<TData>({
   table,
   data,
   selectedData,

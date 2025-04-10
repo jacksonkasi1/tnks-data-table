@@ -17,7 +17,7 @@ import {
   Row,
   ColumnResizeMode,
 } from "@tanstack/react-table";
-import { useEffect, useCallback, useMemo, useRef } from "react";
+import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 
 import {
   Table,
@@ -33,7 +33,6 @@ import { DataTableToolbar } from "@/components/data-table/toolbar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { getColumns } from "./columns";
 import { useTableConfig, TableConfig } from "@/components/data-table/table-config";
 import { useTableColumnResize } from "@/components/data-table/hooks/use-table-column-resize";
 import { DataTableResizer } from "@/components/data-table/data-table-resizer";
@@ -56,16 +55,56 @@ import {
   cleanupColumnResizing
 } from "@/components/data-table/utils/column-sizing";
 
-// Import the extracted modules
-import { useUsersData, useUserSelection } from "./data-fetching";
-import { useExportConfig } from "./export-config";
-
-interface DataTableProps {
+interface DataTableProps<TData, TValue> {
   // Allow overriding the table configuration
   config?: Partial<TableConfig>;
+  
+  // Column definitions generator
+  getColumns: (handleRowDeselection: ((rowId: string) => void) | null | undefined) => ColumnDef<TData, TValue>[];
+  
+  // Data fetching function
+  fetchDataFn: (params: {
+    page: number;
+    limit: number;
+    search: string;
+    from_date: string;
+    to_date: string;
+    sort_by: string;
+    sort_order: string;
+  }) => Promise<{
+    success: boolean;
+    data: TData[];
+    pagination: {
+      page: number;
+      limit: number;
+      total_pages: number;
+      total_items: number;
+    };
+  }>;
+  
+  // Function to fetch specific items by their IDs
+  fetchByIdsFn?: (ids: number[]) => Promise<TData[]>;
+  
+  // Export configuration
+  exportConfig: {
+    entityName: string;
+    columnMapping: Record<string, string>;
+    columnWidths: Array<{ wch: number }>;
+    headers: string[];
+  };
+  
+  // ID field in TData for tracking selected items
+  idField: keyof TData;
 }
 
-export function DataTable({ config = {} }: DataTableProps) {
+export function DataTable<TData, TValue>({
+  config = {},
+  getColumns,
+  fetchDataFn,
+  fetchByIdsFn,
+  exportConfig,
+  idField = 'id' as keyof TData
+}: DataTableProps<TData, TValue>) {
   // Load table configuration with any overrides
   const tableConfig = useTableConfig(config);
   
@@ -91,36 +130,203 @@ export function DataTable({ config = {} }: DataTableProps) {
   const [columnVisibility, setColumnVisibility] = useConditionalUrlState<Record<string, boolean>>("columnVisibility", {});
   const [columnFilters, setColumnFilters] = useConditionalUrlState<Array<{ id: string; value: any }>>("columnFilters", []);
 
+  // Internal states
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const [error, setError] = useState<any>(null);
+  const [data, setData] = useState<{
+    data: TData[];
+    pagination: {
+      page: number;
+      limit: number;
+      total_pages: number;
+      total_items: number;
+    };
+  } | null>(null);
+  
+  // Selection states
+  const [selectedIds, setSelectedIds] = useState<Record<string | number, boolean>>({});
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+
   // Convert the sorting from URL to the format TanStack Table expects
   const sorting = createSortingState(sortBy, sortOrder);
 
   // Ref for the table container for keyboard navigation
   const tableContainerRef = useRef<HTMLDivElement>(null!);
   
-  // Fetch users data using the extracted hook
-  const { data, isLoading, isError, error } = useUsersData(
-    page,
-    pageSize,
-    search,
-    dateRange,
-    sortBy,
-    sortOrder
-  );
+  // Fetch data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const result = await fetchDataFn({
+          page,
+          limit: pageSize,
+          search: preprocessSearch(search),
+          from_date: dateRange.from_date,
+          to_date: dateRange.to_date,
+          sort_by: sortBy,
+          sort_order: sortOrder,
+        });
+        setData(result);
+        setIsError(false);
+        setError(null);
+      } catch (err) {
+        setIsError(true);
+        setError(err);
+        console.error("Error fetching data:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  // Use the extracted user selection hooks
-  const {
-    rowSelection,
-    selectedUserIds,
-    setSelectedUserIds,
-    totalSelectedItems,
-    handleRowDeselection,
-    handleRowSelectionChange,
-    getSelectedUsers,
-    getAllUsers
-  } = useUserSelection(data);
+    fetchData();
+  }, [page, pageSize, search, dateRange, sortBy, sortOrder, fetchDataFn]);
 
-  // Get export configuration
-  const exportConfig = useExportConfig();
+  // Calculate total selected items
+  const totalSelectedItems = Object.keys(selectedIds).length;
+
+  // Handle row deselection
+  const handleRowDeselection = useCallback((rowId: string) => {
+    if (data?.data) {
+      const rowIndex = parseInt(rowId, 10);
+      const item = data.data[rowIndex];
+      
+      if (item) {
+        const itemId = String(item[idField]);
+        
+        // Remove from selectedIds
+        const newSelectedIds = { ...selectedIds };
+        delete newSelectedIds[itemId];
+        setSelectedIds(newSelectedIds);
+        
+        // Update rowSelection
+        const newRowSelection = { ...rowSelection } as Record<string, boolean>;
+        delete newRowSelection[rowId];
+        setRowSelection(newRowSelection);
+      }
+    }
+  }, [data?.data, selectedIds, rowSelection, idField]);
+
+  // Clear all selections
+  const clearAllSelections = useCallback(() => {
+    setSelectedIds({});
+    setRowSelection({});
+  }, []);
+
+  // Handle row selection changes
+  const handleRowSelectionChange = useCallback((updaterOrValue: any) => {
+    // Handle both direct values and updater functions
+    const newSelection = typeof updaterOrValue === 'function'
+      ? updaterOrValue(rowSelection)
+      : updaterOrValue;
+    
+    // Update the UI-level selection state
+    setRowSelection(newSelection);
+    
+    // For every row that's selected, we need to add its ID to our selectedIds object
+    const updatedSelectedIds = { ...selectedIds };
+    
+    // Process current page selections
+    if (data?.data) {
+      Object.keys(newSelection).forEach(rowId => {
+        const rowIndex = parseInt(rowId, 10);
+        const item = data.data[rowIndex];
+        
+        if (item) {
+          const itemId = String(item[idField]);
+          if (newSelection[rowId]) {
+            // Row is selected, add to selectedIds
+            updatedSelectedIds[itemId] = true;
+          } else {
+            // Row is deselected, remove from selectedIds
+            delete updatedSelectedIds[itemId];
+          }
+        }
+      });
+      
+      // Find rows that are no longer selected
+      data.data.forEach((item, index) => {
+        const rowId = String(index);
+        const itemId = String(item[idField]);
+        
+        if (!newSelection[rowId] && selectedIds[itemId]) {
+          // This row was previously selected but isn't anymore
+          delete updatedSelectedIds[itemId];
+        }
+      });
+    }
+    
+    setSelectedIds(updatedSelectedIds);
+  }, [data?.data, selectedIds, rowSelection, idField]);
+
+  // Get selected items data
+  const getSelectedItems = useCallback(async () => {
+    // If nothing is selected, return empty array
+    if (totalSelectedItems === 0 || Object.keys(selectedIds).length === 0) {
+      return [];
+    }
+    
+    // Get array of selected IDs from the selection object
+    const selectedIdsArray = Object.keys(selectedIds).map(id => 
+      typeof id === 'string' ? parseInt(id, 10) : id as number
+    );
+    
+    // First, get items from the current page that are selected
+    const itemsInCurrentPage = data?.data.filter(item => 
+      selectedIds[String(item[idField])]
+    ) || [];
+    
+    const idsInCurrentPage = itemsInCurrentPage.map(item => 
+      item[idField] as unknown as number
+    );
+    
+    // Find which IDs need to be fetched from the server
+    const idsToFetch = selectedIdsArray.filter(id => 
+      !idsInCurrentPage.some(currentId => 
+        currentId === id
+      )
+    );
+    
+    if (idsToFetch.length === 0 || !fetchByIdsFn) {
+      // All selected items are on the current page or we can't fetch by IDs
+      return itemsInCurrentPage;
+    }
+    
+    try {
+      // Fetch data for all missing items in a single batch
+      const fetchedItems = await fetchByIdsFn(idsToFetch);
+      
+      // Combine current page items with fetched items, ensuring no duplicates
+      const allSelectedItems = [...itemsInCurrentPage];
+      
+      // Add fetched items, avoiding duplicates
+      fetchedItems.forEach(fetchedItem => {
+        const fetchedId = fetchedItem[idField] as unknown as number | string;
+        
+        // Check if this item is already in our results
+        const exists = allSelectedItems.some(existingItem => 
+          existingItem[idField] === fetchedId
+        );
+        
+        if (!exists) {
+          allSelectedItems.push(fetchedItem);
+        }
+      });
+      
+      return allSelectedItems;
+      
+    } catch (error) {
+      console.error("Error fetching selected items:", error);
+      return itemsInCurrentPage;
+    }
+  }, [data?.data, selectedIds, totalSelectedItems, fetchByIdsFn, idField]);
+
+  // Get all items on current page
+  const getAllItems = useCallback((): TData[] => {
+    // Return current page data
+    return data?.data || [];
+  }, [data?.data]);
 
   // Memoize data to ensure stable reference
   const tableData = useMemo(() => data?.data || [], [data?.data]);
@@ -138,7 +344,7 @@ export function DataTable({ config = {} }: DataTableProps) {
   const columns = useMemo(() => {
     // If row selection is disabled, pass null as the handler which will hide the checkbox column
     return getColumns(tableConfig.enableRowSelection ? handleRowDeselection : null);
-  }, [handleRowDeselection, tableConfig.enableRowSelection]);
+  }, [getColumns, handleRowDeselection, tableConfig.enableRowSelection]);
 
   // Create event handlers using utility functions
   const handleSortingChange = useCallback(
@@ -172,21 +378,22 @@ export function DataTable({ config = {} }: DataTableProps) {
       const newRowSelection: Record<string, boolean> = {};
       
       // Map the current page's rows to their selection state
-      data.data.forEach((user, index) => {
-        if (selectedUserIds[user.id]) {
+      data.data.forEach((item, index) => {
+        const itemId = String(item[idField]);
+        if (selectedIds[itemId]) {
           newRowSelection[index] = true;
         }
       });
       
       // Only update if there's an actual change to prevent infinite loops
       if (JSON.stringify(newRowSelection) !== JSON.stringify(rowSelection)) {
-        handleRowSelectionChange(newRowSelection);
+        setRowSelection(newRowSelection);
       }
     }
-  }, [data?.data, selectedUserIds, handleRowSelectionChange, rowSelection]);
+  }, [data?.data, selectedIds, idField, rowSelection]);
 
   // Set up the table
-  const table = useReactTable({
+  const table = useReactTable<TData>({
     data: tableData,
     columns,
     state: {
@@ -255,7 +462,7 @@ export function DataTable({ config = {} }: DataTableProps) {
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Error</AlertTitle>
         <AlertDescription>
-          Failed to load users: {error instanceof Error ? error.message : "Unknown error"}
+          Failed to load data: {error instanceof Error ? error.message : "Unknown error"}
         </AlertDescription>
       </Alert>
     );
@@ -269,14 +476,9 @@ export function DataTable({ config = {} }: DataTableProps) {
           setSearch={setSearch}
           setDateRange={setDateRange}
           totalSelectedItems={totalSelectedItems}
-          deleteSelection={
-            () => {
-              table.resetRowSelection();
-              setSelectedUserIds({});
-            }
-          }
-          getSelectedItems={getSelectedUsers}
-          getAllItems={getAllUsers}
+          deleteSelection={clearAllSelections}
+          getSelectedItems={getSelectedItems}
+          getAllItems={getAllItems}
           config={tableConfig}
           resetColumnSizing={() => {
             resetColumnSizing();
@@ -333,7 +535,7 @@ export function DataTable({ config = {} }: DataTableProps) {
               </TableRow>
             ))}
           </TableHeader>
-          
+
           <TableBody>
             {isLoading ? (
               // Loading state
