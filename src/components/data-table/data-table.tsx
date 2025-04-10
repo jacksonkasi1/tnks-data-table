@@ -98,6 +98,9 @@ interface DataTableProps<TData, TValue> {
 
   // Custom page size options
   pageSizeOptions?: number[];
+
+  // Custom toolbar component
+  customToolbarComponent?: React.ReactNode;
 }
 
 export function DataTable<TData, TValue>({
@@ -107,7 +110,8 @@ export function DataTable<TData, TValue>({
   fetchByIdsFn,
   exportConfig,
   idField = 'id' as keyof TData,
-  pageSizeOptions
+  pageSizeOptions,
+  customToolbarComponent
 }: DataTableProps<TData, TValue>) {
   // Load table configuration with any overrides
   const tableConfig = useTableConfig(config);
@@ -495,6 +499,7 @@ export function DataTable<TData, TValue>({
           columnMapping={exportConfig.columnMapping}
           columnWidths={exportConfig.columnWidths}
           headers={exportConfig.headers}
+          customToolbarComponent={customToolbarComponent}
         />
       )}
       

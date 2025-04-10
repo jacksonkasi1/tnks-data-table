@@ -43,6 +43,7 @@ interface DataTableToolbarProps<TData> {
   columnMapping?: Record<string, string>;
   columnWidths?: Array<{ wch: number }>;
   headers?: string[];
+  customToolbarComponent?: React.ReactNode;
 }
 
 export function DataTableToolbar<TData>({
@@ -58,7 +59,8 @@ export function DataTableToolbar<TData>({
   entityName = "items",
   columnMapping,
   columnWidths,
-  headers
+  headers,
+  customToolbarComponent,
 }: DataTableToolbarProps<TData>) {
   // Get router and pathname for URL state reset
   const router = useRouter();
@@ -284,6 +286,8 @@ export function DataTableToolbar<TData>({
       </div>
 
       <div className="flex items-center gap-2">
+        {customToolbarComponent}
+
         {config.enableRowSelection && totalSelectedItems > 0 ? (
           <Button variant="outline" size="sm" onClick={deleteSelection}>
             <TrashIcon className="mr-2 size-4" aria-hidden="true" />
