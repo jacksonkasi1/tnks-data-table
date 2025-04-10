@@ -103,4 +103,4 @@ export function debounce<T extends (...args: any[]) => any>(
  */
 export function resetUrlState(router: any, pathname: string): void {
   router.replace(pathname);
-} 
+}

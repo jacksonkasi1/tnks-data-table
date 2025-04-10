@@ -82,12 +82,6 @@ export async function fetchUserExpenses({
   return userExpensesResponseSchema.parse(data);
 }
 
-/**
- * Format date to YYYY-MM-DD
- */
-export function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0];
-}
 
 /**
  * Fetch specific users by their IDs

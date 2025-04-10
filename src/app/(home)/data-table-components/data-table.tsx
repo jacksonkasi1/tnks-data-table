@@ -30,7 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { DataTablePagination } from "./data-table-pagination";
+import { DataTablePagination } from "@/components/data-table/pagination";
 import { DataTableToolbar } from "./data-table-toolbar";
 import { fetchUsers, fetchUsersByIds } from "@/api/user/get-users";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,10 +38,10 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { User } from "./schema";
 import { getColumns } from "./columns";
-import { useUrlState } from "./url-state";
-import { useTableConfig, TableConfig } from "./table-config";
-import { useTableColumnResize } from "./use-table-column-resize";
-import { DataTableResizer } from "./data-table-resizer";
+import { useUrlState } from "@/components/data-table/utils/url-state";
+import { useTableConfig, TableConfig } from "@/components/data-table/table-config";
+import { useTableColumnResize } from "@/components/data-table/hooks/use-table-column-resize";
+import { DataTableResizer } from "@/components/data-table/data-table-resizer";
 
 interface DataTableProps {
   // Allow overriding the table configuration
@@ -82,7 +82,7 @@ export function DataTable({ config = {} }: DataTableProps) {
   };
   
   // Create a wrapper for useUrlState that respects the enableUrlState config
-  const useConditionalUrlState = <T,>(key: string, defaultValue: T, options = {}) => {
+  const useConditionalUrlState = <T,>(key: string, defaultValue: T, options = {}): readonly [T, React.Dispatch<React.SetStateAction<T>>] => {
     const [state, setState] = React.useState<T>(defaultValue);
     
     // Only use URL state if enabled in config
@@ -557,7 +557,7 @@ export function DataTable({ config = {} }: DataTableProps) {
           setSearch={setSearch}
           setDateRange={setDateRange}
           totalSelectedItems={totalSelectedItems}
-          clearSelection={
+          deleteSelection={
             () => {
               table.resetRowSelection();
               setSelectedUserIds({});

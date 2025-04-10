@@ -2,8 +2,6 @@
  * Table configuration options
  * This file provides centralized configuration for the data table features
  */
-import { useState } from 'react';
-
 export interface TableConfig {
   // Enable/disable row selection
   enableRowSelection: boolean;
