@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { Suspense } from "react";
 
 // ** Import Table
 import UserTable from "./data-table";
@@ -13,7 +14,9 @@ export default function Home() {
       <h1 className="text-xl font-bold mb-4">Users List</h1>
 
       {/* DataTable with custom configuration */}
-      <UserTable />
+      <Suspense fallback={<div>Loading...</div>}>
+        <UserTable />
+      </Suspense>
     </main>
   );
 }
