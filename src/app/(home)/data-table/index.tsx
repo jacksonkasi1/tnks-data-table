@@ -1,28 +1,48 @@
 "use client";
 
-import { fetchUsersByIds } from "@/api/user/get-users";
-import { fetchUsers } from "@/api/user/get-users";
-import { getColumns } from "./columns";
+// ** Import Date Table
 import { DataTable } from "@/components/data-table/data-table";
-import { useExportConfig } from "./config";
+
+// ** Import Table Config & Columns
+import { getColumns } from "./components/columns";
+import { useExportConfig } from "./utils/config";
+
+// ** Import API
+import { fetchUsersByIds } from "@/api/user/fetch-users-by-ids";
+import { useUsersData } from "./utils/data-fetching";
+
+// ** Import Toolbar Options
+import { ToolbarOptions } from "./components/toolbar-options";
+
+// ** Import Types
+import { User } from "./schema";
 
 export default function UserTable() {
   return (
-    <DataTable
+    <DataTable<User, any>
       getColumns={getColumns}
       exportConfig={useExportConfig()}
-      fetchDataFn={fetchUsers}
+      fetchDataFn={useUsersData}
       fetchByIdsFn={fetchUsersByIds}
       idField="id"
       pageSizeOptions={[10, 20, 30, 40, 50, 100, 150]}
+      renderToolbarContent={({ selectedRows, resetSelection }) => (
+        <ToolbarOptions
+          selectedUsers={selectedRows.map(row => ({
+            id: row.id,
+            name: row.name,
+          }))}
+          resetSelection={resetSelection}
+        />
+      )}
       config={{
-        enableRowSelection: true, // Enable row selection
-        enableClickRowSelect: false, // Disable clicking rows to select them
-        enableKeyboardNavigation: true, // Enable keyboard navigation
-        enableSearch: true, // Enable search functionality
-        enableDateFilter: true, // Enable date filter
-        enableColumnVisibility: true, // Enable column visibility options
-        enableUrlState: true, // Enable URL state persistence
+        enableRowSelection: true,
+        enableClickRowSelect: false,
+        enableKeyboardNavigation: true,
+        enableSearch: true,
+        enableDateFilter: true,
+        enableColumnVisibility: true,
+        enableUrlState: true,
         columnResizingTableId: "user-table",
       }}
     />

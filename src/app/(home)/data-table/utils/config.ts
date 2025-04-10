@@ -12,7 +12,7 @@ export function useExportConfig() {
       email: "Email",
       phone: "Phone",
       age: "Age",
-      created_at: "Created At",
+      created_at: "Joined Date",
       expense_count: "Expense Count",
       total_expenses: "Total Expenses"
     };

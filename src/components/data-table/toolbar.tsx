@@ -43,6 +43,7 @@ interface DataTableToolbarProps<TData> {
   columnMapping?: Record<string, string>;
   columnWidths?: Array<{ wch: number }>;
   headers?: string[];
+  customToolbarComponent?: React.ReactNode;
 }
 
 export function DataTableToolbar<TData>({
@@ -58,7 +59,8 @@ export function DataTableToolbar<TData>({
   entityName = "items",
   columnMapping,
   columnWidths,
-  headers
+  headers,
+  customToolbarComponent,
 }: DataTableToolbarProps<TData>) {
   // Get router and pathname for URL state reset
   const router = useRouter();
@@ -69,6 +71,8 @@ export function DataTableToolbar<TData>({
 
   // Get search value directly from URL query parameter
   const searchParamFromUrl = searchParams.get("search") || "";
+  // Decode URL-encoded search parameter
+  const decodedSearchParam = searchParamFromUrl ? decodeURIComponent(searchParamFromUrl) : "";
 
   // Get search value from table state as fallback
   const currentSearchFromTable =
@@ -76,7 +80,7 @@ export function DataTableToolbar<TData>({
 
   // Initialize local search state with URL value or table state
   const [localSearch, setLocalSearch] = useState(
-    searchParamFromUrl || currentSearchFromTable
+    decodedSearchParam || currentSearchFromTable
   );
 
   // Track if the search is being updated locally
@@ -90,8 +94,10 @@ export function DataTableToolbar<TData>({
     }
 
     const searchFromUrl = searchParams.get("search") || "";
-    if (searchFromUrl !== localSearch) {
-      setLocalSearch(searchFromUrl);
+    const decodedSearchFromUrl = searchFromUrl ? decodeURIComponent(searchFromUrl) : "";
+    
+    if (decodedSearchFromUrl !== localSearch) {
+      setLocalSearch(decodedSearchFromUrl);
     }
   }, [searchParams, setLocalSearch, localSearch]);
 
@@ -276,7 +282,7 @@ export function DataTableToolbar<TData>({
                 to: dates.to,
               }}
               onDateSelect={handleDateSelect}
-              className="h-9 w-[250px] cursor-pointer"
+              className="h-9 w-fit cursor-pointer"
               variant="outline"
             />
           </div>
@@ -284,12 +290,7 @@ export function DataTableToolbar<TData>({
       </div>
 
       <div className="flex items-center gap-2">
-        {config.enableRowSelection && totalSelectedItems > 0 ? (
-          <Button variant="outline" size="sm" onClick={deleteSelection}>
-            <TrashIcon className="mr-2 size-4" aria-hidden="true" />
-            Delete ({totalSelectedItems})
-          </Button>
-        ) : null}
+        {customToolbarComponent}
 
         {config.enableExport && (
           <DataTableExport
@@ -350,7 +351,14 @@ export function DataTableToolbar<TData>({
                     variant="outline"
                     size="sm"
                     className="justify-start"
-                    onClick={() => table.resetRowSelection()}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      table.resetRowSelection();
+                      // Also call the parent component's deleteSelection function if available
+                      if (deleteSelection) {
+                        deleteSelection();
+                      }
+                    }}
                   >
                     <CheckSquare className="mr-2 h-4 w-4" />
                     Clear Selection

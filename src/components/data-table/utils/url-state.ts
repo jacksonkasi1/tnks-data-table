@@ -75,6 +75,12 @@ export function useUrlState<T>(
     if (paramValue === null) {
       return defaultValue;
     }
+    
+    // Special handling for search parameter to decode URL-encoded spaces
+    if (key === 'search' && typeof defaultValue === 'string') {
+      return decodeURIComponent(paramValue) as unknown as T;
+    }
+    
     return deserialize(paramValue);
   }, [searchParams, key, deserialize, defaultValue]);
   
@@ -143,7 +149,13 @@ export function useUrlState<T>(
     if (areEqual(resolvedValue, defaultValue)) {
       params.delete(key);
     } else {
-      params.set(key, serialize(resolvedValue));
+      // Special handling for search parameter to preserve spaces
+      if (key === 'search' && typeof resolvedValue === 'string') {
+        // Use encodeURIComponent to properly encode spaces as %20 instead of +
+        params.set(key, encodeURIComponent(resolvedValue));
+      } else {
+        params.set(key, serialize(resolvedValue));
+      }
     }
     
     // Only update URL if params actually changed
