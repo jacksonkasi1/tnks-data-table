@@ -7,5 +7,5 @@ export * from './keyboard-navigation';
 export * from './search';
 export * from './table-state-handlers';
 export * from './url-state';
-
-
+export * from './table-config';
+export * from './deep-utils';
