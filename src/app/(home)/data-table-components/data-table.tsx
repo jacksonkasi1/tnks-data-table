@@ -38,10 +38,10 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { User } from "./schema";
 import { getColumns } from "./columns";
-import { useUrlState } from "../../../components/data-table/utils/url-state";
-import { useTableConfig, TableConfig } from "../../../components/data-table/table-config";
-import { useTableColumnResize } from "../../../components/data-table/hooks/use-table-column-resize";
-import { DataTableResizer } from "./data-table-resizer";
+import { useUrlState } from "@/components/data-table/utils/url-state";
+import { useTableConfig, TableConfig } from "@/components/data-table/table-config";
+import { useTableColumnResize } from "@/components/data-table/hooks/use-table-column-resize";
+import { DataTableResizer } from "@/components/data-table/data-table-resizer";
 
 interface DataTableProps {
   // Allow overriding the table configuration
