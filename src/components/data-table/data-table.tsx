@@ -158,36 +158,39 @@ export function DataTable<TData, TValue>({
     };
   } | null>(null);
   
-  // OPTIMIZED: Use a single selection state with a memoized row selection derived from it
-  const [selectedItems, setSelectedItems] = useState<Record<string | number, boolean>>({});
+  // PERFORMANCE FIX: Use only one selection state as the source of truth
+  const [selectedItemIds, setSelectedItemIds] = useState<Record<string | number, boolean>>({});
   
-  // Extract dataItems for better performance (avoid recalculating)
+  // Convert the sorting from URL to the format TanStack Table expects
+  const sorting = useMemo(() => createSortingState(sortBy, sortOrder), [sortBy, sortOrder]);
+
+  // Get current data items - memoize to avoid recalculations
   const dataItems = useMemo(() => data?.data || [], [data?.data]);
   
-  // OPTIMIZED: Derive rowSelection from selectedItems in a memoized way
+  // PERFORMANCE FIX: Derive rowSelection from selectedItemIds using memoization
   const rowSelection = useMemo(() => {
     if (!dataItems.length) return {};
     
-    // Create row selection map based on current page data and selected items
+    // Map selectedItemIds to row indices for the table
     const selection: Record<string, boolean> = {};
     
     dataItems.forEach((item, index) => {
       const itemId = String(item[idField]);
-      if (selectedItems[itemId]) {
+      if (selectedItemIds[itemId]) {
         selection[String(index)] = true;
       }
     });
     
     return selection;
-  }, [dataItems, selectedItems, idField]);
+  }, [dataItems, selectedItemIds, idField]);
 
-  // Calculate total selected items - memoized to avoid recalculation
+  // Calculate total selected items - memoize to avoid recalculation
   const totalSelectedItems = useMemo(() => 
-    Object.keys(selectedItems).length,
-    [selectedItems]
+    Object.keys(selectedItemIds).length,
+    [selectedItemIds]
   );
 
-  // OPTIMIZED: Handle row deselection with direct item ID removal
+  // PERFORMANCE FIX: Optimized row deselection handler
   const handleRowDeselection = useCallback((rowId: string) => {
     if (!dataItems.length) return;
     
@@ -196,7 +199,8 @@ export function DataTable<TData, TValue>({
     
     if (item) {
       const itemId = String(item[idField]);
-      setSelectedItems(prev => {
+      setSelectedItemIds(prev => {
+        // Remove this item ID from selection
         const next = { ...prev };
         delete next[itemId];
         return next;
@@ -206,97 +210,96 @@ export function DataTable<TData, TValue>({
 
   // Clear all selections
   const clearAllSelections = useCallback(() => {
-    setSelectedItems({});
+    setSelectedItemIds({});
   }, []);
 
-  // OPTIMIZED: Handle row selection changes with batched updates
+  // PERFORMANCE FIX: Optimized row selection handler
   const handleRowSelectionChange = useCallback((updaterOrValue: any) => {
-    // Handle both direct values and updater functions
-    const rowSelectionValue = typeof updaterOrValue === 'function'
+    // Determine the new row selection value
+    const newRowSelection = typeof updaterOrValue === 'function'
       ? updaterOrValue(rowSelection)
       : updaterOrValue;
     
-    // Update selectedItems based on the new row selection
-    setSelectedItems(currentSelectedItems => {
-      // Start with current selection
-      const updatedSelection = { ...currentSelectedItems };
+    // Batch update selectedItemIds based on the new row selection
+    setSelectedItemIds(prev => {
+      const next = { ...prev };
       
-      // Process changes for current page only
+      // Process changes for current page
       if (dataItems.length) {
-        // First pass - process explicit selections/deselections for this page
-        Object.entries(rowSelectionValue).forEach(([rowId, isSelected]) => {
+        // First handle explicit selections in newRowSelection
+        Object.entries(newRowSelection).forEach(([rowId, isSelected]) => {
           const rowIndex = parseInt(rowId, 10);
-          const item = dataItems[rowIndex];
-          
-          if (item) {
+          if (rowIndex >= 0 && rowIndex < dataItems.length) {
+            const item = dataItems[rowIndex];
             const itemId = String(item[idField]);
+            
             if (isSelected) {
-              updatedSelection[itemId] = true;
+              next[itemId] = true;
             } else {
-              delete updatedSelection[itemId];
+              delete next[itemId];
             }
           }
         });
         
-        // Second pass - handle implicit deselections on this page
+        // Then handle implicit deselections (rows that were selected but aren't in newRowSelection)
         dataItems.forEach((item, index) => {
           const itemId = String(item[idField]);
           const rowId = String(index);
           
-          // If row is not in selection but item was previously selected, remove it
-          if (updatedSelection[itemId] && rowSelectionValue[rowId] === undefined) {
-            delete updatedSelection[itemId];
+          // If item was selected but isn't in new selection, deselect it
+          if (prev[itemId] && newRowSelection[rowId] === undefined) {
+            delete next[itemId];
           }
         });
       }
       
-      return updatedSelection;
+      return next;
     });
   }, [dataItems, rowSelection, idField]);
 
-  // Get selected items data - optimized to use memoization where possible
+  // Get selected items data
   const getSelectedItems = useCallback(async () => {
     // If nothing is selected, return empty array
     if (totalSelectedItems === 0) {
       return [];
     }
     
-    // Get array of selected IDs from the selection object
-    const selectedIdsArray = Object.keys(selectedItems).map(id => 
+    // Get IDs of selected items
+    const selectedIdsArray = Object.keys(selectedItemIds).map(id => 
       typeof id === 'string' ? parseInt(id, 10) : id as number
     );
     
-    // First, get items from the current page that are selected
+    // Find items from current page that are selected
     const itemsInCurrentPage = dataItems.filter(item => 
-      selectedItems[String(item[idField])]
+      selectedItemIds[String(item[idField])]
     );
     
+    // Get IDs of items on current page
     const idsInCurrentPage = itemsInCurrentPage.map(item => 
       item[idField] as unknown as number
     );
     
-    // Find which IDs need to be fetched from the server
+    // Find IDs that need to be fetched (not on current page)
     const idsToFetch = selectedIdsArray.filter(id => 
-      !idsInCurrentPage.some(currentId => currentId === id)
+      !idsInCurrentPage.includes(id)
     );
     
+    // If all selected items are on current page or we can't fetch by IDs
     if (idsToFetch.length === 0 || !fetchByIdsFn) {
-      // All selected items are on the current page or we can't fetch by IDs
       return itemsInCurrentPage;
     }
     
     try {
-      // Fetch data for all missing items in a single batch
+      // Fetch missing items in a single batch
       const fetchedItems = await fetchByIdsFn(idsToFetch);
       
-      // Return combined items without duplicates
+      // Combine current page items with fetched items
       return [...itemsInCurrentPage, ...fetchedItems];
-      
     } catch (error) {
       console.error("Error fetching selected items:", error);
       return itemsInCurrentPage;
     }
-  }, [dataItems, selectedItems, totalSelectedItems, fetchByIdsFn, idField]);
+  }, [dataItems, selectedItemIds, totalSelectedItems, fetchByIdsFn, idField]);
 
   // Get all items on current page
   const getAllItems = useCallback((): TData[] => {
@@ -306,7 +309,7 @@ export function DataTable<TData, TValue>({
 
   // Fetch data
   useEffect(() => {
-    // Check if the fetchDataFn is a query hook by looking for the isQueryHook property
+    // Check if the fetchDataFn is a query hook
     const isQueryHook = (fetchDataFn as any).isQueryHook === true;
     
     if (!isQueryHook) {
@@ -359,10 +362,7 @@ export function DataTable<TData, TValue>({
     }
   }, [queryResult]);
 
-  // Convert the sorting from URL to the format TanStack Table expects
-  const sorting = useMemo(() => createSortingState(sortBy, sortOrder), [sortBy, sortOrder]);
-
-  // Memoize pagination state
+  // Memoized pagination state
   const pagination = useMemo(
     () => ({
       pageIndex: page - 1,
@@ -376,7 +376,7 @@ export function DataTable<TData, TValue>({
 
   // Get columns with the deselection handler (memoize to avoid recreation on render)
   const columns = useMemo(() => {
-    // If row selection is disabled, pass null as the handler which will hide the checkbox column
+    // Only pass deselection handler if row selection is enabled
     return getColumns(tableConfig.enableRowSelection ? handleRowDeselection : null);
   }, [getColumns, handleRowDeselection, tableConfig.enableRowSelection]);
 
@@ -443,7 +443,7 @@ export function DataTable<TData, TValue>({
   const handleKeyDown = useCallback(
     createKeyboardNavigationHandler(table, (row, rowIndex) => {
       console.log(`Row ${rowIndex} activated`, row);
-      // Example: Navigate to detail page or open modal with the row data
+      // Example action on keyboard activation
     }),
     [table]
   );
@@ -453,7 +453,7 @@ export function DataTable<TData, TValue>({
     initializeColumnSizes(columns, tableId, setColumnSizing);
   }, [columns, tableId, setColumnSizing]);
 
-  // Update to use data attribute instead of class for better performance
+  // Handle column resizing
   useEffect(() => {
     const isResizingAny = 
       table.getHeaderGroups().some(headerGroup => 
@@ -505,7 +505,7 @@ export function DataTable<TData, TValue>({
           columnWidths={exportConfig.columnWidths}
           headers={exportConfig.headers}
           customToolbarComponent={renderToolbarContent && renderToolbarContent({
-            selectedRows: dataItems.filter((_, index) => rowSelection[index]) || [],
+            selectedRows: dataItems.filter((item) => selectedItemIds[String(item[idField])]),
             resetSelection: clearAllSelections
           })}
         />
@@ -588,7 +588,6 @@ export function DataTable<TData, TValue>({
                   onClick={tableConfig.enableClickRowSelect ? () => row.toggleSelected() : undefined}
                   onFocus={(e) => {
                     // Add a data attribute to the currently focused row
-                    // Remove it from all other rows first
                     document.querySelectorAll('[data-focused="true"]')
                       .forEach(el => el.removeAttribute('data-focused'));
                     e.currentTarget.setAttribute('data-focused', 'true');

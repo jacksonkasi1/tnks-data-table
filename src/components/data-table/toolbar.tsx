@@ -71,6 +71,8 @@ export function DataTableToolbar<TData>({
 
   // Get search value directly from URL query parameter
   const searchParamFromUrl = searchParams.get("search") || "";
+  // Decode URL-encoded search parameter
+  const decodedSearchParam = searchParamFromUrl ? decodeURIComponent(searchParamFromUrl) : "";
 
   // Get search value from table state as fallback
   const currentSearchFromTable =
@@ -78,7 +80,7 @@ export function DataTableToolbar<TData>({
 
   // Initialize local search state with URL value or table state
   const [localSearch, setLocalSearch] = useState(
-    searchParamFromUrl || currentSearchFromTable
+    decodedSearchParam || currentSearchFromTable
   );
 
   // Track if the search is being updated locally
@@ -92,8 +94,10 @@ export function DataTableToolbar<TData>({
     }
 
     const searchFromUrl = searchParams.get("search") || "";
-    if (searchFromUrl !== localSearch) {
-      setLocalSearch(searchFromUrl);
+    const decodedSearchFromUrl = searchFromUrl ? decodeURIComponent(searchFromUrl) : "";
+    
+    if (decodedSearchFromUrl !== localSearch) {
+      setLocalSearch(decodedSearchFromUrl);
     }
   }, [searchParams, setLocalSearch, localSearch]);
 
