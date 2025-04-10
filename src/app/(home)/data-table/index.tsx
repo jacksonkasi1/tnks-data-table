@@ -4,7 +4,7 @@ import { fetchUsersByIds } from "@/api/user/get-users";
 import { fetchUsers } from "@/api/user/get-users";
 import { getColumns } from "./columns";
 import { DataTable } from "@/components/data-table/data-table";
-import { useExportConfig } from "./export-config";
+import { useExportConfig } from "./config";
 
 export default function UserTable() {
   return (
@@ -20,7 +20,6 @@ export default function UserTable() {
         enableKeyboardNavigation: true, // Enable keyboard navigation
         enableSearch: true, // Enable search functionality
         enableDateFilter: true, // Enable date filter
-        enableColumnFilters: false, // Disable column filters
         enableColumnVisibility: true, // Enable column visibility options
         enableUrlState: true, // Enable URL state persistence
         columnResizingTableId: "user-table",
