@@ -10,10 +10,10 @@ import {
 import { DownloadIcon, Loader2 } from "lucide-react";
 import { Table } from "@tanstack/react-table";
 import { exportData, ExportableData } from "@/components/data-table/utils/export-utils";
-import { useState } from "react";
+import { JSX, useState } from "react";
 import { toast } from "sonner";
 
-interface DataTableExportProps<TData> {
+interface DataTableExportProps<TData extends ExportableData> {
   table: Table<TData>;
   data: TData[];
   selectedData?: TData[];
@@ -24,7 +24,7 @@ interface DataTableExportProps<TData> {
   headers?: string[];
 }
 
-export function DataTableExport<TData>({
+export function DataTableExport<TData extends ExportableData>({
   table,
   data,
   selectedData,
@@ -33,7 +33,7 @@ export function DataTableExport<TData>({
   columnMapping,
   columnWidths,
   headers
-}: DataTableExportProps<TData>) {
+}: DataTableExportProps<TData>): JSX.Element {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleExport = async (type: "csv" | "excel") => {
@@ -163,4 +163,4 @@ export function DataTableExport<TData>({
       </DropdownMenuContent>
     </DropdownMenu>
   );
-} 
+}
