@@ -17,9 +17,7 @@ import {
   Row,
   ColumnResizeMode,
 } from "@tanstack/react-table";
-import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { useRef } from "react";
+import { useEffect, useCallback, useMemo, useRef } from "react";
 
 import {
   Table,
@@ -32,16 +30,18 @@ import {
 
 import { DataTablePagination } from "@/components/data-table/pagination";
 import { DataTableToolbar } from "@/components/data-table/toolbar";
-import { fetchUsers, fetchUsersByIds } from "@/api/user/get-users";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { User } from "./schema";
 import { getColumns } from "./columns";
 import { useUrlState } from "@/components/data-table/utils/url-state";
 import { useTableConfig, TableConfig } from "@/components/data-table/table-config";
 import { useTableColumnResize } from "@/components/data-table/hooks/use-table-column-resize";
 import { DataTableResizer } from "@/components/data-table/data-table-resizer";
+
+// Import the extracted modules
+import { useUsersData, useUserSelection } from "./data-fetching";
+import { useExportConfig } from "./export-config";
 
 interface DataTableProps {
   // Allow overriding the table configuration
@@ -60,26 +60,6 @@ export function DataTable({ config = {} }: DataTableProps) {
     tableId,
     tableConfig.enableColumnResizing
   );
-  
-  // Function to preprocess search term before using in API calls
-  const preprocessSearch = (searchTerm: string): string => {
-    if (!searchTerm) return "";
-    
-    // Trim whitespace
-    let processed = searchTerm.trim();
-    
-    // Remove excessive whitespace within the search term
-    processed = processed.replace(/\s+/g, ' ');
-    
-    // Check for minimum length after processing (e.g., if it's just spaces)
-    if (processed.length < 1) return "";
-    
-    // Basic sanitization for API safety
-    // Remove any potentially harmful characters for the backend
-    processed = processed.replace(/[<>]/g, '');
-    
-    return processed;
-  };
   
   // Create a wrapper for useUrlState that respects the enableUrlState config
   const useConditionalUrlState = <T,>(key: string, defaultValue: T, options = {}): readonly [T, React.Dispatch<React.SetStateAction<T>>] => {
@@ -105,22 +85,42 @@ export function DataTable({ config = {} }: DataTableProps) {
   const [columnFilters, setColumnFilters] = useConditionalUrlState<Array<{ id: string; value: any }>>("columnFilters", []);
 
   // Convert the sorting from URL to the format TanStack Table expects
-  const sorting: SortingState = React.useMemo(() => {
+  const sorting: SortingState = useMemo(() => {
     return sortBy && sortOrder
       ? [{ id: sortBy, desc: sortOrder === "desc" }]
       : [];
   }, [sortBy, sortOrder]);
 
-  // Store persistent row selection across pages
-  // Use userId as the key instead of the row index (not in URL since it's transient)
-  const [selectedUserIds, setSelectedUserIds] = React.useState<Record<number, boolean>>({});
-  const [rowSelection, setRowSelection] = React.useState({});
-
   // Ref for the table container for keyboard navigation
   const tableContainerRef = useRef<HTMLDivElement>(null!);
   
+  // Fetch users data using the extracted hook
+  const { data, isLoading, isError, error } = useUsersData(
+    page,
+    pageSize,
+    search,
+    dateRange,
+    sortBy,
+    sortOrder
+  );
+
+  // Use the extracted user selection hooks
+  const {
+    rowSelection,
+    selectedUserIds,
+    setSelectedUserIds,
+    totalSelectedItems,
+    handleRowDeselection,
+    handleRowSelectionChange,
+    getSelectedUsers,
+    getAllUsers
+  } = useUserSelection(data);
+
+  // Get export configuration
+  const exportConfig = useExportConfig();
+  
   // Handle custom keyboard shortcuts
-  const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     // If the key is Space or Enter and we're not in an input/button, handle row selection/activation
     if ((e.key === " " || e.key === "Enter") && 
         !(e.target as HTMLElement).matches('input, button, [role="button"], [contenteditable="true"]')) {
@@ -161,70 +161,12 @@ export function DataTable({ config = {} }: DataTableProps) {
       }
     }
   }, []);
-  
-  // Define column mappings and widths for export
-  const exportColumnMapping = React.useMemo(() => {
-    return {
-      id: "ID",
-      name: "Name",
-      email: "Email",
-      phone: "Phone",
-      age: "Age",
-      created_at: "Created At",
-      expense_count: "Expense Count",
-      total_expenses: "Total Expenses"
-    };
-  }, []);
-  
-  const exportColumnWidths = React.useMemo(() => {
-    return [
-      { wch: 10 }, // ID
-      { wch: 20 }, // Name
-      { wch: 30 }, // Email
-      { wch: 15 }, // Phone
-      { wch: 8 },  // Age
-      { wch: 20 }, // Created At
-      { wch: 15 }, // Expense Count
-      { wch: 15 }  // Total Expenses
-    ];
-  }, []);
-  
-  const exportHeaders = React.useMemo(() => {
-    return [
-      "id",
-      "name",
-      "email",
-      "phone",
-      "age",
-      "created_at",
-      "expense_count",
-      "total_expenses"
-    ];
-  }, []);
-  
-  // Access the query client for fetching all data
-  const queryClient = useQueryClient();
-
-  // Fetch users data from API using React Query
-  const { data, isLoading, isError, error } = useQuery({
-    // Use the preprocessed search in the query key to prevent redundant fetches
-    queryKey: ["users", page, pageSize, preprocessSearch(search), dateRange, sortBy, sortOrder],
-    queryFn: () => fetchUsers({
-      page,
-      limit: pageSize,
-      search: preprocessSearch(search),
-      from_date: dateRange.from_date,
-      to_date: dateRange.to_date,
-      sort_by: sortBy,
-      sort_order: sortOrder,
-    }),
-  });
 
   // Memoize data to ensure stable reference
-  const tableData = React.useMemo(() => data?.data || [], [data?.data]);
+  const tableData = useMemo(() => data?.data || [], [data?.data]);
   
   // Memoized pagination state
-  const pagination = React.useMemo(
+  const pagination = useMemo(
     () => ({
       pageIndex: page - 1,
       pageSize,
@@ -232,203 +174,14 @@ export function DataTable({ config = {} }: DataTableProps) {
     [page, pageSize]
   );
 
-  // Function to handle individual row deselection - DEFINE THIS BEFORE USING IT
-  const handleRowDeselection = React.useCallback((rowId: string) => {
-    if (data?.data) {
-      const rowIndex = parseInt(rowId, 10);
-      const user = data.data[rowIndex];
-      
-      if (user) {
-        // Remove from selectedUserIds
-        const newSelectedUserIds = { ...selectedUserIds };
-        delete newSelectedUserIds[user.id];
-        setSelectedUserIds(newSelectedUserIds);
-        
-        // Update rowSelection
-        const newRowSelection = { ...rowSelection } as Record<string, boolean>;
-        delete newRowSelection[rowId];
-        setRowSelection(newRowSelection);
-      }
-    }
-  }, [data?.data, selectedUserIds, rowSelection, setSelectedUserIds, setRowSelection]);
-
-  // Calculate how many items are selected across all pages
-  const totalSelectedItems = Object.keys(selectedUserIds).length;
-
-  // Function to handle clearing all selections
-  const clearAllSelections = React.useCallback(() => {
-    setSelectedUserIds({});
-    setRowSelection({});
-  }, []);
-
-  // Get selected users data from all available data
-  const getSelectedUsers = React.useCallback(async (): Promise<User[]> => {
-    // If nothing is selected, return empty array
-    if (totalSelectedItems === 0 || Object.keys(selectedUserIds).length === 0) {
-      return [];
-    }
-    
-    // Get array of selected IDs from the selection object
-    const selectedIds = Object.keys(selectedUserIds).map(id => parseInt(id));
-    
-    // First, get users from the current page that are selected
-    const usersInCurrentPage = data?.data.filter(user => selectedUserIds[user.id]) || [];
-    const idsInCurrentPage = usersInCurrentPage.map(user => user.id);
-    
-    // Find which IDs need to be fetched from the server
-    const idsToFetch = selectedIds.filter(id => !idsInCurrentPage.includes(id));
-    
-    if (idsToFetch.length === 0) {
-      // All selected users are on the current page, no need for API call
-      return usersInCurrentPage;
-    }
-    
-    try {
-      // Show loading state for user
-      toast.loading("Preparing export data...", {
-        description: `Fetching data for ${idsToFetch.length} selected users...`,
-        id: "fetch-selected-users",
-        duration: 3000, // Auto dismiss after 3 seconds if not manually dismissed
-      });
-      
-      // Fetch data for all missing users in a single batch
-      const fetchedUsers = await fetchUsersByIds(idsToFetch);
-      
-      // Dismiss loading toast immediately after fetch completes
-      toast.dismiss("fetch-selected-users");
-      
-      // Create a new array to track unique users by ID
-      const userMap = new Map<number, User>();
-      
-      // Add users from current page to the map 
-      usersInCurrentPage.forEach(user => {
-        userMap.set(user.id, user);
-      });
-      
-      // Add fetched users to the map (this will overwrite any duplicates)
-      fetchedUsers.forEach(user => {
-        userMap.set(user.id, user);
-      });
-      
-      // Convert map values back to array
-      const uniqueUsers = Array.from(userMap.values());
-      
-      // Verify that all selected IDs are present
-      const foundIds = uniqueUsers.map(user => user.id);
-      const missingIds = selectedIds.filter(id => !foundIds.includes(id));
-      
-      // If there are missing IDs, create placeholder data
-      if (missingIds.length > 0) {
-        console.warn(`Missing user data for IDs: ${missingIds.join(', ')}`);
-        const placeholderData = missingIds.map(id => ({
-          id,
-          name: `User ${id}`,
-          email: "(data unavailable)",
-          phone: "",
-          age: 0,
-          created_at: new Date().toISOString(),
-          expense_count: 0,
-          total_expenses: "0",
-        } as User));
-        
-        // Add placeholders to the results
-        uniqueUsers.push(...placeholderData);
-      }
-      
-      // Ensure we only have users that were actually selected
-      return uniqueUsers.filter(user => selectedUserIds[user.id]);
-    } catch (error) {
-      console.error("Error fetching selected users:", error);
-      
-      // Dismiss loading toast
-      toast.dismiss("fetch-selected-users");
-      
-      toast.error("Error fetching user data", {
-        description: "Some user data could not be retrieved. The export may be incomplete.",
-      });
-      
-      // Fall back to returning current page + placeholder data for errors
-      const placeholderData = idsToFetch.map(id => ({
-        id,
-        name: `User ${id}`,
-        email: "(data unavailable)",
-        phone: "",
-        age: 0,
-        created_at: new Date().toISOString(),
-        expense_count: 0,
-        total_expenses: "0",
-      } as User));
-      
-      // Create a map to ensure uniqueness by ID
-      const userMap = new Map<number, User>();
-      
-      // Add users from current page
-      usersInCurrentPage.forEach(user => {
-        userMap.set(user.id, user);
-      });
-      
-      // Add placeholder data
-      placeholderData.forEach(user => {
-        userMap.set(user.id, user);
-      });
-      
-      // Convert map values back to array
-      return Array.from(userMap.values());
-    }
-  }, [data?.data, selectedUserIds, totalSelectedItems]);
-
-  // Get all available users data for export
-  const getAllUsers = React.useCallback((): User[] => {
-    // Return current page data
-    return data?.data || [];
-  }, [data?.data]);
-  
-  // Handler for row selection changes
-  const handleRowSelectionChange = React.useCallback((updaterOrValue: any) => {
-    // Handle both direct values and updater functions
-    const newSelection = typeof updaterOrValue === 'function'
-      ? updaterOrValue(rowSelection)
-      : updaterOrValue;
-    
-    // Update the UI-level selection state
-    setRowSelection(newSelection);
-    
-    // For every row that's selected, we need to add its user ID to our selectedUserIds object
-    const updatedSelectedUserIds = { ...selectedUserIds };
-    
-    // Process current page selections
-    if (data?.data) {
-      Object.keys(newSelection).forEach(rowId => {
-        const rowIndex = parseInt(rowId, 10);
-        const user = data.data[rowIndex];
-        
-        if (user) {
-          if (newSelection[rowId]) {
-            // Row is selected, add to selectedUserIds
-            updatedSelectedUserIds[user.id] = true;
-          } else {
-            // Row is deselected, remove from selectedUserIds
-            delete updatedSelectedUserIds[user.id];
-          }
-        }
-      });
-      
-      // Find rows that are no longer selected
-      data.data.forEach((user, index) => {
-        const rowId = String(index);
-        
-        if (!newSelection[rowId] && selectedUserIds[user.id]) {
-          // This row was previously selected but isn't anymore
-          delete updatedSelectedUserIds[user.id];
-        }
-      });
-    }
-    
-    setSelectedUserIds(updatedSelectedUserIds);
-  }, [data?.data, selectedUserIds, rowSelection]);
+  // Get columns with the deselection handler (memoize to avoid recreation on render)
+  const columns = useMemo(() => {
+    // If row selection is disabled, pass null as the handler which will hide the checkbox column
+    return getColumns(tableConfig.enableRowSelection ? handleRowDeselection : null);
+  }, [handleRowDeselection, tableConfig.enableRowSelection]);
 
   // Handler for sorting changes
-  const handleSortingChange = React.useCallback((updaterOrValue: any) => {
+  const handleSortingChange = useCallback((updaterOrValue: any) => {
     // Handle both direct values and updater functions
     const newSorting = typeof updaterOrValue === 'function'
       ? updaterOrValue(sorting)
@@ -445,19 +198,19 @@ export function DataTable({ config = {} }: DataTableProps) {
   }, [setSortBy, setSortOrder, sorting]);
 
   // Handler for column filter changes
-  const handleColumnFiltersChange = React.useCallback((updaterOrValue: any) => {
+  const handleColumnFiltersChange = useCallback((updaterOrValue: any) => {
     // Pass through to setColumnFilters (which handles updater functions)
     setColumnFilters(updaterOrValue);
   }, [setColumnFilters]);
 
   // Handler for column visibility changes
-  const handleColumnVisibilityChange = React.useCallback((updaterOrValue: any) => {
+  const handleColumnVisibilityChange = useCallback((updaterOrValue: any) => {
     // Pass through to setColumnVisibility (which handles updater functions)
     setColumnVisibility(updaterOrValue);
   }, [setColumnVisibility]);
 
   // Handler for pagination changes
-  const handlePaginationChange = React.useCallback((updaterOrValue: any) => {
+  const handlePaginationChange = useCallback((updaterOrValue: any) => {
     // Handle both direct values and updater functions
     const newPagination = typeof updaterOrValue === 'function'
       ? updaterOrValue({ pageIndex: page - 1, pageSize })
@@ -468,7 +221,7 @@ export function DataTable({ config = {} }: DataTableProps) {
   }, [setPage, setPageSize, page, pageSize]);
 
   // Handler for column sizing changes
-  const handleColumnSizingChange = React.useCallback((updaterOrValue: any) => {
+  const handleColumnSizingChange = useCallback((updaterOrValue: any) => {
     // Handle both direct values and updater functions
     const newSizing = typeof updaterOrValue === 'function'
       ? updaterOrValue(columnSizing)
@@ -476,25 +229,8 @@ export function DataTable({ config = {} }: DataTableProps) {
     setColumnSizing(newSizing);
   }, [columnSizing, setColumnSizing]);
 
-  // Get columns with the deselection handler (memoize to avoid recreation on render)
-  // IMPORTANT: Now we define columns AFTER handleRowDeselection is defined
-  const columns = React.useMemo(() => {
-    // If row selection is disabled, pass null as the handler which will hide the checkbox column
-    return getColumns(tableConfig.enableRowSelection ? handleRowDeselection : null);
-  }, [handleRowDeselection, tableConfig.enableRowSelection]);
-
-  // Reset selection when URL params change (pagination, filters, etc.)
-  React.useEffect(() => {
-    // When URL changes, we want to maintain selection across pages
-    if (page === 1 && search === "" && dateRange.from_date === "" && dateRange.to_date === "" && sortBy === "created_at" && sortOrder === "desc") {
-      // If we're at default state, we can optionally reset selection
-      // Uncomment the following line if you want selection to reset when all filters are removed
-      // clearAllSelections();
-    }
-  }, [page, pageSize, search, dateRange, sortBy, sortOrder]);
-
   // When data loads, sync rowSelection with selected user IDs
-  React.useEffect(() => {
+  useEffect(() => {
     if (data?.data) {
       const newRowSelection: Record<string, boolean> = {};
       
@@ -505,9 +241,12 @@ export function DataTable({ config = {} }: DataTableProps) {
         }
       });
       
-      setRowSelection(newRowSelection);
+      // Only update if there's an actual change to prevent infinite loops
+      if (JSON.stringify(newRowSelection) !== JSON.stringify(rowSelection)) {
+        handleRowSelectionChange(newRowSelection);
+      }
     }
-  }, [data?.data, selectedUserIds]);
+  }, [data?.data, selectedUserIds, handleRowSelectionChange, rowSelection]);
 
   // Set up the table
   const table = useReactTable({
@@ -542,9 +281,8 @@ export function DataTable({ config = {} }: DataTableProps) {
     getFacetedUniqueValues: getFacetedUniqueValues(),
   });
 
-
   // Initialize default column sizes when columns are available and no saved sizes exist
-  React.useEffect(() => {
+  useEffect(() => {
     if (columns.length > 0 && Object.keys(columnSizing).length === 0) {
       // Create a map of column id to its default size
       const defaultSizing: Record<string, number> = {};
@@ -574,7 +312,7 @@ export function DataTable({ config = {} }: DataTableProps) {
   }, [columns, columnSizing, setColumnSizing, tableId]);
 
   // Update to use data attribute instead of class for better performance
-  React.useEffect(() => {
+  useEffect(() => {
     const isResizingAny = 
       table.getHeaderGroups().some(headerGroup => 
         headerGroup.headers.some(header => header.column.getIsResizing())
@@ -591,40 +329,6 @@ export function DataTable({ config = {} }: DataTableProps) {
       document.body.removeAttribute('data-resizing');
     };
   }, [table]);
-
-  // Validate URL parameters to ensure proper format
-  React.useEffect(() => {
-    // Validate column filters
-    if (columnFilters.length > 0 && table) {
-      columnFilters.forEach(filter => {
-        if (!filter.id || filter.value === undefined) {
-          console.warn('Invalid column filter format:', filter);
-        }
-      });
-    }
-    
-    // Validate search parameter
-    if (search && typeof search !== 'string') {
-      console.warn('Invalid search format:', search);
-    }
-    
-    // Validate date range
-    if (dateRange && (
-      (dateRange.from_date && typeof dateRange.from_date !== 'string') || 
-      (dateRange.to_date && typeof dateRange.to_date !== 'string')
-    )) {
-      console.warn('Invalid date range format:', dateRange);
-    }
-    
-    // Validate pagination
-    if (typeof page !== 'number' || page < 1) {
-      console.warn('Invalid page number:', page);
-    }
-
-    if (typeof pageSize !== 'number' || pageSize < 1) {
-      console.warn('Invalid page size:', pageSize);
-    }
-  }, [columnFilters, search, dateRange, page, pageSize, table]);
 
   // Handle error state
   if (isError) {
@@ -663,10 +367,10 @@ export function DataTable({ config = {} }: DataTableProps) {
               window.dispatchEvent(new Event('resize'));
             }, 100);
           }}
-          entityName="users"
-          columnMapping={exportColumnMapping}
-          columnWidths={exportColumnWidths}
-          headers={exportHeaders}
+          entityName={exportConfig.entityName}
+          columnMapping={exportConfig.columnMapping}
+          columnWidths={exportConfig.columnWidths}
+          headers={exportConfig.headers}
         />
       )}
       
@@ -712,7 +416,6 @@ export function DataTable({ config = {} }: DataTableProps) {
             ))}
           </TableHeader>
           
-          {/* Keep the rest of the table body as it was */}
           <TableBody>
             {isLoading ? (
               // Loading state
