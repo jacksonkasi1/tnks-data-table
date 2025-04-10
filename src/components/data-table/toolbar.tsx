@@ -72,7 +72,9 @@ export function DataTableToolbar<TData>({
   // Get search value directly from URL query parameter
   const searchParamFromUrl = searchParams.get("search") || "";
   // Decode URL-encoded search parameter
-  const decodedSearchParam = searchParamFromUrl ? decodeURIComponent(searchParamFromUrl) : "";
+  const decodedSearchParam = searchParamFromUrl
+    ? decodeURIComponent(searchParamFromUrl)
+    : "";
 
   // Get search value from table state as fallback
   const currentSearchFromTable =
@@ -94,8 +96,10 @@ export function DataTableToolbar<TData>({
     }
 
     const searchFromUrl = searchParams.get("search") || "";
-    const decodedSearchFromUrl = searchFromUrl ? decodeURIComponent(searchFromUrl) : "";
-    
+    const decodedSearchFromUrl = searchFromUrl
+      ? decodeURIComponent(searchFromUrl)
+      : "";
+
     if (decodedSearchFromUrl !== localSearch) {
       setLocalSearch(decodedSearchFromUrl);
     }
@@ -263,17 +267,6 @@ export function DataTableToolbar<TData>({
           />
         )}
 
-        {isFiltered && (
-          <Button
-            variant="ghost"
-            onClick={handleResetFilters}
-            className="h-8 px-2 lg:px-3"
-          >
-            Reset
-            <Cross2Icon className="ml-2 h-4 w-4" />
-          </Button>
-        )}
-
         {config.enableDateFilter && (
           <div className="flex items-center">
             <CalendarDatePicker
@@ -286,6 +279,17 @@ export function DataTableToolbar<TData>({
               variant="outline"
             />
           </div>
+        )}
+
+        {isFiltered && (
+          <Button
+            variant="ghost"
+            onClick={handleResetFilters}
+            className="h-8 px-2 lg:px-3"
+          >
+            Reset
+            <Cross2Icon className="ml-2 h-4 w-4" />
+          </Button>
         )}
       </div>
 
