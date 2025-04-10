@@ -34,10 +34,27 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { getColumns } from "./columns";
-import { useUrlState } from "@/components/data-table/utils/url-state";
 import { useTableConfig, TableConfig } from "@/components/data-table/table-config";
 import { useTableColumnResize } from "@/components/data-table/hooks/use-table-column-resize";
 import { DataTableResizer } from "@/components/data-table/data-table-resizer";
+
+// Import core utilities
+import { preprocessSearch } from "@/components/data-table/utils/search";
+import { 
+  createSortingHandler, 
+  createColumnFiltersHandler,
+  createColumnVisibilityHandler,
+  createPaginationHandler,
+  createColumnSizingHandler,
+  createSortingState
+} from "@/components/data-table/utils/table-state-handlers";
+import { createKeyboardNavigationHandler } from "@/components/data-table/utils/keyboard-navigation";
+import { createConditionalStateHook } from "@/components/data-table/utils/conditional-state";
+import { 
+  initializeColumnSizes, 
+  trackColumnResizing,
+  cleanupColumnResizing
+} from "@/components/data-table/utils/column-sizing";
 
 // Import the extracted modules
 import { useUsersData, useUserSelection } from "./data-fetching";
@@ -61,18 +78,8 @@ export function DataTable({ config = {} }: DataTableProps) {
     tableConfig.enableColumnResizing
   );
   
-  // Create a wrapper for useUrlState that respects the enableUrlState config
-  const useConditionalUrlState = <T,>(key: string, defaultValue: T, options = {}): readonly [T, React.Dispatch<React.SetStateAction<T>>] => {
-    const [state, setState] = React.useState<T>(defaultValue);
-    
-    // Only use URL state if enabled in config
-    if (tableConfig.enableUrlState) {
-      return useUrlState<T>(key, defaultValue, options);
-    }
-    
-    // Otherwise use regular React state
-    return [state, setState] as const;
-  };
+  // Create conditional URL state hook based on config
+  const useConditionalUrlState = createConditionalStateHook(tableConfig.enableUrlState);
   
   // States for API parameters using conditional URL state
   const [page, setPage] = useConditionalUrlState("page", 1);
@@ -85,11 +92,7 @@ export function DataTable({ config = {} }: DataTableProps) {
   const [columnFilters, setColumnFilters] = useConditionalUrlState<Array<{ id: string; value: any }>>("columnFilters", []);
 
   // Convert the sorting from URL to the format TanStack Table expects
-  const sorting: SortingState = useMemo(() => {
-    return sortBy && sortOrder
-      ? [{ id: sortBy, desc: sortOrder === "desc" }]
-      : [];
-  }, [sortBy, sortOrder]);
+  const sorting = createSortingState(sortBy, sortOrder);
 
   // Ref for the table container for keyboard navigation
   const tableContainerRef = useRef<HTMLDivElement>(null!);
@@ -118,49 +121,6 @@ export function DataTable({ config = {} }: DataTableProps) {
 
   // Get export configuration
   const exportConfig = useExportConfig();
-  
-  // Handle custom keyboard shortcuts
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    // If the key is Space or Enter and we're not in an input/button, handle row selection/activation
-    if ((e.key === " " || e.key === "Enter") && 
-        !(e.target as HTMLElement).matches('input, button, [role="button"], [contenteditable="true"]')) {
-      // Prevent default behavior
-      e.preventDefault();
-      
-      // Find the focused row or cell
-      const focusedElement = document.activeElement;
-      if (focusedElement && (
-          focusedElement.getAttribute('role') === 'row' || 
-          focusedElement.getAttribute('role') === 'gridcell'
-      )) {
-        // Find the closest row
-        const rowElement = focusedElement.getAttribute('role') === 'row' 
-          ? focusedElement 
-          : focusedElement.closest('[role="row"]');
-          
-        if (rowElement) {
-          // Get the row index from the data-row-index attribute or the row id
-          const rowId = rowElement.getAttribute('data-row-index') || rowElement.id;
-          if (rowId) {
-            // Find the row by index and toggle its selection
-            const rowIndex = parseInt(rowId.replace(/^row-/, ''), 10);
-            const row = table.getRowModel().rows[rowIndex];
-            if (row) {
-              if (e.key === " ") {
-                // Space toggles selection
-                row.toggleSelected();
-              } else if (e.key === "Enter") {
-                // Enter activates the row - you can add custom action here
-                console.log(`Row ${rowIndex} activated`, row.original);
-                // Example: Navigate to detail page or open modal with the row data
-                // window.location.href = `/users/${row.original.id}`;
-              }
-            }
-          }
-        }
-      }
-    }
-  }, []);
 
   // Memoize data to ensure stable reference
   const tableData = useMemo(() => data?.data || [], [data?.data]);
@@ -180,54 +140,31 @@ export function DataTable({ config = {} }: DataTableProps) {
     return getColumns(tableConfig.enableRowSelection ? handleRowDeselection : null);
   }, [handleRowDeselection, tableConfig.enableRowSelection]);
 
-  // Handler for sorting changes
-  const handleSortingChange = useCallback((updaterOrValue: any) => {
-    // Handle both direct values and updater functions
-    const newSorting = typeof updaterOrValue === 'function'
-      ? updaterOrValue(sorting)
-      : updaterOrValue;
-    
-    if (newSorting.length > 0) {
-      setSortBy(newSorting[0].id);
-      setSortOrder(newSorting[0].desc ? "desc" : "asc");
-    } else {
-      // Default sorting
-      setSortBy("created_at");
-      setSortOrder("desc");
-    }
-  }, [setSortBy, setSortOrder, sorting]);
+  // Create event handlers using utility functions
+  const handleSortingChange = useCallback(
+    createSortingHandler(setSortBy, setSortOrder), 
+    [setSortBy, setSortOrder]
+  );
 
-  // Handler for column filter changes
-  const handleColumnFiltersChange = useCallback((updaterOrValue: any) => {
-    // Pass through to setColumnFilters (which handles updater functions)
-    setColumnFilters(updaterOrValue);
-  }, [setColumnFilters]);
+  const handleColumnFiltersChange = useCallback(
+    createColumnFiltersHandler(setColumnFilters),
+    [setColumnFilters]
+  );
 
-  // Handler for column visibility changes
-  const handleColumnVisibilityChange = useCallback((updaterOrValue: any) => {
-    // Pass through to setColumnVisibility (which handles updater functions)
-    setColumnVisibility(updaterOrValue);
-  }, [setColumnVisibility]);
+  const handleColumnVisibilityChange = useCallback(
+    createColumnVisibilityHandler(setColumnVisibility),
+    [setColumnVisibility]
+  );
 
-  // Handler for pagination changes
-  const handlePaginationChange = useCallback((updaterOrValue: any) => {
-    // Handle both direct values and updater functions
-    const newPagination = typeof updaterOrValue === 'function'
-      ? updaterOrValue({ pageIndex: page - 1, pageSize })
-      : updaterOrValue;
-    
-    setPage(newPagination.pageIndex + 1);
-    setPageSize(newPagination.pageSize);
-  }, [setPage, setPageSize, page, pageSize]);
+  const handlePaginationChange = useCallback(
+    createPaginationHandler(setPage, setPageSize, page, pageSize),
+    [setPage, setPageSize, page, pageSize]
+  );
 
-  // Handler for column sizing changes
-  const handleColumnSizingChange = useCallback((updaterOrValue: any) => {
-    // Handle both direct values and updater functions
-    const newSizing = typeof updaterOrValue === 'function'
-      ? updaterOrValue(columnSizing)
-      : updaterOrValue;
-    setColumnSizing(newSizing);
-  }, [columnSizing, setColumnSizing]);
+  const handleColumnSizingChange = useCallback(
+    createColumnSizingHandler(setColumnSizing, columnSizing),
+    [columnSizing, setColumnSizing]
+  );
 
   // When data loads, sync rowSelection with selected user IDs
   useEffect(() => {
@@ -281,35 +218,20 @@ export function DataTable({ config = {} }: DataTableProps) {
     getFacetedUniqueValues: getFacetedUniqueValues(),
   });
 
+  // Create keyboard navigation handler
+  const handleKeyDown = useCallback(
+    createKeyboardNavigationHandler(table, (row, rowIndex) => {
+      console.log(`Row ${rowIndex} activated`, row);
+      // Example: Navigate to detail page or open modal with the row data
+      // window.location.href = `/users/${row.id}`;
+    }),
+    [table]
+  );
+
   // Initialize default column sizes when columns are available and no saved sizes exist
   useEffect(() => {
-    if (columns.length > 0 && Object.keys(columnSizing).length === 0) {
-      // Create a map of column id to its default size
-      const defaultSizing: Record<string, number> = {};
-      columns.forEach(column => {
-        if ('id' in column && column.id && 'size' in column && typeof column.size === 'number') {
-          defaultSizing[column.id] = column.size;
-        } else if ('accessorKey' in column && typeof column.accessorKey === 'string' && 'size' in column && typeof column.size === 'number') {
-          defaultSizing[column.accessorKey] = column.size;
-        }
-      });
-      
-      // Only set if we have sizes to apply and there are no saved sizes in localStorage
-      if (Object.keys(defaultSizing).length > 0) {
-        // Check localStorage first
-        try {
-          const savedSizing = localStorage.getItem(`table-column-sizing-${tableId}`);
-          if (!savedSizing) {
-            // Only apply defaults if no saved sizing exists
-            setColumnSizing(defaultSizing);
-          }
-        } catch (error) {
-          // If localStorage fails, apply defaults
-          setColumnSizing(defaultSizing);
-        }
-      }
-    }
-  }, [columns, columnSizing, setColumnSizing, tableId]);
+    initializeColumnSizes(columns, tableId, setColumnSizing);
+  }, [columns, tableId, setColumnSizing]);
 
   // Update to use data attribute instead of class for better performance
   useEffect(() => {
@@ -318,15 +240,11 @@ export function DataTable({ config = {} }: DataTableProps) {
         headerGroup.headers.some(header => header.column.getIsResizing())
       );
     
-    if (isResizingAny) {
-      document.body.setAttribute('data-resizing', 'true');
-    } else {
-      document.body.removeAttribute('data-resizing');
-    }
+    trackColumnResizing(isResizingAny);
     
     // Cleanup on unmount
     return () => {
-      document.body.removeAttribute('data-resizing');
+      cleanupColumnResizing();
     };
   }, [table]);
 
