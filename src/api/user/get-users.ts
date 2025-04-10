@@ -1,6 +1,6 @@
 // API helper functions to interact with the backend API
 
-import { usersResponseSchema, userExpensesResponseSchema, User, Expense } from "@/app/(home)/data-table-components/schema";
+import { usersResponseSchema, userExpensesResponseSchema, User } from "@/app/(home)/data-table/schema";
 
 const API_BASE_URL = "/api";
 
@@ -26,7 +26,7 @@ export async function fetchUsers({
 }) {
   // Process search term - trim and sanitize
   const processedSearch = search ? search.trim().replace(/\s+/g, ' ') : "";
-  
+
   // Build query parameters
   const params = new URLSearchParams();
   if (processedSearch) params.append("search", processedSearch);

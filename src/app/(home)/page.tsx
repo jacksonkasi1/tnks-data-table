@@ -1,4 +1,4 @@
-import { DataTable } from "./data-table-components/data-table";
+import { DataTable } from "./data-table/data-table";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
