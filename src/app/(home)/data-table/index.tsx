@@ -14,6 +14,7 @@ export default function UserTable() {
       fetchDataFn={fetchUsers}
       fetchByIdsFn={fetchUsersByIds}
       idField="id"
+      pageSizeOptions={[10, 20, 30, 40, 50, 100, 150]}
       config={{
         enableRowSelection: true, // Enable row selection
         enableClickRowSelect: false, // Disable clicking rows to select them

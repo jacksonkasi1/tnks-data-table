@@ -95,6 +95,9 @@ interface DataTableProps<TData, TValue> {
   
   // ID field in TData for tracking selected items
   idField: keyof TData;
+
+  // Custom page size options
+  pageSizeOptions?: number[];
 }
 
 export function DataTable<TData, TValue>({
@@ -103,7 +106,8 @@ export function DataTable<TData, TValue>({
   fetchDataFn,
   fetchByIdsFn,
   exportConfig,
-  idField = 'id' as keyof TData
+  idField = 'id' as keyof TData,
+  pageSizeOptions
 }: DataTableProps<TData, TValue>) {
   // Load table configuration with any overrides
   const tableConfig = useTableConfig(config);
@@ -612,6 +616,7 @@ export function DataTable<TData, TValue>({
         <DataTablePagination 
           table={table} 
           totalItems={data?.pagination.total_items || 0}
+          pageSizeOptions={pageSizeOptions || [10, 20, 30, 40, 50]}
         />
       )}
     </div>
