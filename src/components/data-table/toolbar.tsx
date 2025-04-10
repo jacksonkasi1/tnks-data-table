@@ -20,7 +20,7 @@ import { DataTableExport } from "./data-export";
 import { resetUrlState } from "@/components/data-table/utils/deep-utils";
 import { parseDateFromUrl } from "@/components/data-table/utils/url-state";
 import { TableConfig } from "@/components/data-table/utils/table-config";
-import { formatDate } from "@/components/data-table/utils/date-formate";
+import { formatDate } from "@/components/data-table/utils/date-format";
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
