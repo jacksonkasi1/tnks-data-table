@@ -11,7 +11,6 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-  Row,
   ColumnResizeMode,
 } from "@tanstack/react-table";
 import { useEffect, useCallback, useMemo, useRef, useState } from "react";
@@ -159,16 +158,152 @@ export function DataTable<TData, TValue>({
     };
   } | null>(null);
   
-  // Selection states
-  const [selectedIds, setSelectedIds] = useState<Record<string | number, boolean>>({});
-  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
-
-  // Convert the sorting from URL to the format TanStack Table expects
-  const sorting = createSortingState(sortBy, sortOrder);
-
-  // Ref for the table container for keyboard navigation
-  const tableContainerRef = useRef<HTMLDivElement>(null!);
+  // OPTIMIZED: Use a single selection state with a memoized row selection derived from it
+  const [selectedItems, setSelectedItems] = useState<Record<string | number, boolean>>({});
   
+  // Extract dataItems for better performance (avoid recalculating)
+  const dataItems = useMemo(() => data?.data || [], [data?.data]);
+  
+  // OPTIMIZED: Derive rowSelection from selectedItems in a memoized way
+  const rowSelection = useMemo(() => {
+    if (!dataItems.length) return {};
+    
+    // Create row selection map based on current page data and selected items
+    const selection: Record<string, boolean> = {};
+    
+    dataItems.forEach((item, index) => {
+      const itemId = String(item[idField]);
+      if (selectedItems[itemId]) {
+        selection[String(index)] = true;
+      }
+    });
+    
+    return selection;
+  }, [dataItems, selectedItems, idField]);
+
+  // Calculate total selected items - memoized to avoid recalculation
+  const totalSelectedItems = useMemo(() => 
+    Object.keys(selectedItems).length,
+    [selectedItems]
+  );
+
+  // OPTIMIZED: Handle row deselection with direct item ID removal
+  const handleRowDeselection = useCallback((rowId: string) => {
+    if (!dataItems.length) return;
+    
+    const rowIndex = parseInt(rowId, 10);
+    const item = dataItems[rowIndex];
+    
+    if (item) {
+      const itemId = String(item[idField]);
+      setSelectedItems(prev => {
+        const next = { ...prev };
+        delete next[itemId];
+        return next;
+      });
+    }
+  }, [dataItems, idField]);
+
+  // Clear all selections
+  const clearAllSelections = useCallback(() => {
+    setSelectedItems({});
+  }, []);
+
+  // OPTIMIZED: Handle row selection changes with batched updates
+  const handleRowSelectionChange = useCallback((updaterOrValue: any) => {
+    // Handle both direct values and updater functions
+    const rowSelectionValue = typeof updaterOrValue === 'function'
+      ? updaterOrValue(rowSelection)
+      : updaterOrValue;
+    
+    // Update selectedItems based on the new row selection
+    setSelectedItems(currentSelectedItems => {
+      // Start with current selection
+      const updatedSelection = { ...currentSelectedItems };
+      
+      // Process changes for current page only
+      if (dataItems.length) {
+        // First pass - process explicit selections/deselections for this page
+        Object.entries(rowSelectionValue).forEach(([rowId, isSelected]) => {
+          const rowIndex = parseInt(rowId, 10);
+          const item = dataItems[rowIndex];
+          
+          if (item) {
+            const itemId = String(item[idField]);
+            if (isSelected) {
+              updatedSelection[itemId] = true;
+            } else {
+              delete updatedSelection[itemId];
+            }
+          }
+        });
+        
+        // Second pass - handle implicit deselections on this page
+        dataItems.forEach((item, index) => {
+          const itemId = String(item[idField]);
+          const rowId = String(index);
+          
+          // If row is not in selection but item was previously selected, remove it
+          if (updatedSelection[itemId] && rowSelectionValue[rowId] === undefined) {
+            delete updatedSelection[itemId];
+          }
+        });
+      }
+      
+      return updatedSelection;
+    });
+  }, [dataItems, rowSelection, idField]);
+
+  // Get selected items data - optimized to use memoization where possible
+  const getSelectedItems = useCallback(async () => {
+    // If nothing is selected, return empty array
+    if (totalSelectedItems === 0) {
+      return [];
+    }
+    
+    // Get array of selected IDs from the selection object
+    const selectedIdsArray = Object.keys(selectedItems).map(id => 
+      typeof id === 'string' ? parseInt(id, 10) : id as number
+    );
+    
+    // First, get items from the current page that are selected
+    const itemsInCurrentPage = dataItems.filter(item => 
+      selectedItems[String(item[idField])]
+    );
+    
+    const idsInCurrentPage = itemsInCurrentPage.map(item => 
+      item[idField] as unknown as number
+    );
+    
+    // Find which IDs need to be fetched from the server
+    const idsToFetch = selectedIdsArray.filter(id => 
+      !idsInCurrentPage.some(currentId => currentId === id)
+    );
+    
+    if (idsToFetch.length === 0 || !fetchByIdsFn) {
+      // All selected items are on the current page or we can't fetch by IDs
+      return itemsInCurrentPage;
+    }
+    
+    try {
+      // Fetch data for all missing items in a single batch
+      const fetchedItems = await fetchByIdsFn(idsToFetch);
+      
+      // Return combined items without duplicates
+      return [...itemsInCurrentPage, ...fetchedItems];
+      
+    } catch (error) {
+      console.error("Error fetching selected items:", error);
+      return itemsInCurrentPage;
+    }
+  }, [dataItems, selectedItems, totalSelectedItems, fetchByIdsFn, idField]);
+
+  // Get all items on current page
+  const getAllItems = useCallback((): TData[] => {
+    // Return current page data
+    return dataItems;
+  }, [dataItems]);
+
   // Fetch data
   useEffect(() => {
     // Check if the fetchDataFn is a query hook by looking for the isQueryHook property
@@ -224,155 +359,10 @@ export function DataTable<TData, TValue>({
     }
   }, [queryResult]);
 
-  // Calculate total selected items
-  const totalSelectedItems = Object.keys(selectedIds).length;
+  // Convert the sorting from URL to the format TanStack Table expects
+  const sorting = useMemo(() => createSortingState(sortBy, sortOrder), [sortBy, sortOrder]);
 
-  // Handle row deselection
-  const handleRowDeselection = useCallback((rowId: string) => {
-    if (data?.data) {
-      const rowIndex = parseInt(rowId, 10);
-      const item = data.data[rowIndex];
-      
-      if (item) {
-        const itemId = String(item[idField]);
-        
-        // Remove from selectedIds
-        const newSelectedIds = { ...selectedIds };
-        delete newSelectedIds[itemId];
-        setSelectedIds(newSelectedIds);
-        
-        // Update rowSelection
-        const newRowSelection = { ...rowSelection } as Record<string, boolean>;
-        delete newRowSelection[rowId];
-        setRowSelection(newRowSelection);
-      }
-    }
-  }, [data?.data, selectedIds, rowSelection, idField]);
-
-  // Clear all selections
-  const clearAllSelections = useCallback(() => {
-    setSelectedIds({});
-    setRowSelection({});
-  }, []);
-
-  // Handle row selection changes
-  const handleRowSelectionChange = useCallback((updaterOrValue: any) => {
-    // Handle both direct values and updater functions
-    const newSelection = typeof updaterOrValue === 'function'
-      ? updaterOrValue(rowSelection)
-      : updaterOrValue;
-    
-    // Update the UI-level selection state
-    setRowSelection(newSelection);
-    
-    // For every row that's selected, we need to add its ID to our selectedIds object
-    const updatedSelectedIds = { ...selectedIds };
-    
-    // Process current page selections
-    if (data?.data) {
-      Object.keys(newSelection).forEach(rowId => {
-        const rowIndex = parseInt(rowId, 10);
-        const item = data.data[rowIndex];
-        
-        if (item) {
-          const itemId = String(item[idField]);
-          if (newSelection[rowId]) {
-            // Row is selected, add to selectedIds
-            updatedSelectedIds[itemId] = true;
-          } else {
-            // Row is deselected, remove from selectedIds
-            delete updatedSelectedIds[itemId];
-          }
-        }
-      });
-      
-      // Find rows that are no longer selected
-      data.data.forEach((item, index) => {
-        const rowId = String(index);
-        const itemId = String(item[idField]);
-        
-        if (!newSelection[rowId] && selectedIds[itemId]) {
-          // This row was previously selected but isn't anymore
-          delete updatedSelectedIds[itemId];
-        }
-      });
-    }
-    
-    setSelectedIds(updatedSelectedIds);
-  }, [data?.data, selectedIds, rowSelection, idField]);
-
-  // Get selected items data
-  const getSelectedItems = useCallback(async () => {
-    // If nothing is selected, return empty array
-    if (totalSelectedItems === 0 || Object.keys(selectedIds).length === 0) {
-      return [];
-    }
-    
-    // Get array of selected IDs from the selection object
-    const selectedIdsArray = Object.keys(selectedIds).map(id => 
-      typeof id === 'string' ? parseInt(id, 10) : id as number
-    );
-    
-    // First, get items from the current page that are selected
-    const itemsInCurrentPage = data?.data.filter(item => 
-      selectedIds[String(item[idField])]
-    ) || [];
-    
-    const idsInCurrentPage = itemsInCurrentPage.map(item => 
-      item[idField] as unknown as number
-    );
-    
-    // Find which IDs need to be fetched from the server
-    const idsToFetch = selectedIdsArray.filter(id => 
-      !idsInCurrentPage.some(currentId => 
-        currentId === id
-      )
-    );
-    
-    if (idsToFetch.length === 0 || !fetchByIdsFn) {
-      // All selected items are on the current page or we can't fetch by IDs
-      return itemsInCurrentPage;
-    }
-    
-    try {
-      // Fetch data for all missing items in a single batch
-      const fetchedItems = await fetchByIdsFn(idsToFetch);
-      
-      // Combine current page items with fetched items, ensuring no duplicates
-      const allSelectedItems = [...itemsInCurrentPage];
-      
-      // Add fetched items, avoiding duplicates
-      fetchedItems.forEach(fetchedItem => {
-        const fetchedId = fetchedItem[idField] as unknown as number | string;
-        
-        // Check if this item is already in our results
-        const exists = allSelectedItems.some(existingItem => 
-          existingItem[idField] === fetchedId
-        );
-        
-        if (!exists) {
-          allSelectedItems.push(fetchedItem);
-        }
-      });
-      
-      return allSelectedItems;
-      
-    } catch (error) {
-      console.error("Error fetching selected items:", error);
-      return itemsInCurrentPage;
-    }
-  }, [data?.data, selectedIds, totalSelectedItems, fetchByIdsFn, idField]);
-
-  // Get all items on current page
-  const getAllItems = useCallback((): TData[] => {
-    // Return current page data
-    return data?.data || [];
-  }, [data?.data]);
-
-  // Memoize data to ensure stable reference
-  const tableData = useMemo(() => data?.data || [], [data?.data]);
-  
-  // Memoized pagination state
+  // Memoize pagination state
   const pagination = useMemo(
     () => ({
       pageIndex: page - 1,
@@ -380,6 +370,9 @@ export function DataTable<TData, TValue>({
     }),
     [page, pageSize]
   );
+
+  // Ref for the table container for keyboard navigation
+  const tableContainerRef = useRef<HTMLDivElement>(null!);
 
   // Get columns with the deselection handler (memoize to avoid recreation on render)
   const columns = useMemo(() => {
@@ -413,29 +406,9 @@ export function DataTable<TData, TValue>({
     [columnSizing, setColumnSizing]
   );
 
-  // When data loads, sync rowSelection with selected user IDs
-  useEffect(() => {
-    if (data?.data) {
-      const newRowSelection: Record<string, boolean> = {};
-      
-      // Map the current page's rows to their selection state
-      data.data.forEach((item, index) => {
-        const itemId = String(item[idField]);
-        if (selectedIds[itemId]) {
-          newRowSelection[index] = true;
-        }
-      });
-      
-      // Only update if there's an actual change to prevent infinite loops
-      if (JSON.stringify(newRowSelection) !== JSON.stringify(rowSelection)) {
-        setRowSelection(newRowSelection);
-      }
-    }
-  }, [data?.data, selectedIds, idField, rowSelection]);
-
-  // Set up the table
+  // Set up the table with memoized state
   const table = useReactTable<TData>({
-    data: tableData,
+    data: dataItems,
     columns,
     state: {
       sorting,
@@ -471,7 +444,6 @@ export function DataTable<TData, TValue>({
     createKeyboardNavigationHandler(table, (row, rowIndex) => {
       console.log(`Row ${rowIndex} activated`, row);
       // Example: Navigate to detail page or open modal with the row data
-      // window.location.href = `/users/${row.id}`;
     }),
     [table]
   );
@@ -533,7 +505,7 @@ export function DataTable<TData, TValue>({
           columnWidths={exportConfig.columnWidths}
           headers={exportConfig.headers}
           customToolbarComponent={renderToolbarContent && renderToolbarContent({
-            selectedRows: data?.data.filter((_, index) => rowSelection[index]) || [],
+            selectedRows: dataItems.filter((_, index) => rowSelection[index]) || [],
             resetSelection: clearAllSelections
           })}
         />
@@ -654,7 +626,7 @@ export function DataTable<TData, TValue>({
       </div>
       
       {tableConfig.enablePagination && (
-        <DataTablePagination 
+        <DataTablePagination
           table={table} 
           totalItems={data?.pagination.total_items || 0}
           pageSizeOptions={pageSizeOptions || [10, 20, 30, 40, 50]}
