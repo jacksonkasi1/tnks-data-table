@@ -1,14 +1,15 @@
-// ** Third Party Libraries
 import { Hono } from "hono";
+
+// ** Third Party Libraries
 import { z } from "zod";
 
 // ** Drizzle
-import { and, asc, between, count, desc, eq, ilike, or, sql, sum, inArray } from "drizzle-orm";
+import { and, asc, between, count, desc, eq, ilike, or, sql } from "drizzle-orm";
 
-// ** Database
+// ** Import DB
 import { db } from "@/db";
 
-// ** Schema
+// ** Import Schema
 import { expenses } from "@/db/schema/tbl_expenses";
 import { users } from "@/db/schema/tbl_users";
 
