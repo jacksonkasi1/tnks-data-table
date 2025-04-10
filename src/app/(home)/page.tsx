@@ -1,5 +1,6 @@
-import { DataTable } from "./data-table-components/data-table";
 import { Metadata } from "next";
+
+import UserTable from "./data-table";
 
 export const metadata: Metadata = {
   title: "Data Table Example",
@@ -8,22 +9,10 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <main className="container mx-auto py-10">
-      <h1 className="text-xl font-bold mb-4">Users</h1>
+      <h1 className="text-xl font-bold mb-4">Users List</h1>
 
       {/* DataTable with custom configuration */}
-      <DataTable
-        config={{
-          enableRowSelection: true, // Enable row selection
-          enableClickRowSelect: false, // Disable clicking rows to select them
-          enableKeyboardNavigation: true, // Enable keyboard navigation
-          enableSearch: true, // Enable search functionality
-          enableDateFilter: true, // Enable date filter
-          enableColumnFilters: false, // Disable column filters
-          enableColumnVisibility: true, // Enable column visibility options
-          enableUrlState: true, // Enable URL state persistence
-          columnResizingTableId: "user-table",
-        }}
-      />
+      <UserTable />
     </main>
   );
 }

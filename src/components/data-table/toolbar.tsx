@@ -17,11 +17,10 @@ import { Separator } from "@/components/ui/separator";
 import { CalendarDatePicker } from "@/components/calendar-date-picker";
 import { DataTableViewOptions } from "@/components/data-table/view-options";
 import { DataTableExport } from "./data-export";
-import { User } from "./schema";
-import { resetUrlState } from "@/components/data-table/hooks/deep-utils";
+import { resetUrlState } from "@/components/data-table/utils/deep-utils";
 import { parseDateFromUrl } from "@/components/data-table/utils/url-state";
-import { TableConfig } from "@/components/data-table/table-config";
-import { formatDate } from "@/components/data-table/utils/date-formate";
+import { TableConfig } from "@/components/data-table/utils/table-config";
+import { formatDate } from "@/components/data-table/utils/date-format";
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
@@ -36,10 +35,14 @@ interface DataTableToolbarProps<TData> {
   ) => void;
   totalSelectedItems?: number;
   deleteSelection?: () => void;
-  getSelectedUsers?: () => Promise<User[]>;
-  getAllUsers?: () => User[];
+  getSelectedItems?: () => Promise<TData[]>;
+  getAllItems?: () => TData[];
   config: TableConfig;
   resetColumnSizing?: () => void;
+  entityName?: string;
+  columnMapping?: Record<string, string>;
+  columnWidths?: Array<{ wch: number }>;
+  headers?: string[];
 }
 
 export function DataTableToolbar<TData>({
@@ -48,10 +51,14 @@ export function DataTableToolbar<TData>({
   setDateRange,
   totalSelectedItems = 0,
   deleteSelection,
-  getSelectedUsers,
-  getAllUsers,
+  getSelectedItems,
+  getAllItems,
   config,
   resetColumnSizing,
+  entityName = "items",
+  columnMapping,
+  columnWidths,
+  headers
 }: DataTableToolbarProps<TData>) {
   // Get router and pathname for URL state reset
   const router = useRouter();
@@ -228,22 +235,22 @@ export function DataTableToolbar<TData>({
     }
   };
 
-  // Get selected users data for export - this is now just for the UI indication
+  // Get selected items data for export - this is now just for the UI indication
   // The actual data fetching happens in the export component
-  const selectedUsers =
+  const selectedItems =
     totalSelectedItems > 0
-      ? new Array(totalSelectedItems).fill({} as User)
+      ? new Array(totalSelectedItems).fill({} as TData)
       : [];
 
-  // Get all available users data for export
-  const allUsers = getAllUsers ? getAllUsers() : [];
+  // Get all available items data for export
+  const allItems = getAllItems ? getAllItems() : [];
 
   return (
     <div className="flex flex-wrap items-center justify-between">
       <div className="flex flex-1 flex-wrap items-center gap-2">
         {config.enableSearch && (
           <Input
-            placeholder="Search users..."
+            placeholder={`Search ${entityName}...`}
             value={localSearch}
             onChange={handleSearchChange}
             className="h-8 w-[150px] lg:w-[250px]"
@@ -287,9 +294,13 @@ export function DataTableToolbar<TData>({
         {config.enableExport && (
           <DataTableExport
             table={table as any}
-            data={allUsers}
-            selectedData={selectedUsers}
-            getSelectedUsers={getSelectedUsers}
+            data={allItems}
+            selectedData={selectedItems}
+            getSelectedItems={getSelectedItems}
+            entityName={entityName}
+            columnMapping={columnMapping}
+            columnWidths={columnWidths}
+            headers={headers}
           />
         )}
 

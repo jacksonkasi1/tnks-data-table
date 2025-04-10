@@ -1,6 +1,6 @@
 // API helper functions to interact with the backend API
 
-import { usersResponseSchema, userExpensesResponseSchema, User, Expense } from "@/app/(home)/data-table-components/schema";
+import { usersResponseSchema, userExpensesResponseSchema, User } from "@/app/(home)/data-table/schema";
 
 const API_BASE_URL = "/api";
 
@@ -26,7 +26,7 @@ export async function fetchUsers({
 }) {
   // Process search term - trim and sanitize
   const processedSearch = search ? search.trim().replace(/\s+/g, ' ') : "";
-  
+
   // Build query parameters
   const params = new URLSearchParams();
   if (processedSearch) params.append("search", processedSearch);
@@ -91,30 +91,65 @@ export async function fetchUsersByIds(userIds: number[]): Promise<User[]> {
     return [];
   }
   
-  // Fetch each user in parallel
-  const promises = userIds.map(async (userId) => {
+  // Use a more efficient approach with batching
+  // Define a reasonable batch size to avoid URL length limits
+  const BATCH_SIZE = 50;
+  const results: User[] = [];
+
+  // Process in batches
+  for (let i = 0; i < userIds.length; i += BATCH_SIZE) {
+    const batchIds = userIds.slice(i, i + BATCH_SIZE);
+    
     try {
-      // Fetch individual user 
+      // Build parameter string with multiple IDs
       const params = new URLSearchParams();
-      params.append("id", userId.toString());
+      // Add each ID as a separate "id" parameter
+      batchIds.forEach(id => {
+        params.append("id", id.toString());
+      });
+      
+      // Set a large limit to ensure we get all matches
+      params.append("limit", "1000"); 
+      
+      // Fetch the batch
       const response = await fetch(`${API_BASE_URL}/users?${params.toString()}`);
       
       if (!response.ok) {
-        throw new Error(`Failed to fetch user ${userId}: ${response.statusText}`);
+        throw new Error(`Failed to fetch users: ${response.statusText}`);
       }
       
       const data = await response.json();
       const parsedData = usersResponseSchema.parse(data);
       
-      // Return the first user from the result (should be only one if filtering by ID)
-      return parsedData.data[0] || null;
+      // Add the batch results to our collection
+      // Filter to ensure we only include users that were requested
+      const validUsers = parsedData.data.filter(user => 
+        batchIds.includes(user.id)
+      );
+      
+      results.push(...validUsers);
     } catch (error) {
-      console.error(`Error fetching user ${userId}:`, error);
-      return null;
+      console.error(`Error fetching batch of users:`, error);
+      // Continue with the next batch even if this one failed
     }
+  }
+  
+  // Create a map of user ID to user to eliminate potential duplicates
+  const userMap = new Map<number, User>();
+  results.forEach(user => {
+    userMap.set(user.id, user);
   });
   
-  // Wait for all requests to complete and filter out any nulls
-  const results = await Promise.all(promises);
-  return results.filter((user): user is User => user !== null);
+  // Find which user IDs we're missing
+  const foundIds = Array.from(userMap.keys());
+  const missingIds = userIds.filter(id => !foundIds.includes(id));
+  
+  if (missingIds.length > 0) {
+    console.warn(`Failed to fetch data for ${missingIds.length} users: ${missingIds.join(", ")}`);
+  }
+  
+  // Return the results in the same order as the input IDs where possible
+  return userIds
+    .map(id => userMap.get(id))
+    .filter((user): user is User => user !== undefined);
 } 

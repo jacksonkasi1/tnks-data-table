@@ -20,12 +20,14 @@ import {
     table: Table<TData>;
     totalItems?: number; // Total number of items from API
     totalSelectedItems?: number; // Total selected items across all pages
+    pageSizeOptions?: number[]; // Custom page size options
   }
   
   export function DataTablePagination<TData>({
     table,
     totalItems = 0,
     totalSelectedItems = 0,
+    pageSizeOptions = [10, 20, 30, 40, 50], // Default options if none provided
   }: DataTablePaginationProps<TData>) {
     return (
       <div className="flex w-full flex-col items-center justify-between gap-4 overflow-auto px-2 py-1 sm:flex-row sm:gap-8">
@@ -49,7 +51,7 @@ import {
                 <SelectValue placeholder={table.getState().pagination.pageSize} />
               </SelectTrigger>
               <SelectContent side="top" className="cursor-pointer">
-                {[10, 20, 30, 40, 50].map((pageSize) => (
+                {pageSizeOptions.map((pageSize) => (
                   <SelectItem key={pageSize} value={`${pageSize}`} className="cursor-pointer">
                     {pageSize}
                   </SelectItem>

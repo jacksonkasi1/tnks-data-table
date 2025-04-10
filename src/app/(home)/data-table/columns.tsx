@@ -42,7 +42,7 @@ export const getColumns = (
     },
     {
       accessorKey: "phone",
-      header: ({ column }) => (
+      header: ({ column}) => (
         <DataTableColumnHeader column={column} title="Phone" />
       ),
       cell: ({ row }) => {
