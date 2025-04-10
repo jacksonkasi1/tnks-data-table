@@ -1,9 +1,6 @@
-import { useQueryClient, useQuery, keepPreviousData } from "@tanstack/react-query";
-import { useState, useCallback } from "react";
-import { toast } from "sonner";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
-import { fetchUsers, fetchUsersByIds } from "@/api/user/get-users";
-import { User } from "./schema";
+import { fetchUsers } from "@/api/user/fetch-users";
 import { preprocessSearch } from "@/components/data-table/utils/search";
 
 /**

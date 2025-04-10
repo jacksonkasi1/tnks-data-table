@@ -1,7 +1,7 @@
 "use client";
 
-import { fetchUsersByIds } from "@/api/user/get-users";
-import { fetchUsers } from "@/api/user/get-users";
+import { fetchUsersByIds } from "@/api/user/fetch-users-by-ids";
+import { fetchUsers } from "@/api/user/fetch-users";
 import { getColumns } from "./columns";
 import { DataTable } from "@/components/data-table/data-table";
 import { useExportConfig } from "./config";
