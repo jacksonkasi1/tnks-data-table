@@ -9,7 +9,7 @@ import { useExportConfig } from "./utils/config";
 
 // ** Import API
 import { fetchUsersByIds } from "@/api/user/fetch-users-by-ids";
-import { fetchUsers } from "@/api/user/fetch-users";
+import { useUsersData } from "./utils/data-fetching";
 
 // ** Import Toolbar Options
 import { ToolbarOptions } from "./components/toolbar-options";
@@ -19,7 +19,7 @@ export default function UserTable() {
     <DataTable
       getColumns={getColumns}
       exportConfig={useExportConfig()}
-      fetchDataFn={fetchUsers}
+      fetchDataFn={useUsersData}
       fetchByIdsFn={fetchUsersByIds}
       idField="id"
       pageSizeOptions={[10, 20, 30, 40, 50, 100, 150]}

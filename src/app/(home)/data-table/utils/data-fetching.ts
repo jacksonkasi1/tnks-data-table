@@ -18,16 +18,28 @@ export function useUsersData(
   sortOrder: string
 ) {
   return useQuery({
-    queryKey: ["users", page, pageSize, preprocessSearch(search), dateRange, sortBy, sortOrder],
-    queryFn: () => fetchUsers({
+    queryKey: [
+      "users",
       page,
-      limit: pageSize,
-      search: preprocessSearch(search),
-      from_date: dateRange.from_date,
-      to_date: dateRange.to_date,
-      sort_by: sortBy,
-      sort_order: sortOrder,
-    }),
-    placeholderData: keepPreviousData
+      pageSize,
+      preprocessSearch(search),
+      dateRange,
+      sortBy,
+      sortOrder,
+    ],
+    queryFn: () =>
+      fetchUsers({
+        page,
+        limit: pageSize,
+        search: preprocessSearch(search),
+        from_date: dateRange.from_date,
+        to_date: dateRange.to_date,
+        sort_by: sortBy,
+        sort_order: sortOrder,
+      }),
+    placeholderData: keepPreviousData, // Keep previous data when fetching new data. If skeleton animation is needed when fetching data, comment this out.
   });
 }
+
+// Add a property to the function so we can use it with the DataTable component
+useUsersData.isQueryHook = true;

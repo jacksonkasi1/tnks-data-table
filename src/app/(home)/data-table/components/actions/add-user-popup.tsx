@@ -8,6 +8,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 
 // ** Import UI Components
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ export function AddUserPopup() {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
+  const queryClient = useQueryClient();
 
   // Initialize form
   const form = useForm<FormValues>({
@@ -70,6 +72,7 @@ export function AddUserPopup() {
         form.reset();
         setOpen(false);
         router.refresh(); // Refresh the page to show new data
+        await queryClient.invalidateQueries({ queryKey: ["users"] });
       } else {
         toast.error(response.error || "Failed to add user");
       }

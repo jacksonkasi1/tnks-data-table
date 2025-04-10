@@ -63,7 +63,7 @@ interface DataTableProps<TData, TValue> {
   getColumns: (handleRowDeselection: ((rowId: string) => void) | null | undefined) => ColumnDef<TData, TValue>[];
   
   // Data fetching function
-  fetchDataFn: (params: {
+  fetchDataFn: ((params: {
     page: number;
     limit: number;
     search: string;
@@ -80,7 +80,14 @@ interface DataTableProps<TData, TValue> {
       total_pages: number;
       total_items: number;
     };
-  }>;
+  }>) | ((
+    page: number,
+    pageSize: number,
+    search: string,
+    dateRange: { from_date: string; to_date: string },
+    sortBy: string,
+    sortOrder: string
+  ) => any);
   
   // Function to fetch specific items by their IDs
   fetchByIdsFn?: (ids: number[]) => Promise<TData[]>;
@@ -164,32 +171,58 @@ export function DataTable<TData, TValue>({
   
   // Fetch data
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        const result = await fetchDataFn({
-          page,
-          limit: pageSize,
-          search: preprocessSearch(search),
-          from_date: dateRange.from_date,
-          to_date: dateRange.to_date,
-          sort_by: sortBy,
-          sort_order: sortOrder,
-        });
-        setData(result);
+    // Check if the fetchDataFn is a query hook by looking for the isQueryHook property
+    const isQueryHook = (fetchDataFn as any).isQueryHook === true;
+    
+    if (!isQueryHook) {
+      const fetchData = async () => {
+        try {
+          setIsLoading(true);
+          const result = await (fetchDataFn as any)({
+            page,
+            limit: pageSize,
+            search: preprocessSearch(search),
+            from_date: dateRange.from_date,
+            to_date: dateRange.to_date,
+            sort_by: sortBy,
+            sort_order: sortOrder,
+          });
+          setData(result);
+          setIsError(false);
+          setError(null);
+        } catch (err) {
+          setIsError(true);
+          setError(err);
+          console.error("Error fetching data:", err);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      fetchData();
+    }
+  }, [page, pageSize, search, dateRange, sortBy, sortOrder, fetchDataFn]);
+
+  // If fetchDataFn is a React Query hook, call it directly with parameters
+  const queryResult = (fetchDataFn as any).isQueryHook === true 
+    ? (fetchDataFn as any)(page, pageSize, search, dateRange, sortBy, sortOrder)
+    : null;
+  
+  // If using React Query, update state based on query result
+  useEffect(() => {
+    if (queryResult) {
+      setIsLoading(queryResult.isLoading);
+      if (queryResult.isSuccess && queryResult.data) {
+        setData(queryResult.data);
         setIsError(false);
         setError(null);
-      } catch (err) {
-        setIsError(true);
-        setError(err);
-        console.error("Error fetching data:", err);
-      } finally {
-        setIsLoading(false);
       }
-    };
-
-    fetchData();
-  }, [page, pageSize, search, dateRange, sortBy, sortOrder, fetchDataFn]);
+      if (queryResult.isError) {
+        setIsError(true);
+        setError(queryResult.error);
+      }
+    }
+  }, [queryResult]);
 
   // Calculate total selected items
   const totalSelectedItems = Object.keys(selectedIds).length;

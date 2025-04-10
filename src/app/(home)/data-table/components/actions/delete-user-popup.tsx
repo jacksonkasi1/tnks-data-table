@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 // ** Import 3rd Party Libs
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 // ** Import UI Components
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ export function DeleteUserPopup({
   userName,
 }: DeleteUserPopupProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = React.useState(false);
 
   const handleDelete = async () => {
@@ -45,6 +47,7 @@ export function DeleteUserPopup({
         toast.success("User deleted successfully");
         onOpenChange(false);
         router.refresh(); // Refresh the page to show updated data
+        await queryClient.invalidateQueries({ queryKey: ["users"] });
       } else {
         toast.error(response.error || "Failed to delete user");
       }
