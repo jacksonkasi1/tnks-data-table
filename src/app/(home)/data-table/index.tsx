@@ -1,10 +1,15 @@
 "use client";
 
+// ** Import Date Table
+import { DataTable } from "@/components/data-table/data-table";
+
+// ** Import Table Config & Columns
+import { getColumns } from "./components/columns";
+import { useExportConfig } from "./utils/config";
+
+// ** Import API
 import { fetchUsersByIds } from "@/api/user/fetch-users-by-ids";
 import { fetchUsers } from "@/api/user/fetch-users";
-import { getColumns } from "./columns";
-import { DataTable } from "@/components/data-table/data-table";
-import { useExportConfig } from "./config";
 
 export default function UserTable() {
   return (

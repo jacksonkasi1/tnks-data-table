@@ -1,7 +1,10 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
+// ** Import API
 import { fetchUsers } from "@/api/user/fetch-users";
-import { preprocessSearch } from "@/components/data-table/utils/search";
+
+// ** Import Utils
+import { preprocessSearch } from "@/components/data-table/utils";
 
 /**
  * Hook to fetch users with the current filters and pagination

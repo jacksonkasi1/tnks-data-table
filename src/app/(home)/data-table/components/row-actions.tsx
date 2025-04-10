@@ -1,8 +1,10 @@
 "use client";
 
+// ** Import 3rd Party Libs
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import { Row } from "@tanstack/react-table";
 
+// ** Import UI Components
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,7 +14,10 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { userSchema } from "./schema";
+
+// ** Import Schema
+import { userSchema } from "../schema";
+
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
 }

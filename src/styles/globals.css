@@ -122,7 +122,7 @@
 }
 
 /* Custom cursor pointer for interactive elements in the data table */
-button, 
+button,
 .rdp-button,
 .rdp-day, 
 select,
@@ -315,7 +315,7 @@ input[type="week"] {
   .resizable-table [data-resizing] {
     transition: opacity 0.15s ease, transform 0.1s ease;
   }
-  
+
   .resizable-table [data-resizing]:hover {
     transform: scaleX(1.5);
     opacity: 1 !important;

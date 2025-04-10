@@ -1,9 +1,10 @@
 import { Metadata } from "next";
 
+// ** Import Table
 import UserTable from "./data-table";
 
 export const metadata: Metadata = {
-  title: "Data Table Example",
+  title: "Users Table Example",
 };
 
 export default function Home() {

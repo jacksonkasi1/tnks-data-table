@@ -1,13 +1,21 @@
 "use client";
 
-import { ColumnDef } from "@tanstack/react-table";
-import { User } from "./schema";
-import { DataTableRowActions } from "./row-actions";
-import { Checkbox } from "@/components/ui/checkbox";
+// ** Import 3rd Party Libs
 import { format } from "date-fns";
+import { ColumnDef } from "@tanstack/react-table";
+
+// ** Import Components
+import { DataTableColumnHeader } from "@/components/data-table/column-header";
+
+// ** Import UI Components
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 
-import { DataTableColumnHeader } from "@/components/data-table/column-header";
+// ** Import Schema
+import { User } from "../schema";
+
+// ** Import Table Row Actions
+import { DataTableRowActions } from "./row-actions";
 
 export const getColumns = (
   handleRowDeselection: ((rowId: string) => void) | null | undefined
@@ -42,7 +50,7 @@ export const getColumns = (
     },
     {
       accessorKey: "phone",
-      header: ({ column}) => (
+      header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Phone" />
       ),
       cell: ({ row }) => {
@@ -60,7 +68,9 @@ export const getColumns = (
         <DataTableColumnHeader column={column} title="Age" />
       ),
       cell: ({ row }) => {
-        return <div className="w-[80px] text-center">{row.getValue("age")}</div>;
+        return (
+          <div className="w-[80px] text-center">{row.getValue("age")}</div>
+        );
       },
       size: 80,
     },
@@ -91,8 +101,10 @@ export const getColumns = (
           style: "currency",
           currency: "USD",
         }).format(parseFloat(amount || "0"));
-        
-        return <div className="w-[120px] text-right font-medium">{formatted}</div>;
+
+        return (
+          <div className="w-[120px] text-right font-medium">{formatted}</div>
+        );
       },
       size: 150,
     },
@@ -105,7 +117,7 @@ export const getColumns = (
         const date = new Date(row.getValue("created_at"));
         // Format date as "MMM d, yyyy" (e.g., "Mar 16, 2025")
         const formattedDate = format(date, "MMM d, yyyy");
-        
+
         return <div className="w-[120px]">{formattedDate}</div>;
       },
       size: 120,
@@ -131,7 +143,9 @@ export const getColumns = (
               table.getIsAllPageRowsSelected() ||
               (table.getIsSomePageRowsSelected() && "indeterminate")
             }
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
             aria-label="Select all"
             className="translate-y-0.5 cursor-pointer"
           />
@@ -158,7 +172,7 @@ export const getColumns = (
         enableHiding: false,
         size: 50,
       },
-      ...baseColumns
+      ...baseColumns,
     ];
   }
 
