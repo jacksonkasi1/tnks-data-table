@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { z } from "zod";
 
 // ** Import DB
 import { db } from "@/db";
@@ -43,14 +42,11 @@ app.delete("/:id", async (c) => {
       );
     }
 
-    // Start a transaction to delete user and their expenses
-    await db.transaction(async (tx) => {
-      // First delete all expenses associated with the user
-      await tx.delete(expenses).where(eq(expenses.user_id, userId));
-      
-      // Then delete the user
-      await tx.delete(users).where(eq(users.id, userId));
-    });
+    // First delete all expenses associated with the user
+    await db.delete(expenses).where(eq(expenses.user_id, userId));
+
+    // Then delete the user
+    await db.delete(users).where(eq(users.id, userId));
 
     return c.json(
       {
