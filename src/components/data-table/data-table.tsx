@@ -106,8 +106,11 @@ interface DataTableProps<TData, TValue> {
   // Custom page size options
   pageSizeOptions?: number[];
 
-  // Custom toolbar component
-  customToolbarComponent?: React.ReactNode;
+  // Custom toolbar content render function
+  renderToolbarContent?: (props: {
+    selectedRows: TData[];
+    resetSelection: () => void;
+  }) => React.ReactNode;
 }
 
 export function DataTable<TData, TValue>({
@@ -118,7 +121,7 @@ export function DataTable<TData, TValue>({
   exportConfig,
   idField = 'id' as keyof TData,
   pageSizeOptions,
-  customToolbarComponent
+  renderToolbarContent
 }: DataTableProps<TData, TValue>) {
   // Load table configuration with any overrides
   const tableConfig = useTableConfig(config);
@@ -532,7 +535,10 @@ export function DataTable<TData, TValue>({
           columnMapping={exportConfig.columnMapping}
           columnWidths={exportConfig.columnWidths}
           headers={exportConfig.headers}
-          customToolbarComponent={customToolbarComponent}
+          customToolbarComponent={renderToolbarContent && renderToolbarContent({
+            selectedRows: data?.data.filter((_, index) => rowSelection[index]) || [],
+            resetSelection: clearAllSelections
+          })}
         />
       )}
       
