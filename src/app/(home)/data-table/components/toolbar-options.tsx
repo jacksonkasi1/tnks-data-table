@@ -1,20 +1,10 @@
-// ** Import 3rd Party Libs
-import { PlusIcon } from "lucide-react";
-
-// ** Import UI Components
-import { Button } from "@/components/ui/button";
+// ** Import Actions
+import { AddUserPopup } from "./actions/add-user-popup";
 
 export const ToolbarOptions = () => {
-  const AddButton = () => (
-    <Button size="sm" variant="outline">
-      <PlusIcon className="mr-2 h-4 w-4" />
-      Add User
-    </Button>
-  );
-
   return (
     <div>
-      <AddButton />
+      <AddUserPopup />
     </div>
   );
 };

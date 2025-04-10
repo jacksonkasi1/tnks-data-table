@@ -7,12 +7,12 @@ import { DataTable } from "@/components/data-table/data-table";
 import { getColumns } from "./components/columns";
 import { useExportConfig } from "./utils/config";
 
-// ** Import Toolbar Options
-import { ToolbarOptions } from "./components/toolbar-options";
-
 // ** Import API
 import { fetchUsersByIds } from "@/api/user/fetch-users-by-ids";
 import { fetchUsers } from "@/api/user/fetch-users";
+
+// ** Import Toolbar Options
+import { ToolbarOptions } from "./components/toolbar-options";
 
 export default function UserTable() {
   return (
