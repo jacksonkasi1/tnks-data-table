@@ -10,7 +10,7 @@ import {
 import { DownloadIcon, Loader2 } from "lucide-react";
 import { Table } from "@tanstack/react-table";
 import { exportData } from "@/lib/export-utils";
-import { User } from "../data-table-components/schema";
+import { User } from "./schema";
 import { useState } from "react";
 import { toast } from "sonner";
 

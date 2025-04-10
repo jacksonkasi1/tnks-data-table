@@ -10,15 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import { DataTableFacetedFilter } from "./data-table-faceted-filter";
 import { CalendarDatePicker } from "@/components/calendar-date-picker";
-import { DataTableViewOptions } from "./data-table-view-options";
+import { DataTableViewOptions } from "@/components/data-table/view-options";
 import { formatDate } from "@/api/user/get-users";
-import { DataTableExport } from "./data-table-export";
+import { DataTableExport } from "./data-export";
 import { User } from "./schema";
-import { resetUrlState } from "./utils";
-import { parseDateFromUrl } from "./url-state";
-import { TableConfig } from "./table-config";
+import { resetUrlState } from "../../../components/data-table/hooks/deep-utils";
+import { parseDateFromUrl } from "../../../components/data-table/utils/url-state";
+import { TableConfig } from "../../../components/data-table/table-config";
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;

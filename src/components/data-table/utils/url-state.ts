@@ -1,6 +1,6 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState, useEffect, useRef } from "react";
-import { isDeepEqual } from "./utils";
+import { isDeepEqual } from "../hooks/deep-utils";
 
 /**
  * Custom hook for managing URL-based state
@@ -182,4 +182,4 @@ export function validateDateString(dateString: string): boolean {
 export function parseDateFromUrl(dateString: string): Date | undefined {
   if (!validateDateString(dateString)) return undefined;
   return new Date(dateString);
-} 
+}
