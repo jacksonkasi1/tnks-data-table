@@ -1,4 +1,5 @@
-import { userExpensesResponseSchema } from "@/app/(home)/data-table/schema/schema";
+// ** Import Schema
+import { userExpensesResponseSchema } from "@/app/(home)/data-table/schema";
 
 const API_BASE_URL = "/api";
 
@@ -26,12 +27,14 @@ export async function fetchUserExpenses({
   params.append("limit", limit.toString());
 
   // Fetch data
-  const response = await fetch(`${API_BASE_URL}/users/${userId}/expenses?${params.toString()}`);
-  
+  const response = await fetch(
+    `${API_BASE_URL}/users/${userId}/expenses?${params.toString()}`
+  );
+
   if (!response.ok) {
     throw new Error(`Failed to fetch user expenses: ${response.statusText}`);
   }
-  
+
   const data = await response.json();
   return userExpensesResponseSchema.parse(data);
-} 
+}

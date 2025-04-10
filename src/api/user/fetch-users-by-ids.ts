@@ -1,4 +1,5 @@
-import { usersResponseSchema, User } from "@/app/(home)/data-table/schema/schema";
+// ** Import Schema
+import { usersResponseSchema, User } from "@/app/(home)/data-table/schema";
 
 const API_BASE_URL = "/api";
 
@@ -71,4 +72,4 @@ export async function fetchUsersByIds(userIds: number[]): Promise<User[]> {
   return userIds
     .map(id => userMap.get(id))
     .filter((user): user is User => user !== undefined);
-} 
+}

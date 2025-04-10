@@ -1,4 +1,5 @@
-import { usersResponseSchema } from "@/app/(home)/data-table/schema/schema";
+// ** Import Schema
+import { usersResponseSchema } from "@/app/(home)/data-table/schema";
 
 const API_BASE_URL = "/api";
 
