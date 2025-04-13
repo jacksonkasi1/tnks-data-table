@@ -127,13 +127,26 @@ export function DataTableExport<TData extends ExportableData>({
         .filter(column => column.getIsVisible())
         .filter(column => column.id !== 'actions' && column.id !== 'select');
 
-      // Generate export options based on visible columns
-      const exportHeaders = visibleColumns.map(column => column.id);
+      // Generate export options based on visible columns and respect column order
+      const columnOrder = table.getState().columnOrder;
+      const orderedVisibleColumns = columnOrder.length > 0
+        ? [...visibleColumns].sort((a, b) => {
+            const aIndex = columnOrder.indexOf(a.id);
+            const bIndex = columnOrder.indexOf(b.id);
+            // If column isn't in the order array, put it at the end
+            if (aIndex === -1) return 1;
+            if (bIndex === -1) return -1;
+            return aIndex - bIndex;
+          })
+        : visibleColumns;
+
+      // Generate export headers based on ordered columns
+      const exportHeaders = orderedVisibleColumns.map(column => column.id);
 
       // Auto-generate column mapping from table headers if not provided
       const exportColumnMapping = columnMapping || (() => {
         const mapping: Record<string, string> = {};
-        visibleColumns.forEach(column => {
+        orderedVisibleColumns.forEach(column => {
           // Try to get header text if available
           const headerText = column.columnDef.header as string;
           
@@ -150,10 +163,13 @@ export function DataTableExport<TData extends ExportableData>({
         return mapping;
       })();
 
-      // Filter column widths to match visible columns
+      // Filter column widths to match visible columns and their order
       const exportColumnWidths = columnWidths ? 
-        visibleColumns.map((_, index) => columnWidths[index] || { wch: 15 }) :
-        visibleColumns.map(() => ({ wch: 15 }));
+        orderedVisibleColumns.map((column, index) => {
+          const originalIndex = visibleColumns.findIndex(vc => vc.id === column.id);
+          return columnWidths[originalIndex] || { wch: 15 };
+        }) :
+        orderedVisibleColumns.map(() => ({ wch: 15 }));
 
       // Use the generic export function with proper options
       await exportData(

@@ -160,6 +160,9 @@ export function DataTable<TData, TValue>({
     };
   } | null>(null);
   
+  // Column order state (managed separately from URL state as it's persisted in localStorage)
+  const [columnOrder, setColumnOrder] = useState<string[]>([]);
+  
   // PERFORMANCE FIX: Use only one selection state as the source of truth
   const [selectedItemIds, setSelectedItemIds] = useState<Record<string | number, boolean>>({});
   
@@ -408,6 +411,35 @@ export function DataTable<TData, TValue>({
     [columnSizing, setColumnSizing]
   );
 
+  // Column order change handler
+  const handleColumnOrderChange = useCallback((updaterOrValue: any) => {
+    const newColumnOrder = typeof updaterOrValue === 'function'
+      ? updaterOrValue(columnOrder)
+      : updaterOrValue;
+    
+    setColumnOrder(newColumnOrder);
+    
+    // Persist column order to localStorage
+    try {
+      localStorage.setItem('data-table-column-order', JSON.stringify(newColumnOrder));
+    } catch (error) {
+      console.error('Failed to save column order to localStorage:', error);
+    }
+  }, [columnOrder]);
+  
+  // Load column order from localStorage on initial render
+  useEffect(() => {
+    try {
+      const savedOrder = localStorage.getItem('data-table-column-order');
+      if (savedOrder) {
+        const parsedOrder = JSON.parse(savedOrder);
+        setColumnOrder(parsedOrder);
+      }
+    } catch (error) {
+      console.error('Error loading column order:', error);
+    }
+  }, []);
+
   // Set up the table with memoized state
   const table = useReactTable<TData>({
     data: dataItems,
@@ -419,9 +451,11 @@ export function DataTable<TData, TValue>({
       columnFilters,
       pagination,
       columnSizing,
+      columnOrder,
     },
     columnResizeMode: 'onChange' as ColumnResizeMode,
     onColumnSizingChange: handleColumnSizingChange,
+    onColumnOrderChange: handleColumnOrderChange,
     pageCount: data?.pagination.total_pages || 0,
     enableRowSelection: tableConfig.enableRowSelection,
     enableColumnResizing: tableConfig.enableColumnResizing,
@@ -470,6 +504,20 @@ export function DataTable<TData, TValue>({
     };
   }, [table]);
 
+  // Reset column order
+  const resetColumnOrder = useCallback(() => {
+    // Reset to empty array (which resets to default order)
+    table.setColumnOrder([]);
+    setColumnOrder([]);
+    
+    // Remove from localStorage
+    try {
+      localStorage.removeItem('data-table-column-order');
+    } catch (error) {
+      console.error('Failed to remove column order from localStorage:', error);
+    }
+  }, [table]);
+
   // Handle error state
   if (isError) {
     return (
@@ -502,6 +550,7 @@ export function DataTable<TData, TValue>({
               window.dispatchEvent(new Event('resize'));
             }, 100);
           }}
+          resetColumnOrder={resetColumnOrder}
           entityName={exportConfig.entityName}
           columnMapping={exportConfig.columnMapping}
           columnWidths={exportConfig.columnWidths}
