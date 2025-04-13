@@ -25,6 +25,8 @@ interface BulkDeletePopupProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedUsers: { id: number; name: string }[];
+  allSelectedIds?: number[];
+  totalSelectedCount?: number;
   resetSelection: () => void;
 }
 
@@ -32,30 +34,38 @@ export function BulkDeletePopup({
   open,
   onOpenChange,
   selectedUsers,
+  allSelectedIds,
+  totalSelectedCount,
   resetSelection,
 }: BulkDeletePopupProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = React.useState(false);
 
+  // Use allSelectedIds if available, otherwise fallback to selectedUsers ids
+  const idsToDelete = allSelectedIds || selectedUsers.map(user => user.id);
+
+  // Use total count if available, otherwise fallback to visible items count
+  const itemCount = totalSelectedCount || selectedUsers.length;
+
   const handleDelete = async () => {
     try {
       setIsLoading(true);
       
       // Delete users sequentially
-      for (const user of selectedUsers) {
-        const response = await deleteUser(user.id);
+      for (const id of idsToDelete) {
+        const response = await deleteUser(id);
         if (!response.success) {
-          throw new Error(`Failed to delete user ${user.name}`);
+          throw new Error(`Failed to delete user ID ${id}`);
         }
       }
 
       toast.success(
-        selectedUsers.length === 1
+        itemCount === 1
           ? "User deleted successfully"
-          : `${selectedUsers.length} users deleted successfully`
+          : `${itemCount} users deleted successfully`
       );
-      
+
       onOpenChange(false);
       resetSelection();
       router.refresh();
@@ -68,17 +78,17 @@ export function BulkDeletePopup({
   };
 
   const getDialogTitle = () => {
-    if (selectedUsers.length === 1) {
+    if (itemCount === 1) {
       return "Delete User";
     }
     return "Delete Users";
   };
 
   const getDialogDescription = () => {
-    if (selectedUsers.length === 1) {
+    if (itemCount === 1 && selectedUsers.length === 1) {
       return `Are you sure you want to delete ${selectedUsers[0].name}? This action cannot be undone.`;
     }
-    return `Are you sure you want to delete ${selectedUsers.length} users? This action cannot be undone.`;
+    return `Are you sure you want to delete ${itemCount} users? This action cannot be undone.`;
   };
 
   return (
