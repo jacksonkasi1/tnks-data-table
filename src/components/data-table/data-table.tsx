@@ -628,6 +628,7 @@ export function DataTable<TData, TValue>({
         <DataTablePagination
           table={table} 
           totalItems={data?.pagination.total_items || 0}
+          totalSelectedItems={totalSelectedItems}
           pageSizeOptions={pageSizeOptions || [10, 20, 30, 40, 50]}
         />
       )}
