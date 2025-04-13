@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import * as React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 
 interface DataTableViewOptionsProps<TData> {
   table: Table<TData>;
@@ -45,6 +45,27 @@ export function DataTableViewOptions<TData>({
 
   // State for drag and drop
   const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);
+  
+  // Order columns based on the current table column order
+  const orderedColumns = useMemo(() => {
+    const columnOrder = table.getState().columnOrder;
+    
+    if (!columnOrder.length) {
+      return columns;
+    }
+    
+    // Create a new array with columns sorted according to the columnOrder
+    return [...columns].sort((a, b) => {
+      const aIndex = columnOrder.indexOf(a.id);
+      const bIndex = columnOrder.indexOf(b.id);
+      
+      // If column isn't in the order array, put it at the end
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      
+      return aIndex - bIndex;
+    });
+  }, [columns, table.getState().columnOrder]);
   
   // Load column order from localStorage on initial render
   useEffect(() => {
@@ -150,7 +171,7 @@ export function DataTableViewOptions<TData>({
           <CommandList>
             <CommandEmpty>No columns found.</CommandEmpty>
             <CommandGroup>
-              {columns.map((column) => (
+              {orderedColumns.map((column) => (
                 <CommandItem
                   key={column.id}
                   onSelect={() => column.toggleVisibility(!column.getIsVisible())}
