@@ -532,7 +532,7 @@ export function DataTable<TData, TValue>({
               >
                 {headerGroup.headers.map((header) => (
                   <TableHead
-                    className="px-4 py-2 group/th relative"
+                    className="px-2 py-2 relative text-left group/th"
                     key={header.id}
                     colSpan={header.colSpan}
                     role="columnheader"
