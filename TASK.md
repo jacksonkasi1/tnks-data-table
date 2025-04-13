@@ -77,10 +77,10 @@
 ## Performance Optimizations
 
 - [ ] Implement virtualization for large datasets
-- [x] Add memoization for expensive renders
-- [x] Optimize re-renders with React.memo
-- [x] Add debounced search inputs
-- [x] Implement proper data caching
+- [ ] Add memoization for expensive renders
+- [ ] Optimize re-renders with React.memo
+- [ ] Add debounced search inputs
+- [ ] Implement proper data caching
 
 ## Accessibility
 
@@ -95,10 +95,10 @@
 - [ ] Implement row grouping
 - [ ] Add expandable rows for detail view
 - [ ] Create nested tables
-- [x] Add drag-and-drop column reordering
+- [ ] Add drag-and-drop column reordering
 - [x] Implement column resizing and save the state of each table independently in localStorage.
 - [ ] Add sticky headers/columns
-- [x] Create state persistence (URL or localStorage)
+- [ ] Create state persistence (URL or localStorage)
 
 ## Documentation
 
