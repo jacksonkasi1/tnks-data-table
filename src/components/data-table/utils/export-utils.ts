@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
@@ -69,7 +68,18 @@ export function exportToCSV<T extends ExportableData>(
   }
 
   try {
-    const csvContent = convertToCSV(data, headers);
+    // Filter data to only include specified headers
+    const filteredData = data.map(item => {
+      const filteredItem: Record<string, any> = {};
+      headers.forEach(header => {
+        if (header in item) {
+          filteredItem[header] = item[header];
+        }
+      });
+      return filteredItem;
+    });
+
+    const csvContent = convertToCSV(filteredData, headers);
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     downloadFile(blob, `${filename}.csv`);
     return true;
@@ -101,11 +111,13 @@ export function exportToExcel<T extends ExportableData>(
         return acc;
       }, {} as Record<string, string>);
     
-    // Map data to worksheet format
+    // Map data to worksheet format, only including mapped columns
     const worksheetData = data.map(item => {
       const row: Record<string, any> = {};
       Object.entries(mapping).forEach(([key, displayName]) => {
-        row[displayName] = item[key];
+        if (key in item) {
+          row[displayName] = item[key];
+        }
       });
       return row;
     });

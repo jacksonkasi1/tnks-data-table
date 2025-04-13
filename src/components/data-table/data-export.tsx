@@ -74,43 +74,38 @@ export function DataTableExport<TData extends ExportableData>({
     };
 
     try {
-      // Generate export options
+      // Get visible columns from the table
+      const visibleColumns = table.getAllColumns()
+        .filter(column => column.getIsVisible())
+        .filter(column => column.id !== 'actions' && column.id !== 'select');
 
-      // Get column headers from provided headers, visible columns, or data keys
-      const exportHeaders = headers || (
-        table.getAllColumns()
-          .filter(column => column.getIsVisible())
-          .map(column => column.id)
-          .filter(id => id !== 'actions' && id !== 'select')
-      );
+      // Generate export options based on visible columns
+      const exportHeaders = visibleColumns.map(column => column.id);
 
       // Auto-generate column mapping from table headers if not provided
       const exportColumnMapping = columnMapping || (() => {
         const mapping: Record<string, string> = {};
-
-        // First try to get from table headers
-        table.getAllColumns()
-          .filter(column => column.getIsVisible())
-          .forEach(column => {
-            // Skip action columns
-            if (column.id !== 'actions' && column.id !== 'select') {
-              // Try to get header text if available
-              const headerText = column.columnDef.header as string;
-              
-              if (headerText && typeof headerText === 'string') {
-                mapping[column.id] = headerText;
-              } else {
-                // Fallback to formatted column ID
-                mapping[column.id] = column.id
-                  .split(/(?=[A-Z])|_/)
-                  .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                  .join(' ');
-              }
-            }
-          });
+        visibleColumns.forEach(column => {
+          // Try to get header text if available
+          const headerText = column.columnDef.header as string;
           
+          if (headerText && typeof headerText === 'string') {
+            mapping[column.id] = headerText;
+          } else {
+            // Fallback to formatted column ID
+            mapping[column.id] = column.id
+              .split(/(?=[A-Z])|_/)
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              .join(' ');
+          }
+        });
         return mapping;
       })();
+
+      // Filter column widths to match visible columns
+      const exportColumnWidths = columnWidths ? 
+        visibleColumns.map((_, index) => columnWidths[index] || { wch: 15 }) :
+        visibleColumns.map(() => ({ wch: 15 }));
 
       // Use the generic export function with proper options
       await exportData(
@@ -122,7 +117,7 @@ export function DataTableExport<TData extends ExportableData>({
           entityName,
           headers: exportHeaders,
           columnMapping: exportColumnMapping,
-          columnWidths: columnWidths
+          columnWidths: exportColumnWidths
         }
       );
     } finally {
