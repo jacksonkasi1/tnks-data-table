@@ -96,7 +96,8 @@ export function exportToExcel<T extends ExportableData>(
   data: T[], 
   filename: string,
   columnMapping?: Record<string, string>, // Optional mapping of data keys to display names
-  columnWidths?: Array<{ wch: number }>
+  columnWidths?: Array<{ wch: number }>,
+  headers?: string[] // Add headers parameter to specify which columns to export
 ): boolean {
   if (data.length === 0) {
     console.error("No data to export");
@@ -114,9 +115,11 @@ export function exportToExcel<T extends ExportableData>(
     // Map data to worksheet format, only including mapped columns
     const worksheetData = data.map(item => {
       const row: Record<string, any> = {};
-      Object.entries(mapping).forEach(([key, displayName]) => {
+      // If headers are provided, only include those columns
+      const columnsToExport = headers || Object.keys(mapping);
+      columnsToExport.forEach(key => {
         if (key in item) {
-          row[displayName] = item[key];
+          row[mapping[key]] = item[key];
         }
       });
       return row;
@@ -209,7 +212,13 @@ export async function exportData<T extends ExportableData>(
         });
       }
     } else {
-      success = exportToExcel(exportData, filename, options?.columnMapping, options?.columnWidths);
+      success = exportToExcel(
+        exportData, 
+        filename, 
+        options?.columnMapping, 
+        options?.columnWidths,
+        options?.headers // Pass headers to exportToExcel
+      );
       if (success) {
         toast.success("Export successful", {
           description: `Exported ${exportData.length} ${entityName} to Excel.`,
