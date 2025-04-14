@@ -312,7 +312,7 @@ export function DataTableToolbar<TData>({
         )}
 
         {config.enableColumnVisibility && (
-          <DataTableViewOptions table={table} />
+          <DataTableViewOptions table={table} columnMapping={columnMapping} />
         )}
 
         <Popover>

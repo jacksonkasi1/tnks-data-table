@@ -1,7 +1,7 @@
 "use client";
 
 import type { Table } from "@tanstack/react-table";
-import { Check, ChevronsUpDown, GripVertical, Settings2, RotateCcw } from "lucide-react";
+import { Check, GripVertical, Settings2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -23,6 +23,7 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 
 interface DataTableViewOptionsProps<TData> {
   table: Table<TData>;
+  columnMapping?: Record<string, string>;
 }
 
 // Local storage key for column order
@@ -30,6 +31,7 @@ const COLUMN_ORDER_STORAGE_KEY = "data-table-column-order";
 
 export function DataTableViewOptions<TData>({
   table,
+  columnMapping,
 }: DataTableViewOptionsProps<TData>) {
   // Get columns that can be hidden
   const columns = React.useMemo(
@@ -45,28 +47,28 @@ export function DataTableViewOptions<TData>({
 
   // State for drag and drop
   const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);
-  
+
   // Order columns based on the current table column order
   const orderedColumns = useMemo(() => {
     const columnOrder = table.getState().columnOrder;
-    
+
     if (!columnOrder.length) {
       return columns;
     }
-    
+
     // Create a new array with columns sorted according to the columnOrder
     return [...columns].sort((a, b) => {
       const aIndex = columnOrder.indexOf(a.id);
       const bIndex = columnOrder.indexOf(b.id);
-      
+
       // If column isn't in the order array, put it at the end
       if (aIndex === -1) return 1;
       if (bIndex === -1) return -1;
-      
+
       return aIndex - bIndex;
     });
   }, [columns, table.getState().columnOrder]);
-  
+
   // Load column order from localStorage on initial render
   useEffect(() => {
     try {
@@ -109,31 +111,31 @@ export function DataTableViewOptions<TData>({
   // Handle drop
   const handleDrop = useCallback((e: React.DragEvent, targetColumnId: string) => {
     e.preventDefault();
-    
+
     if (!draggedColumnId || draggedColumnId === targetColumnId) return;
-    
+
     // Get current column order
-    const currentOrder = table.getState().columnOrder.length > 0 
-      ? [...table.getState().columnOrder] 
+    const currentOrder = table.getState().columnOrder.length > 0
+      ? [...table.getState().columnOrder]
       : table.getAllLeafColumns().map(d => d.id);
-    
+
     // Find indices
     const draggedIndex = currentOrder.indexOf(draggedColumnId);
     const targetIndex = currentOrder.indexOf(targetColumnId);
-    
+
     if (draggedIndex === -1 || targetIndex === -1) return;
-    
+
     // Create new order by moving the dragged column
     const newOrder = [...currentOrder];
     newOrder.splice(draggedIndex, 1);
     newOrder.splice(targetIndex, 0, draggedColumnId);
-    
+
     // Update table column order
     table.setColumnOrder(newOrder);
-    
+
     // Save to localStorage
     saveColumnOrder(newOrder);
-    
+
     setDraggedColumnId(null);
   }, [draggedColumnId, table, saveColumnOrder]);
 
@@ -147,9 +149,15 @@ export function DataTableViewOptions<TData>({
 
   // Get column display label
   const getColumnLabel = useCallback((column: any) => {
-    return (column.columnDef.meta as { label?: string })?.label ?? 
+    // First check if we have a mapping for this column
+    if (columnMapping && column.id in columnMapping) {
+      return columnMapping[column.id];
+    }
+    // Then check for meta label
+    return (column.columnDef.meta as { label?: string })?.label ??
+      // Finally fall back to formatted column ID
       column.id.replace(/_/g, ' ');
-  }, []);
+  }, [columnMapping]);
 
   return (
     <Popover>
@@ -199,7 +207,7 @@ export function DataTableViewOptions<TData>({
             </CommandGroup>
             <CommandSeparator />
             <CommandGroup>
-              <CommandItem 
+              <CommandItem
                 onSelect={resetColumnOrder}
                 className="justify-center text-center cursor-pointer"
               >
