@@ -46,7 +46,7 @@ export function BulkDeletePopup({
   const idsToDelete = allSelectedIds || selectedUsers.map(user => user.id);
 
   // Use total count if available, otherwise fallback to visible items count
-  const itemCount = totalSelectedCount || selectedUsers.length;
+  const itemCount = totalSelectedCount ?? selectedUsers.length;
 
   const handleDelete = async () => {
     try {
