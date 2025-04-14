@@ -21,7 +21,7 @@ const querySchema = z.object({
   search: z.string().optional(),
   from_date: z.string().optional(),
   to_date: z.string().optional(),
-  sort_by: z.enum(["name", "email", "total_expenses", "expense_count", "created_at"]).default("created_at"),
+  sort_by: z.enum(["id", "name", "email", "phone", "age", "total_expenses", "expense_count", "created_at"]).default("created_at"),
   sort_order: z.enum(["asc", "desc"]).default("desc"),
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(10),
@@ -100,6 +100,7 @@ router.get("/", async (c) => {
       .where(and(...filters))
       .groupBy(users.id)
       .orderBy(
+        // Handle aggregated fields
         sort_by === "total_expenses"
           ? sort_order === "asc"
             ? asc(sql`coalesce(sum(${expenses.amount}), 0)`)
@@ -108,11 +109,19 @@ router.get("/", async (c) => {
             ? sort_order === "asc"
               ? asc(sql`coalesce(count(${expenses.id}), 0)`)
               : desc(sql`coalesce(count(${expenses.id}), 0)`)
+          // Handle user table fields
+          : sort_by === "id"
+            ? sort_order === "asc" ? asc(users.id) : desc(users.id)
           : sort_by === "name"
             ? sort_order === "asc" ? asc(users.name) : desc(users.name)
-            : sort_by === "email"
-              ? sort_order === "asc" ? asc(users.email) : desc(users.email)
-              : sort_order === "asc" ? asc(users.created_at) : desc(users.created_at)
+          : sort_by === "email"
+            ? sort_order === "asc" ? asc(users.email) : desc(users.email)
+          : sort_by === "phone"
+            ? sort_order === "asc" ? asc(users.phone) : desc(users.phone)
+          : sort_by === "age"
+            ? sort_order === "asc" ? asc(users.age) : desc(users.age)
+          // Default to created_at
+          : sort_order === "asc" ? asc(users.created_at) : desc(users.created_at)
       )
       .limit(limit)
       .offset((page - 1) * limit);
