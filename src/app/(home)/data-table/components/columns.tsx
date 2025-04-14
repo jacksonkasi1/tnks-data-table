@@ -138,35 +138,39 @@ export const getColumns = (
       {
         id: "select",
         header: ({ table }) => (
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label="Select all"
-            className="translate-y-0.5 cursor-pointer"
-          />
+          <div className="pl-2">
+            <Checkbox
+              checked={
+                table.getIsAllPageRowsSelected() ||
+                (table.getIsSomePageRowsSelected() && "indeterminate")
+              }
+              onCheckedChange={(value) =>
+                table.toggleAllPageRowsSelected(!!value)
+              }
+              aria-label="Select all"
+              className="translate-y-0.5 cursor-pointer"
+            />
+          </div>
         ),
         cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => {
-              if (value) {
-                row.toggleSelected(true);
-              } else {
-                row.toggleSelected(false);
-                // If we have a deselection handler, use it for better cross-page tracking
-                if (handleRowDeselection) {
-                  handleRowDeselection(row.id);
+          <div>
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={(value) => {
+                if (value) {
+                  row.toggleSelected(true);
+                } else {
+                  row.toggleSelected(false);
+                  // If we have a deselection handler, use it for better cross-page tracking
+                  if (handleRowDeselection) {
+                    handleRowDeselection(row.id);
+                  }
                 }
-              }
-            }}
-            aria-label="Select row"
-            className="translate-y-0.5 cursor-pointer"
-          />
+              }}
+              aria-label="Select row"
+              className="translate-y-0.5 cursor-pointer"
+            />
+          </div>
         ),
         enableSorting: false,
         enableHiding: false,
