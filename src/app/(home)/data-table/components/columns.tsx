@@ -27,9 +27,10 @@ export const getColumns = (
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="ID" />
       ),
-      cell: ({ row }) => <div className="truncate text-left">{row.getValue("id")}</div>,
+      cell: ({ row }) => (
+        <div className="truncate text-left">{row.getValue("id")}</div>
+      ),
       size: 70,
-      enableSorting: false,
     },
     {
       accessorKey: "name",
@@ -37,7 +38,9 @@ export const getColumns = (
         <DataTableColumnHeader column={column} title="Name" />
       ),
       cell: ({ row }) => (
-        <div className="font-medium truncate text-left">{row.getValue("name")}</div>
+        <div className="font-medium truncate text-left">
+          {row.getValue("name")}
+        </div>
       ),
       size: 200,
     },
@@ -78,7 +81,9 @@ export const getColumns = (
       ),
       cell: ({ row }) => {
         return (
-          <div className="max-w-full text-left truncate">{row.getValue("age")}</div>
+          <div className="max-w-full text-left truncate">
+            {row.getValue("age")}
+          </div>
         );
       },
       size: 80,
@@ -92,7 +97,9 @@ export const getColumns = (
         const count = row.getValue("expense_count") as number;
         return (
           <div className="max-w-full text-left">
-            <Badge variant="outline" className="truncate">{count}</Badge>
+            <Badge variant="outline" className="truncate">
+              {count}
+            </Badge>
           </div>
         );
       },
@@ -112,7 +119,9 @@ export const getColumns = (
         }).format(parseFloat(amount || "0"));
 
         return (
-          <div className="max-w-full text-left font-medium truncate">{formatted}</div>
+          <div className="max-w-full text-left font-medium truncate">
+            {formatted}
+          </div>
         );
       },
       size: 150,
@@ -126,8 +135,9 @@ export const getColumns = (
         const date = new Date(row.getValue("created_at"));
         // Format date as "MMM d, yyyy" (e.g., "Mar 16, 2025")
         const formattedDate = format(date, "MMM d, yyyy");
-
-        return <div className="max-w-full text-left truncate">{formattedDate}</div>;
+        return (
+          <div className="max-w-full text-left truncate">{formattedDate}</div>
+        );
       },
       size: 120,
     },
