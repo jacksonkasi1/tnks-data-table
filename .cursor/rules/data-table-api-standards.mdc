@@ -1,0 +1,717 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+title: Data Table API Development Standards
+description: Guidelines for implementing RESTful APIs to support data tables, including CRUD operations, filtering, sorting, pagination, and response formats
+glob: "src/{api,server}/**/*.{ts,js,tsx,jsx}"
+alwaysApply: false
+---
+
+# Data Table API Development Standards
+
+## Introduction
+
+This rule defines standards for building server-side APIs that support data table components. The frontend data table requires consistent API patterns for CRUD operations, filtering, sorting, pagination, and error handling. Following these standards ensures seamless integration between the frontend table component and backend services.
+
+## API Overview
+
+A complete data table implementation requires the following API endpoints:
+
+1. **List/Query Endpoint**: Fetch multiple records with filtering, sorting, and pagination
+2. **Single Item Endpoint**: Get details for a specific record
+3. **Create Endpoint**: Add new records
+4. **Update Endpoint**: Modify existing records
+5. **Delete Endpoint**: Remove records (single or batch)
+6. **Batch Fetch Endpoint**: Retrieve multiple specific records by IDs
+
+For all endpoints, we follow a consistent request/response structure using RESTful principles.
+
+## Common Response Structure
+
+All API responses must follow these standard structures:
+
+### Success Response
+
+```typescript
+interface SuccessResponse<T> {
+  success: true;
+  data: T; // Single item or array of items
+  message?: string; // Optional success message
+  pagination?: {
+    page: number;
+    limit: number;
+    total_pages: number;
+    total_items: number;
+  };
+}
+```
+
+### Error Response
+
+```typescript
+interface ErrorResponse {
+  success: false;
+  error: string; // Human-readable error message
+  details?: any; // Optional detailed error information
+  code?: string; // Optional error code
+}
+```
+
+## Endpoint Implementations
+
+### List/Query Endpoint
+
+**URL Pattern**: `/api/{resource}`  
+**Method**: `GET`  
+**Purpose**: Fetch a collection of resources with filtering, sorting, and pagination
+
+#### Query Parameters
+
+- `search`: Text search term
+- `from_date`: Start date filter (ISO format)
+- `to_date`: End date filter (ISO format)
+- `sort_by`: Field to sort by
+- `sort_order`: Sort direction (`asc` or `desc`)
+- `page`: Page number (1-based)
+- `limit`: Items per page
+- Additional custom filters as needed
+
+#### Implementation Example
+
+```typescript
+// Using Hono and Drizzle ORM with PostgreSQL
+import { Hono } from "hono";
+import { z } from "zod";
+import { and, asc, between, count, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { db } from "@/db";
+import { myEntityTable } from "@/db/schema/my-entity";
+
+const router = new Hono();
+
+// Define query parameter schema with Zod
+const querySchema = z.object({
+  search: z.string().optional(),
+  from_date: z.string().optional(),
+  to_date: z.string().optional(),
+  sort_by: z.enum(["created_at", "name", "id", /* add other sortable fields */]).default("created_at"),
+  sort_order: z.enum(["asc", "desc"]).default("desc"),
+  page: z.coerce.number().default(1),
+  limit: z.coerce.number().default(10),
+});
+
+// GET /api/my-entities
+router.get("/", async (c) => {
+  try {
+    // Parse and validate query parameters
+    const result = querySchema.safeParse(c.req.query());
+    
+    if (!result.success) {
+      return c.json({
+        success: false,
+        error: "Invalid query parameters",
+        details: result.error.format(),
+      }, 400);
+    }
+    
+    const { search, from_date, to_date, sort_by, sort_order, page, limit } = result.data;
+    
+    // Build filters
+    const filters = [];
+    
+    // Search filter (search across multiple fields)
+    if (search) {
+      filters.push(
+        or(
+          ilike(myEntityTable.name, `%${search}%`),
+          ilike(myEntityTable.description, `%${search}%`),
+          // Add other searchable fields
+        )
+      );
+    }
+    
+    // Date filtering
+    if (from_date && to_date) {
+      filters.push(
+        between(
+          myEntityTable.created_at,
+          new Date(from_date),
+          new Date(to_date)
+        )
+      );
+    } else if (from_date) {
+      const fromDateTime = new Date(from_date);
+      filters.push(sql`${myEntityTable.created_at} >= ${fromDateTime}`);
+    } else if (to_date) {
+      const toDateTime = new Date(to_date);
+      filters.push(sql`${myEntityTable.created_at} <= ${toDateTime}`);
+    }
+    
+    // Add any custom filters here
+    
+    // Get data with pagination
+    const data = await db
+      .select()
+      .from(myEntityTable)
+      .where(filters.length > 0 ? and(...filters) : undefined)
+      .orderBy(
+        sort_by === "name"
+          ? sort_order === "asc" ? asc(myEntityTable.name) : desc(myEntityTable.name)
+          : sort_order === "asc" ? asc(myEntityTable.created_at) : desc(myEntityTable.created_at)
+        // Add other sort fields as needed
+      )
+      .limit(limit)
+      .offset((page - 1) * limit);
+    
+    // Count total items (for pagination)
+    const [{ value: totalItems }] = await db
+      .select({ value: count() })
+      .from(myEntityTable)
+      .where(filters.length > 0 ? and(...filters) : undefined);
+    
+    return c.json({
+      success: true,
+      data: data,
+      pagination: {
+        page,
+        limit,
+        total_pages: Math.ceil(totalItems / limit),
+        total_items: totalItems,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching items:", error);
+    return c.json({
+      success: false,
+      error: "Failed to fetch items",
+      details: error instanceof Error ? error.message : String(error),
+    }, 500);
+  }
+});
+
+export default router;
+```
+
+### Single Item Endpoint
+
+**URL Pattern**: `/api/{resource}/{id}`  
+**Method**: `GET`  
+**Purpose**: Retrieve a specific resource by ID
+
+#### Implementation Example
+
+```typescript
+// GET /api/my-entities/:id
+router.get("/:id", async (c) => {
+  try {
+    const id = parseInt(c.req.param("id"), 10);
+    
+    if (isNaN(id)) {
+      return c.json({
+        success: false,
+        error: "Invalid ID format",
+      }, 400);
+    }
+    
+    const [item] = await db
+      .select()
+      .from(myEntityTable)
+      .where(eq(myEntityTable.id, id));
+    
+    if (!item) {
+      return c.json({
+        success: false,
+        error: "Item not found",
+      }, 404);
+    }
+    
+    return c.json({
+      success: true,
+      data: item,
+    });
+  } catch (error) {
+    console.error("Error fetching item:", error);
+    return c.json({
+      success: false,
+      error: "Failed to fetch item",
+      details: error instanceof Error ? error.message : String(error),
+    }, 500);
+  }
+});
+```
+
+### Create Endpoint
+
+**URL Pattern**: `/api/{resource}` or `/api/{resource}/add`  
+**Method**: `POST`  
+**Purpose**: Add a new resource
+
+#### Implementation Example
+
+```typescript
+// Input validation schema
+const createSchema = z.object({
+  name: z.string().min(1, "Name is required").max(255),
+  description: z.string().optional(),
+  // Add other fields as needed
+});
+
+// POST /api/my-entities/add
+router.post("/add", async (c) => {
+  try {
+    // Parse and validate request body
+    const body = await c.req.json();
+    const validatedData = createSchema.parse(body);
+    
+    // Check for unique constraints if needed
+    const existingItem = await db.query.myEntityTable.findFirst({
+      where: eq(myEntityTable.name, validatedData.name),
+    });
+    
+    if (existingItem) {
+      return c.json({
+        success: false,
+        error: "An item with this name already exists",
+      }, 409);
+    }
+    
+    // Insert new item
+    const [newItem] = await db
+      .insert(myEntityTable)
+      .values({
+        name: validatedData.name,
+        description: validatedData.description,
+        // Add other fields
+      })
+      .returning();
+    
+    return c.json({
+      success: true,
+      data: newItem,
+      message: "Item created successfully"
+    }, 201);
+  } catch (error) {
+    console.error("Error creating item:", error);
+    
+    if (error instanceof z.ZodError) {
+      return c.json({
+        success: false,
+        error: "Validation error",
+        details: error.errors,
+      }, 400);
+    }
+    
+    return c.json({
+      success: false,
+      error: "Failed to create item",
+      details: error instanceof Error ? error.message : String(error),
+    }, 500);
+  }
+});
+```
+
+### Update Endpoint
+
+**URL Pattern**: `/api/{resource}/{id}`  
+**Method**: `PUT` or `PATCH`  
+**Purpose**: Update an existing resource
+
+#### Implementation Example
+
+```typescript
+// Update validation schema
+const updateSchema = z.object({
+  name: z.string().min(1, "Name is required").max(255).optional(),
+  description: z.string().optional(),
+  // Add other fields as needed
+});
+
+// PUT /api/my-entities/:id
+router.put("/:id", async (c) => {
+  try {
+    const id = parseInt(c.req.param("id"), 10);
+    
+    if (isNaN(id)) {
+      return c.json({
+        success: false,
+        error: "Invalid ID format",
+      }, 400);
+    }
+    
+    // Check if item exists
+    const [existingItem] = await db
+      .select()
+      .from(myEntityTable)
+      .where(eq(myEntityTable.id, id));
+    
+    if (!existingItem) {
+      return c.json({
+        success: false,
+        error: "Item not found",
+      }, 404);
+    }
+    
+    // Parse and validate request body
+    const body = await c.req.json();
+    const validatedData = updateSchema.parse(body);
+    
+    // Check name uniqueness if name is being updated
+    if (validatedData.name && validatedData.name !== existingItem.name) {
+      const duplicateName = await db.query.myEntityTable.findFirst({
+        where: eq(myEntityTable.name, validatedData.name),
+      });
+      
+      if (duplicateName) {
+        return c.json({
+          success: false,
+          error: "An item with this name already exists",
+        }, 409);
+      }
+    }
+    
+    // Update item
+    const [updatedItem] = await db
+      .update(myEntityTable)
+      .set({
+        ...validatedData,
+        updated_at: new Date(),
+      })
+      .where(eq(myEntityTable.id, id))
+      .returning();
+    
+    return c.json({
+      success: true,
+      data: updatedItem,
+      message: "Item updated successfully"
+    });
+  } catch (error) {
+    console.error("Error updating item:", error);
+    
+    if (error instanceof z.ZodError) {
+      return c.json({
+        success: false,
+        error: "Validation error",
+        details: error.errors,
+      }, 400);
+    }
+    
+    return c.json({
+      success: false,
+      error: "Failed to update item",
+      details: error instanceof Error ? error.message : String(error),
+    }, 500);
+  }
+});
+```
+
+### Delete Endpoint
+
+**URL Pattern**: `/api/{resource}/{id}`  
+**Method**: `DELETE`  
+**Purpose**: Remove a resource
+
+#### Implementation Example
+
+```typescript
+// DELETE /api/my-entities/:id
+router.delete("/:id", async (c) => {
+  try {
+    const id = parseInt(c.req.param("id"), 10);
+    
+    if (isNaN(id)) {
+      return c.json({
+        success: false,
+        error: "Invalid ID format",
+      }, 400);
+    }
+    
+    // Check if item exists
+    const [existingItem] = await db
+      .select()
+      .from(myEntityTable)
+      .where(eq(myEntityTable.id, id));
+    
+    if (!existingItem) {
+      return c.json({
+        success: false,
+        error: "Item not found",
+      }, 404);
+    }
+    
+    // Delete related records if needed (handle cascading)
+    // await db.delete(relatedTable).where(eq(relatedTable.entity_id, id));
+    
+    // Delete the item
+    await db.delete(myEntityTable).where(eq(myEntityTable.id, id));
+    
+    return c.json({
+      success: true,
+      message: "Item deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting item:", error);
+    return c.json({
+      success: false,
+      error: "Failed to delete item",
+      details: error instanceof Error ? error.message : String(error),
+    }, 500);
+  }
+});
+```
+
+### Batch Fetch Endpoint
+
+**URL Pattern**: `/api/{resource}/batch` or using query parameters  
+**Method**: `GET` or `POST`  
+**Purpose**: Retrieve multiple specific resources by their IDs
+
+#### Implementation Example
+
+```typescript
+// GET /api/my-entities/batch?ids=1,2,3
+// or
+// POST /api/my-entities/batch with body { ids: [1, 2, 3] }
+router.get("/batch", async (c) => {
+  try {
+    let ids: number[] = [];
+    
+    // Get IDs from query parameters (comma-separated)
+    const idsParam = c.req.query("ids");
+    
+    if (idsParam) {
+      ids = idsParam.split(",")
+        .map(id => parseInt(id.trim(), 10))
+        .filter(id => !isNaN(id));
+    }
+    
+    if (ids.length === 0) {
+      return c.json({
+        success: true,
+        data: [] // Return empty array for no IDs
+      });
+    }
+    
+    // Fetch the items by IDs
+    const items = await db
+      .select()
+      .from(myEntityTable)
+      .where(inArray(myEntityTable.id, ids));
+    
+    // Return the result
+    return c.json({
+      success: true,
+      data: items
+    });
+  } catch (error) {
+    console.error("Error batch fetching items:", error);
+    return c.json({
+      success: false,
+      error: "Failed to fetch items",
+      details: error instanceof Error ? error.message : String(error),
+    }, 500);
+  }
+});
+
+// Alternative POST implementation for larger ID sets
+router.post("/batch", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    if (!Array.isArray(body.ids) || body.ids.length === 0) {
+      return c.json({
+        success: true,
+        data: [] // Return empty array for no IDs
+      });
+    }
+    
+    const ids = body.ids
+      .map(id => parseInt(id, 10))
+      .filter(id => !isNaN(id));
+    
+    // Process IDs in batches to avoid URL length limitations
+    const BATCH_SIZE = 50;
+    const items = [];
+    
+    // Process in batches
+    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+      const batchIds = ids.slice(i, i + BATCH_SIZE);
+      
+      const batchItems = await db
+        .select()
+        .from(myEntityTable)
+        .where(inArray(myEntityTable.id, batchIds));
+      
+      items.push(...batchItems);
+    }
+    
+    return c.json({
+      success: true,
+      data: items
+    });
+  } catch (error) {
+    console.error("Error batch fetching items:", error);
+    return c.json({
+      success: false,
+      error: "Failed to fetch items",
+      details: error instanceof Error ? error.message : String(error),
+    }, 500);
+  }
+});
+```
+
+### Bulk Delete Endpoint
+
+**URL Pattern**: `/api/{resource}/bulk-delete`  
+**Method**: `POST`  
+**Purpose**: Delete multiple resources at once
+
+#### Implementation Example
+
+```typescript
+// POST /api/my-entities/bulk-delete
+router.post("/bulk-delete", async (c) => {
+  try {
+    const body = await c.req.json();
+    
+    if (!Array.isArray(body.ids) || body.ids.length === 0) {
+      return c.json({
+        success: false,
+        error: "No valid IDs provided"
+      }, 400);
+    }
+    
+    const ids = body.ids
+      .map(id => parseInt(id, 10))
+      .filter(id => !isNaN(id));
+    
+    if (ids.length === 0) {
+      return c.json({
+        success: false,
+        error: "No valid IDs provided"
+      }, 400);
+    }
+    
+    // Delete related records if needed (handle cascading)
+    // await db.delete(relatedTable).where(inArray(relatedTable.entity_id, ids));
+    
+    // Delete the items
+    const result = await db
+      .delete(myEntityTable)
+      .where(inArray(myEntityTable.id, ids));
+    
+    // Count of deleted items may not be directly available in some ORMs
+    // If available, use it; otherwise just confirm operation completed
+    
+    return c.json({
+      success: true,
+      message: `Items deleted successfully`,
+      details: {
+        deleted_count: ids.length
+      }
+    });
+  } catch (error) {
+    console.error("Error bulk deleting items:", error);
+    return c.json({
+      success: false,
+      error: "Failed to delete items",
+      details: error instanceof Error ? error.message : String(error),
+    }, 500);
+  }
+});
+```
+
+## Implementation Steps
+
+When implementing a data table API for any entity, follow these steps:
+
+1. **Define the Schema**:
+   - Identify the entity fields
+   - Set up appropriate data types and constraints
+   - Define relationships with other entities
+
+2. **Implement Core Endpoints**:
+   - Create the list endpoint with filtering, sorting, and pagination
+   - Add single item fetch endpoint
+   - Implement create/update/delete endpoints
+   - Add batch operations as needed
+
+3. **Add Validation**:
+   - Define Zod schemas for input validation
+   - Validate query parameters and request bodies
+   - Handle validation errors consistently
+
+4. **Implement Error Handling**:
+   - Catch all potential errors
+   - Return appropriate HTTP status codes
+   - Provide helpful error messages
+   - Log errors for debugging
+
+5. **Optimize for Performance**:
+   - Use appropriate indexes for frequently queried fields
+   - Implement efficient pagination
+   - Use batch operations for related data
+   - Consider caching for frequently accessed data
+
+## Best Practices
+
+1. **Consistent Response Format**:
+   - Always use the standardized success/error response format
+   - Include pagination information for list endpoints
+   - Provide meaningful error messages
+
+2. **Parameter Validation**:
+   - Validate all inputs with appropriate schemas
+   - Convert string parameters to their proper types (numbers, dates, etc.)
+   - Provide default values for optional parameters
+
+3. **Database Operations**:
+   - Use transactions for operations that modify multiple tables
+   - Handle database constraints and uniqueness checks
+   - Implement proper error handling for database operations
+
+4. **API Design**:
+   - Follow RESTful principles
+   - Use consistent naming conventions
+   - Implement proper HTTP methods for different operations
+   - Return appropriate HTTP status codes
+
+5. **Security**:
+   - Validate and sanitize all inputs
+   - Implement proper authentication and authorization
+   - Use parameterized queries to prevent SQL injection
+   - Don't expose sensitive data in responses
+
+6. **Documentation**:
+   - Add comments explaining complex logic
+   - Document API endpoints, parameters, and responses
+   - Include examples of request/response formats
+
+## Common Pitfalls
+
+1. **Forgetting to handle invalid input types** (e.g., non-numeric IDs)
+2. **Missing validation** for query parameters or request bodies
+3. **Inconsistent error responses** across different endpoints
+4. **Not handling database errors** properly
+5. **Inefficient queries** that don't scale with data growth
+6. **Missing pagination** on list endpoints
+7. **Not limiting query results**, potentially returning too many records
+8. **Incomplete validation** of uniqueness constraints before insert/update
+9. **Missing authorization checks** for sensitive operations
+10. **Not handling related data** correctly when deleting records
+
+## Task Splitting Strategy
+
+When implementing a new entity API, divide the work into these manageable tasks:
+
+1. **Schema Definition**: Define the database schema and relationships
+2. **Base CRUD**: Implement basic CRUD operations without advanced filtering
+3. **Filtering & Sorting**: Add filtering and sorting capabilities
+4. **Pagination**: Implement proper pagination
+5. **Validation**: Add input validation for all endpoints
+6. **Error Handling**: Ensure comprehensive error handling
+7. **Batch Operations**: Implement batch operations (if needed)
+8. **Testing**: Write tests for all endpoints
+9. **Documentation**: Document the API endpoints
+10. **Performance Optimization**: Optimize for performance if needed

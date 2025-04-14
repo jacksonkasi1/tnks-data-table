@@ -44,7 +44,7 @@ This documentation provides comprehensive guidance on how to implement, configur
 
 ## Server
 
-Check out the API development document to understand the default configuration for this table. [👉 Click here](./src/SERVER.md)
+Check out the API development document to understand the default configuration for this table. [👉 Click here](./SERVER.md)
 
 ### Key Benefits
 
