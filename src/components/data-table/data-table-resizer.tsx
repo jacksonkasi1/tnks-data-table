@@ -8,14 +8,14 @@ import { GripVertical } from "lucide-react"
 // Simplified resizer component without complex types
 export function DataTableResizer({ header, table }: { header: any; table: any }) {
   const isResizing = header.column.getIsResizing()
-  
+
   return (
     <div
       onMouseDown={header.getResizeHandler()}
       onTouchStart={header.getResizeHandler()}
       className={cn(
         "absolute right-0 top-0 flex h-full w-4 cursor-col-resize select-none touch-none items-center justify-center",
-        "opacity-0 hover:opacity-100 group-hover/th:opacity-100 z-10",
+        "opacity-0 group-hover/th:opacity-100 z-10",
         isResizing && "opacity-100"
       )}
       aria-hidden="true"

@@ -26,12 +26,14 @@ export default function UserTable() {
       fetchByIdsFn={fetchUsersByIds}
       idField="id"
       pageSizeOptions={[10, 20, 30, 40, 50, 100, 150]}
-      renderToolbarContent={({ selectedRows, resetSelection }) => (
+      renderToolbarContent={({ selectedRows, allSelectedIds, totalSelectedCount, resetSelection }) => (
         <ToolbarOptions
           selectedUsers={selectedRows.map(row => ({
             id: row.id,
             name: row.name,
           }))}
+          allSelectedUserIds={allSelectedIds}
+          totalSelectedCount={totalSelectedCount}
           resetSelection={resetSelection}
         />
       )}

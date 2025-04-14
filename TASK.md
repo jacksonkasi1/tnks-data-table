@@ -49,19 +49,19 @@
 
 ## CRUD Operations
 
-- [ ] Implement delete user functionality with confirmation dialog
-- [ ] Add API integration for user deletion
-- [ ] Create add new user form/dialog
-- [ ] Implement API integration for user creation
+- [x] Implement delete user functionality with confirmation dialog
+- [x] Add API integration for user deletion
+- [x] Create add new user form/dialog
+- [x] Implement API integration for user creation
 - [ ] Add edit user functionality
 - [ ] Implement optimistic updates for better UX
 
 ## Reusability & Architecture
 
-- [ ] Refactor table components into a reusable pattern
+- [x] Refactor table components into a reusable pattern
 - [ ] Create a modular table factory/builder pattern
-- [ ] Extract table hooks into reusable custom hooks
-- [ ] Implement generic typing for better type safety
+- [x] Extract table hooks into reusable custom hooks
+- [x] Implement generic typing for better type safety
 - [ ] Create a unified state management approach
 - [ ] Document component composition pattern for extensibility
 

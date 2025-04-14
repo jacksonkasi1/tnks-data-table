@@ -4,7 +4,7 @@ import { Cross2Icon } from "@radix-ui/react-icons";
 import { Table } from "@tanstack/react-table";
 import { useEffect, useState, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Settings, Undo2, TrashIcon, EyeOff, CheckSquare } from "lucide-react";
+import { Settings, Undo2, TrashIcon, EyeOff, CheckSquare, MoveHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +39,7 @@ interface DataTableToolbarProps<TData> {
   getAllItems?: () => TData[];
   config: TableConfig;
   resetColumnSizing?: () => void;
+  resetColumnOrder?: () => void;
   entityName?: string;
   columnMapping?: Record<string, string>;
   columnWidths?: Array<{ wch: number }>;
@@ -56,6 +57,7 @@ export function DataTableToolbar<TData>({
   getAllItems,
   config,
   resetColumnSizing,
+  resetColumnOrder,
   entityName = "items",
   columnMapping,
   columnWidths,
@@ -347,6 +349,21 @@ export function DataTableToolbar<TData>({
                   >
                     <Undo2 className="mr-2 h-4 w-4" />
                     Reset Column Sizes
+                  </Button>
+                )}
+
+                {resetColumnOrder && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="justify-start"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      resetColumnOrder();
+                    }}
+                  >
+                    <MoveHorizontal className="mr-2 h-4 w-4" />
+                    Reset Column Order
                   </Button>
                 )}
 
