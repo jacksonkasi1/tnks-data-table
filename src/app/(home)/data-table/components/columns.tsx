@@ -23,6 +23,15 @@ export const getColumns = (
   // Base columns without the select column
   const baseColumns: ColumnDef<User>[] = [
     {
+      accessorKey: "id",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="ID" />
+      ),
+      cell: ({ row }) => <div className="truncate">{row.getValue("id")}</div>,
+      size: 70,
+      enableSorting: false,
+    },
+    {
       accessorKey: "name",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Name" />
