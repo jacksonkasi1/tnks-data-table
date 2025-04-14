@@ -42,6 +42,10 @@ The Advanced Data Table component is a highly configurable and feature-rich tabl
 
 This documentation provides comprehensive guidance on how to implement, configure, and extend the data table for your specific needs.
 
+## Server
+
+Check out the API development document to understand the default configuration for this table. [👉 Click here](./SERVER.md)
+
 ### Key Benefits
 
 - **TypeScript Support**: Fully typed components for better developer experience
