@@ -618,7 +618,7 @@ export function DataTable<TData, TValue>({
                   {Array.from({ length: columns.length }).map((_, j) => (
                     <TableCell
                       key={`skeleton-cell-${j}`}
-                      className="px-4 py-2 truncate max-w-0"
+                      className="px-4 py-2 truncate max-w-0 text-left"
                       role="gridcell"
                       tabIndex={-1}
                     >
@@ -648,7 +648,7 @@ export function DataTable<TData, TValue>({
                 >
                   {row.getVisibleCells().map((cell, cellIndex) => (
                     <TableCell
-                      className="px-4 py-2 truncate max-w-0"
+                      className="px-4 py-2 truncate max-w-0 text-left"
                       key={cell.id}
                       id={`cell-${rowIndex}-${cellIndex}`}
                       data-cell-index={cellIndex}
@@ -667,7 +667,7 @@ export function DataTable<TData, TValue>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center truncate"
+                  className="h-24 text-left truncate"
                 >
                   No results.
                 </TableCell>
