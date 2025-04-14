@@ -28,7 +28,7 @@ export const getColumns = (
         <DataTableColumnHeader column={column} title="Name" />
       ),
       cell: ({ row }) => (
-        <div className="font-medium">{row.getValue("name")}</div>
+        <div className="font-medium truncate">{row.getValue("name")}</div>
       ),
       size: 200,
     },
@@ -39,8 +39,8 @@ export const getColumns = (
       ),
       cell: ({ row }) => {
         return (
-          <div className="flex space-x-2">
-            <span className="max-w-[500px] truncate font-medium">
+          <div className="flex space-x-2 truncate">
+            <span className="truncate font-medium">
               {row.getValue("email")}
             </span>
           </div>
@@ -55,8 +55,8 @@ export const getColumns = (
       ),
       cell: ({ row }) => {
         return (
-          <div className="flex items-center">
-            <span>{row.getValue("phone")}</span>
+          <div className="flex items-center truncate">
+            <span className="truncate">{row.getValue("phone")}</span>
           </div>
         );
       },
@@ -69,7 +69,7 @@ export const getColumns = (
       ),
       cell: ({ row }) => {
         return (
-          <div className="w-[80px] text-center">{row.getValue("age")}</div>
+          <div className="max-w-full text-center truncate">{row.getValue("age")}</div>
         );
       },
       size: 80,
@@ -82,8 +82,8 @@ export const getColumns = (
       cell: ({ row }) => {
         const count = row.getValue("expense_count") as number;
         return (
-          <div className="w-[80px] text-center">
-            <Badge variant="outline">{count}</Badge>
+          <div className="max-w-full">
+            <Badge variant="outline" className="truncate">{count}</Badge>
           </div>
         );
       },
@@ -103,7 +103,7 @@ export const getColumns = (
         }).format(parseFloat(amount || "0"));
 
         return (
-          <div className="w-[120px] text-right font-medium">{formatted}</div>
+          <div className="max-w-full text-right font-medium truncate">{formatted}</div>
         );
       },
       size: 150,
@@ -118,7 +118,7 @@ export const getColumns = (
         // Format date as "MMM d, yyyy" (e.g., "Mar 16, 2025")
         const formattedDate = format(date, "MMM d, yyyy");
 
-        return <div className="w-[120px]">{formattedDate}</div>;
+        return <div className="max-w-full truncate">{formattedDate}</div>;
       },
       size: 120,
     },
@@ -138,7 +138,7 @@ export const getColumns = (
       {
         id: "select",
         header: ({ table }) => (
-          <div className="pl-2">
+          <div className="pl-2 truncate">
             <Checkbox
               checked={
                 table.getIsAllPageRowsSelected() ||
@@ -153,7 +153,7 @@ export const getColumns = (
           </div>
         ),
         cell: ({ row }) => (
-          <div>
+          <div className="pl-2 truncate">
             <Checkbox
               checked={row.getIsSelected()}
               onCheckedChange={(value) => {

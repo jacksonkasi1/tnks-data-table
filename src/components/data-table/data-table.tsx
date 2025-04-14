@@ -35,8 +35,8 @@ import { DataTableResizer } from "@/components/data-table/data-table-resizer";
 
 // Import core utilities
 import { preprocessSearch } from "@/components/data-table/utils/search";
-import { 
-  createSortingHandler, 
+import {
+  createSortingHandler,
   createColumnFiltersHandler,
   createColumnVisibilityHandler,
   createPaginationHandler,
@@ -45,8 +45,8 @@ import {
 } from "@/components/data-table/utils/table-state-handlers";
 import { createKeyboardNavigationHandler } from "@/components/data-table/utils/keyboard-navigation";
 import { createConditionalStateHook } from "@/components/data-table/utils/conditional-state";
-import { 
-  initializeColumnSizes, 
+import {
+  initializeColumnSizes,
   trackColumnResizing,
   cleanupColumnResizing
 } from "@/components/data-table/utils/column-sizing";
@@ -54,10 +54,10 @@ import {
 interface DataTableProps<TData, TValue> {
   // Allow overriding the table configuration
   config?: Partial<TableConfig>;
-  
+
   // Column definitions generator
   getColumns: (handleRowDeselection: ((rowId: string) => void) | null | undefined) => ColumnDef<TData, TValue>[];
-  
+
   // Data fetching function
   fetchDataFn: ((params: {
     page: number;
@@ -84,10 +84,10 @@ interface DataTableProps<TData, TValue> {
     sortBy: string,
     sortOrder: string
   ) => any);
-  
+
   // Function to fetch specific items by their IDs
   fetchByIdsFn?: (ids: number[]) => Promise<TData[]>;
-  
+
   // Export configuration
   exportConfig: {
     entityName: string;
@@ -95,7 +95,7 @@ interface DataTableProps<TData, TValue> {
     columnWidths: Array<{ wch: number }>;
     headers: string[];
   };
-  
+
   // ID field in TData for tracking selected items
   idField: keyof TData;
 
@@ -123,19 +123,19 @@ export function DataTable<TData, TValue>({
 }: DataTableProps<TData, TValue>) {
   // Load table configuration with any overrides
   const tableConfig = useTableConfig(config);
-  
+
   // Table ID for localStorage storage - generate a default if not provided
   const tableId = tableConfig.columnResizingTableId || 'data-table-default';
-  
+
   // Use our custom hook for column resizing
   const { columnSizing, setColumnSizing, resetColumnSizing } = useTableColumnResize(
     tableId,
     tableConfig.enableColumnResizing
   );
-  
+
   // Create conditional URL state hook based on config
   const useConditionalUrlState = createConditionalStateHook(tableConfig.enableUrlState);
-  
+
   // States for API parameters using conditional URL state
   const [page, setPage] = useConditionalUrlState("page", 1);
   const [pageSize, setPageSize] = useConditionalUrlState("pageSize", 10);
@@ -159,38 +159,38 @@ export function DataTable<TData, TValue>({
       total_items: number;
     };
   } | null>(null);
-  
+
   // Column order state (managed separately from URL state as it's persisted in localStorage)
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
-  
+
   // PERFORMANCE FIX: Use only one selection state as the source of truth
   const [selectedItemIds, setSelectedItemIds] = useState<Record<string | number, boolean>>({});
-  
+
   // Convert the sorting from URL to the format TanStack Table expects
   const sorting = useMemo(() => createSortingState(sortBy, sortOrder), [sortBy, sortOrder]);
 
   // Get current data items - memoize to avoid recalculations
   const dataItems = useMemo(() => data?.data || [], [data?.data]);
-  
+
   // PERFORMANCE FIX: Derive rowSelection from selectedItemIds using memoization
   const rowSelection = useMemo(() => {
     if (!dataItems.length) return {};
-    
+
     // Map selectedItemIds to row indices for the table
     const selection: Record<string, boolean> = {};
-    
+
     dataItems.forEach((item, index) => {
       const itemId = String(item[idField]);
       if (selectedItemIds[itemId]) {
         selection[String(index)] = true;
       }
     });
-    
+
     return selection;
   }, [dataItems, selectedItemIds, idField]);
 
   // Calculate total selected items - memoize to avoid recalculation
-  const totalSelectedItems = useMemo(() => 
+  const totalSelectedItems = useMemo(() =>
     Object.keys(selectedItemIds).length,
     [selectedItemIds]
   );
@@ -198,10 +198,10 @@ export function DataTable<TData, TValue>({
   // PERFORMANCE FIX: Optimized row deselection handler
   const handleRowDeselection = useCallback((rowId: string) => {
     if (!dataItems.length) return;
-    
+
     const rowIndex = parseInt(rowId, 10);
     const item = dataItems[rowIndex];
-    
+
     if (item) {
       const itemId = String(item[idField]);
       setSelectedItemIds(prev => {
@@ -224,11 +224,11 @@ export function DataTable<TData, TValue>({
     const newRowSelection = typeof updaterOrValue === 'function'
       ? updaterOrValue(rowSelection)
       : updaterOrValue;
-    
+
     // Batch update selectedItemIds based on the new row selection
     setSelectedItemIds(prev => {
       const next = { ...prev };
-      
+
       // Process changes for current page
       if (dataItems.length) {
         // First handle explicit selections in newRowSelection
@@ -237,7 +237,7 @@ export function DataTable<TData, TValue>({
           if (rowIndex >= 0 && rowIndex < dataItems.length) {
             const item = dataItems[rowIndex];
             const itemId = String(item[idField]);
-            
+
             if (isSelected) {
               next[itemId] = true;
             } else {
@@ -245,19 +245,19 @@ export function DataTable<TData, TValue>({
             }
           }
         });
-        
+
         // Then handle implicit deselections (rows that were selected but aren't in newRowSelection)
         dataItems.forEach((item, index) => {
           const itemId = String(item[idField]);
           const rowId = String(index);
-          
+
           // If item was selected but isn't in new selection, deselect it
           if (prev[itemId] && newRowSelection[rowId] === undefined) {
             delete next[itemId];
           }
         });
       }
-      
+
       return next;
     });
   }, [dataItems, rowSelection, idField]);
@@ -268,36 +268,36 @@ export function DataTable<TData, TValue>({
     if (totalSelectedItems === 0) {
       return [];
     }
-    
+
     // Get IDs of selected items
-    const selectedIdsArray = Object.keys(selectedItemIds).map(id => 
+    const selectedIdsArray = Object.keys(selectedItemIds).map(id =>
       typeof id === 'string' ? parseInt(id, 10) : id as number
     );
-    
+
     // Find items from current page that are selected
-    const itemsInCurrentPage = dataItems.filter(item => 
+    const itemsInCurrentPage = dataItems.filter(item =>
       selectedItemIds[String(item[idField])]
     );
-    
+
     // Get IDs of items on current page
-    const idsInCurrentPage = itemsInCurrentPage.map(item => 
+    const idsInCurrentPage = itemsInCurrentPage.map(item =>
       item[idField] as unknown as number
     );
-    
+
     // Find IDs that need to be fetched (not on current page)
-    const idsToFetch = selectedIdsArray.filter(id => 
+    const idsToFetch = selectedIdsArray.filter(id =>
       !idsInCurrentPage.includes(id)
     );
-    
+
     // If all selected items are on current page or we can't fetch by IDs
     if (idsToFetch.length === 0 || !fetchByIdsFn) {
       return itemsInCurrentPage;
     }
-    
+
     try {
       // Fetch missing items in a single batch
       const fetchedItems = await fetchByIdsFn(idsToFetch);
-      
+
       // Combine current page items with fetched items
       return [...itemsInCurrentPage, ...fetchedItems];
     } catch (error) {
@@ -316,7 +316,7 @@ export function DataTable<TData, TValue>({
   useEffect(() => {
     // Check if the fetchDataFn is a query hook
     const isQueryHook = (fetchDataFn as any).isQueryHook === true;
-    
+
     if (!isQueryHook) {
       const fetchData = async () => {
         try {
@@ -347,10 +347,10 @@ export function DataTable<TData, TValue>({
   }, [page, pageSize, search, dateRange, sortBy, sortOrder, fetchDataFn]);
 
   // If fetchDataFn is a React Query hook, call it directly with parameters
-  const queryResult = (fetchDataFn as any).isQueryHook === true 
+  const queryResult = (fetchDataFn as any).isQueryHook === true
     ? (fetchDataFn as any)(page, pageSize, search, dateRange, sortBy, sortOrder)
     : null;
-  
+
   // If using React Query, update state based on query result
   useEffect(() => {
     if (queryResult) {
@@ -387,7 +387,7 @@ export function DataTable<TData, TValue>({
 
   // Create event handlers using utility functions
   const handleSortingChange = useCallback(
-    createSortingHandler(setSortBy, setSortOrder), 
+    createSortingHandler(setSortBy, setSortOrder),
     [setSortBy, setSortOrder]
   );
 
@@ -416,9 +416,9 @@ export function DataTable<TData, TValue>({
     const newColumnOrder = typeof updaterOrValue === 'function'
       ? updaterOrValue(columnOrder)
       : updaterOrValue;
-    
+
     setColumnOrder(newColumnOrder);
-    
+
     // Persist column order to localStorage
     try {
       localStorage.setItem('data-table-column-order', JSON.stringify(newColumnOrder));
@@ -426,7 +426,7 @@ export function DataTable<TData, TValue>({
       console.error('Failed to save column order to localStorage:', error);
     }
   }, [columnOrder]);
-  
+
   // Load column order from localStorage on initial render
   useEffect(() => {
     try {
@@ -491,13 +491,13 @@ export function DataTable<TData, TValue>({
 
   // Handle column resizing
   useEffect(() => {
-    const isResizingAny = 
-      table.getHeaderGroups().some(headerGroup => 
+    const isResizingAny =
+      table.getHeaderGroups().some(headerGroup =>
         headerGroup.headers.some(header => header.column.getIsResizing())
       );
-    
+
     trackColumnResizing(isResizingAny);
-    
+
     // Cleanup on unmount
     return () => {
       cleanupColumnResizing();
@@ -509,7 +509,7 @@ export function DataTable<TData, TValue>({
     // Reset to empty array (which resets to default order)
     table.setColumnOrder([]);
     setColumnOrder([]);
-    
+
     // Remove from localStorage
     try {
       localStorage.removeItem('data-table-column-order');
@@ -563,10 +563,10 @@ export function DataTable<TData, TValue>({
           })}
         />
       )}
-      
-      <div 
-        ref={tableContainerRef} 
-        className="overflow-y-auto rounded-md border table-container" 
+
+      <div
+        ref={tableContainerRef}
+        className="overflow-y-auto rounded-md border table-container"
         role="grid"
         tabIndex={0}
         aria-label="Data table"
@@ -575,7 +575,7 @@ export function DataTable<TData, TValue>({
         <Table className={tableConfig.enableColumnResizing ? "resizable-table" : ""}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow 
+              <TableRow
                 key={headerGroup.id}
                 role="row"
               >
@@ -610,15 +610,15 @@ export function DataTable<TData, TValue>({
             {isLoading ? (
               // Loading state
               Array.from({ length: pageSize }).map((_, i) => (
-                <TableRow 
+                <TableRow
                   key={`skeleton-${i}`}
                   role="row"
                   tabIndex={-1}
                 >
                   {Array.from({ length: columns.length }).map((_, j) => (
-                    <TableCell 
-                      key={`skeleton-cell-${j}`} 
-                      className="px-4 py-2"
+                    <TableCell
+                      key={`skeleton-cell-${j}`}
+                      className="px-4 py-2 truncate max-w-0"
                       role="gridcell"
                       tabIndex={-1}
                     >
@@ -647,8 +647,8 @@ export function DataTable<TData, TValue>({
                   }}
                 >
                   {row.getVisibleCells().map((cell, cellIndex) => (
-                    <TableCell 
-                      className="px-4 py-2" 
+                    <TableCell
+                      className="px-4 py-2 truncate max-w-0"
                       key={cell.id}
                       id={`cell-${rowIndex}-${cellIndex}`}
                       data-cell-index={cellIndex}
@@ -667,7 +667,7 @@ export function DataTable<TData, TValue>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center"
+                  className="h-24 text-center truncate"
                 >
                   No results.
                 </TableCell>
@@ -676,10 +676,10 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      
+
       {tableConfig.enablePagination && (
         <DataTablePagination
-          table={table} 
+          table={table}
           totalItems={data?.pagination.total_items || 0}
           totalSelectedItems={totalSelectedItems}
           pageSizeOptions={pageSizeOptions || [10, 20, 30, 40, 50]}
