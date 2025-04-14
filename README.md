@@ -181,7 +181,8 @@ By following this structure, you can easily maintain and extend your data tables
 1. **Install required dependencies**:
 
 ```bash
-npm install @tanstack/react-table @tanstack/react-query zod @hookform/resolvers sonner date-fns
+# Installing dependencies with Bun
+bun add @tanstack/react-table @tanstack/react-query zod @hookform/resolvers sonner date-fns
 ```
 
 2. **Copy the core data table components** to your project:
