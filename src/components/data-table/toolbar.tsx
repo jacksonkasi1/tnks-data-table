@@ -319,7 +319,7 @@ export function DataTableToolbar<TData>({
           <PopoverTrigger asChild>
             <Button
               variant="outline"
-              size="default"
+              size="icon"
               className="p-0"
               title="Table Settings"
             >
