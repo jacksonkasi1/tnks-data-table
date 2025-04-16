@@ -410,6 +410,7 @@ export const CalendarDatePicker = React.forwardRef<
                 "w-auto",
                 multiSelectVariants({ variant, className })
               )}
+              size="sm"
               onClick={handleTogglePopover}
               suppressHydrationWarning
             >
