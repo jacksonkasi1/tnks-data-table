@@ -410,7 +410,7 @@ export const CalendarDatePicker = React.forwardRef<
                 "w-auto",
                 multiSelectVariants({ variant, className })
               )}
-              size="sm"
+              size="default"
               onClick={handleTogglePopover}
               suppressHydrationWarning
             >
@@ -562,7 +562,7 @@ export const CalendarDatePicker = React.forwardRef<
                       <Button
                         key={label}
                         variant="ghost"
-                        size="sm"
+                        size="default"
                         className={cn(
                           "justify-start hover:bg-primary/90 hover:text-background",
                           selectedRange === label &&

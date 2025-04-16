@@ -85,7 +85,7 @@ export function AddUserPopup() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
+        <Button size="default">
           Add User
         </Button>
       </DialogTrigger>

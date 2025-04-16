@@ -280,7 +280,7 @@ export function DataTableExport<TData extends ExportableData>({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8" disabled={isLoading}>
+        <Button variant="outline" size="default" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

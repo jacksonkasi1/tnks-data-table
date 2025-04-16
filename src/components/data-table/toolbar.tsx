@@ -265,7 +265,7 @@ export function DataTableToolbar<TData>({
             placeholder={`Search ${entityName}...`}
             value={localSearch}
             onChange={handleSearchChange}
-            className="h-8 w-[150px] lg:w-[250px]"
+            className="w-[150px] lg:w-[250px]"
           />
         )}
 
@@ -287,7 +287,7 @@ export function DataTableToolbar<TData>({
           <Button
             variant="ghost"
             onClick={handleResetFilters}
-            className="h-8 px-2 lg:px-3"
+            className="px-2 lg:px-3"
           >
             Reset
             <Cross2Icon className="ml-2 h-4 w-4" />
@@ -319,8 +319,8 @@ export function DataTableToolbar<TData>({
           <PopoverTrigger asChild>
             <Button
               variant="outline"
-              size="sm"
-              className="h-8 w-8 p-0"
+              size="default"
+              className="p-0"
               title="Table Settings"
             >
               <Settings className="h-4 w-4" />
@@ -337,7 +337,7 @@ export function DataTableToolbar<TData>({
                 {config.enableColumnResizing && resetColumnSizing && (
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="default"
                     className="justify-start"
                     onClick={(e) => {
                       e.preventDefault();
@@ -352,7 +352,7 @@ export function DataTableToolbar<TData>({
                 {resetColumnOrder && (
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="default"
                     className="justify-start"
                     onClick={(e) => {
                       e.preventDefault();
@@ -367,7 +367,7 @@ export function DataTableToolbar<TData>({
                 {config.enableRowSelection && (
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="default"
                     className="justify-start"
                     onClick={(e) => {
                       e.preventDefault();
@@ -386,7 +386,7 @@ export function DataTableToolbar<TData>({
                 {!table.getIsAllColumnsVisible() && (
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="default"
                     className="justify-start"
                     onClick={() => table.resetColumnVisibility()}
                   >

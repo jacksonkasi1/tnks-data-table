@@ -37,7 +37,7 @@ import {
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              size="sm"
+              size="default"
               className="h-8 data-[state=open]:bg-accent"
             >
               <span>{title}</span>
