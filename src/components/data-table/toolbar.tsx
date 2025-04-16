@@ -331,11 +331,8 @@ export function DataTableToolbar<TData>({
             <div className="grid gap-4">
               <div className="space-y-2">
                 <h4 className="font-medium leading-none">Table Settings</h4>
-                <p className="text-sm text-muted-foreground">
-                  Configure the table appearance and behavior.
-                </p>
               </div>
-              <Separator />
+
               <div className="grid gap-2">
                 {config.enableColumnResizing && resetColumnSizing && (
                   <Button
