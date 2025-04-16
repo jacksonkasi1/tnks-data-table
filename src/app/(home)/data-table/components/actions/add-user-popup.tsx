@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 
 // ** Import 3rd Party Libs
 import { z } from "zod";
@@ -45,7 +44,6 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export function AddUserPopup() {
-  const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const queryClient = useQueryClient();
@@ -71,7 +69,6 @@ export function AddUserPopup() {
         toast.success("User added successfully");
         form.reset();
         setOpen(false);
-        router.refresh(); // Refresh the page to show new data
         await queryClient.invalidateQueries({ queryKey: ["users"] });
       } else {
         toast.error(response.error || "Failed to add user");

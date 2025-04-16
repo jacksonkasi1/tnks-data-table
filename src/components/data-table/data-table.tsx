@@ -86,7 +86,7 @@ interface DataTableProps<TData, TValue> {
   ) => any);
 
   // Function to fetch specific items by their IDs
-  fetchByIdsFn?: (ids: number[]) => Promise<TData[]>;
+  fetchByIdsFn?: (ids: any[]) => Promise<TData[]>;
 
   // Export configuration
   exportConfig: {

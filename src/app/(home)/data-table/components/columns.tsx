@@ -172,7 +172,7 @@ export const getColumns = (
           </div>
         ),
         cell: ({ row }) => (
-          <div className="pl-2 truncate">
+          <div className="truncate">
             <Checkbox
               checked={row.getIsSelected()}
               onCheckedChange={(value) => {
