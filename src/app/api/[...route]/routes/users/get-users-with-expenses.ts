@@ -21,7 +21,7 @@ const querySchema = z.object({
   search: z.string().optional(),
   from_date: z.string().optional(),
   to_date: z.string().optional(),
-  sort_by: z.enum(["name", "email", "total_expenses", "created_at"]).default("created_at"),
+  sort_by: z.enum(["id", "name", "email", "phone", "age", "total_expenses", "expense_count", "created_at"]).default("created_at"),
   sort_order: z.enum(["asc", "desc"]).default("desc"),
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(10),
@@ -32,7 +32,7 @@ router.get("/", async (c) => {
   try {
     // Parse and validate query parameters
     const result = querySchema.safeParse(c.req.query());
-    
+
     if (!result.success) {
       return c.json({
         success: false,
@@ -40,12 +40,12 @@ router.get("/", async (c) => {
         details: result.error.format(),
       }, 400);
     }
-    
+
     const { search, from_date, to_date, sort_by, sort_order, page, limit } = result.data;
-    
+
     // Build filters
     const filters = [];
-    
+
     // Search filter (search across multiple user fields)
     if (search) {
       filters.push(
@@ -56,7 +56,7 @@ router.get("/", async (c) => {
         )
       );
     }
-    
+
     // Date filtering based on user created_at
     // Only apply if there are non-empty values
     if (from_date && to_date && from_date.trim() !== "" && to_date.trim() !== "") {
@@ -82,7 +82,7 @@ router.get("/", async (c) => {
       );
     }
     // If both are empty or undefined, no date filter will be applied
-    
+
     // Get users with expense aggregations
     const usersWithExpenses = await db
       .select({
@@ -100,25 +100,38 @@ router.get("/", async (c) => {
       .where(and(...filters))
       .groupBy(users.id)
       .orderBy(
-        sort_by === "total_expenses" 
-          ? sort_order === "asc" 
-            ? asc(sql`coalesce(sum(${expenses.amount}), 0)`) 
+        // Handle aggregated fields
+        sort_by === "total_expenses"
+          ? sort_order === "asc"
+            ? asc(sql`coalesce(sum(${expenses.amount}), 0)`)
             : desc(sql`coalesce(sum(${expenses.amount}), 0)`)
+          : sort_by === "expense_count"
+            ? sort_order === "asc"
+              ? asc(sql`coalesce(count(${expenses.id}), 0)`)
+              : desc(sql`coalesce(count(${expenses.id}), 0)`)
+          // Handle user table fields
+          : sort_by === "id"
+            ? sort_order === "asc" ? asc(users.id) : desc(users.id)
           : sort_by === "name"
             ? sort_order === "asc" ? asc(users.name) : desc(users.name)
-            : sort_by === "email"
-              ? sort_order === "asc" ? asc(users.email) : desc(users.email)
-              : sort_order === "asc" ? asc(users.created_at) : desc(users.created_at)
+          : sort_by === "email"
+            ? sort_order === "asc" ? asc(users.email) : desc(users.email)
+          : sort_by === "phone"
+            ? sort_order === "asc" ? asc(users.phone) : desc(users.phone)
+          : sort_by === "age"
+            ? sort_order === "asc" ? asc(users.age) : desc(users.age)
+          // Default to created_at
+          : sort_order === "asc" ? asc(users.created_at) : desc(users.created_at)
       )
       .limit(limit)
       .offset((page - 1) * limit);
-    
+
     // Count total users (for pagination)
     const [{ count: totalUsers }] = await db
       .select({ count: count() })
       .from(users)
       .where(and(...filters));
-    
+
     return c.json({
       success: true,
       data: usersWithExpenses,
@@ -143,14 +156,14 @@ router.get("/", async (c) => {
 router.get("/:id/expenses", async (c) => {
   try {
     const userId = parseInt(c.req.param("id"), 10);
-    
+
     if (isNaN(userId)) {
       return c.json({
         success: false,
         error: "Invalid user ID",
       }, 400);
     }
-    
+
     // Parse and validate query parameters
     const schema = z.object({
       from_date: z.string().optional(),
@@ -158,9 +171,9 @@ router.get("/:id/expenses", async (c) => {
       page: z.coerce.number().default(1),
       limit: z.coerce.number().default(10),
     });
-    
+
     const result = schema.safeParse(c.req.query());
-    
+
     if (!result.success) {
       return c.json({
         success: false,
@@ -168,18 +181,18 @@ router.get("/:id/expenses", async (c) => {
         details: result.error.format(),
       }, 400);
     }
-    
+
     const { from_date, to_date, page, limit } = result.data;
-    
+
     // Build date filters
     const dateFilters = [];
-    
+
     if (from_date && !to_date) {
       // Single date filter
       const fromDateTime = new Date(from_date);
       const nextDay = new Date(fromDateTime);
       nextDay.setDate(nextDay.getDate() + 1);
-      
+
       dateFilters.push(
         between(
           expenses.expense_date,
@@ -197,10 +210,10 @@ router.get("/:id/expenses", async (c) => {
         )
       );
     }
-    
+
     // Combine user ID filter with date filters
     const filters = [eq(expenses.user_id, userId), ...dateFilters];
-    
+
     // Get user expenses with pagination
     const userExpenses = await db
       .select({
@@ -217,23 +230,23 @@ router.get("/:id/expenses", async (c) => {
       .orderBy(desc(expenses.expense_date))
       .limit(limit)
       .offset((page - 1) * limit);
-    
+
     // Get total count for pagination
     const [{ count: totalExpenses }] = await db
       .select({ count: count() })
       .from(expenses)
       .where(and(...filters));
-    
+
     // Get user details
     const [user] = await db.select().from(users).where(eq(users.id, userId));
-    
+
     if (!user) {
       return c.json({
         success: false,
         error: "User not found",
       }, 404);
     }
-    
+
     // Get aggregate expense data
     const [expenseStats] = await db
       .select({
@@ -244,16 +257,16 @@ router.get("/:id/expenses", async (c) => {
       })
       .from(expenses)
       .where(and(...filters));
-    
+
     return c.json({
       success: true,
       data: {
         user,
         expenses: userExpenses,
         stats: expenseStats || {
-          total_amount: "0", 
-          avg_amount: "0", 
-          max_amount: "0", 
+          total_amount: "0",
+          avg_amount: "0",
+          max_amount: "0",
           min_amount: "0"
         },
       },

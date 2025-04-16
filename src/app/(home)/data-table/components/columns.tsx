@@ -23,12 +23,24 @@ export const getColumns = (
   // Base columns without the select column
   const baseColumns: ColumnDef<User>[] = [
     {
+      accessorKey: "id",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="ID" />
+      ),
+      cell: ({ row }) => (
+        <div className="truncate text-left">{row.getValue("id")}</div>
+      ),
+      size: 70,
+    },
+    {
       accessorKey: "name",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Name" />
       ),
       cell: ({ row }) => (
-        <div className="font-medium">{row.getValue("name")}</div>
+        <div className="font-medium truncate text-left">
+          {row.getValue("name")}
+        </div>
       ),
       size: 200,
     },
@@ -39,8 +51,8 @@ export const getColumns = (
       ),
       cell: ({ row }) => {
         return (
-          <div className="flex space-x-2">
-            <span className="max-w-[500px] truncate font-medium">
+          <div className="flex space-x-2 truncate">
+            <span className="truncate font-medium">
               {row.getValue("email")}
             </span>
           </div>
@@ -55,8 +67,8 @@ export const getColumns = (
       ),
       cell: ({ row }) => {
         return (
-          <div className="flex items-center">
-            <span>{row.getValue("phone")}</span>
+          <div className="flex items-center truncate">
+            <span className="truncate">{row.getValue("phone")}</span>
           </div>
         );
       },
@@ -69,7 +81,9 @@ export const getColumns = (
       ),
       cell: ({ row }) => {
         return (
-          <div className="w-[80px] text-center">{row.getValue("age")}</div>
+          <div className="max-w-full text-left truncate">
+            {row.getValue("age")}
+          </div>
         );
       },
       size: 80,
@@ -82,8 +96,10 @@ export const getColumns = (
       cell: ({ row }) => {
         const count = row.getValue("expense_count") as number;
         return (
-          <div className="w-[80px] text-center">
-            <Badge variant="outline">{count}</Badge>
+          <div className="max-w-full text-left">
+            <Badge variant="outline" className="truncate">
+              {count}
+            </Badge>
           </div>
         );
       },
@@ -103,7 +119,9 @@ export const getColumns = (
         }).format(parseFloat(amount || "0"));
 
         return (
-          <div className="w-[120px] text-right font-medium">{formatted}</div>
+          <div className="max-w-full text-left font-medium truncate">
+            {formatted}
+          </div>
         );
       },
       size: 150,
@@ -117,8 +135,9 @@ export const getColumns = (
         const date = new Date(row.getValue("created_at"));
         // Format date as "MMM d, yyyy" (e.g., "Mar 16, 2025")
         const formattedDate = format(date, "MMM d, yyyy");
-
-        return <div className="w-[120px]">{formattedDate}</div>;
+        return (
+          <div className="max-w-full text-left truncate">{formattedDate}</div>
+        );
       },
       size: 120,
     },
@@ -138,35 +157,39 @@ export const getColumns = (
       {
         id: "select",
         header: ({ table }) => (
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label="Select all"
-            className="translate-y-0.5 cursor-pointer"
-          />
+          <div className="pl-2 truncate">
+            <Checkbox
+              checked={
+                table.getIsAllPageRowsSelected() ||
+                (table.getIsSomePageRowsSelected() && "indeterminate")
+              }
+              onCheckedChange={(value) =>
+                table.toggleAllPageRowsSelected(!!value)
+              }
+              aria-label="Select all"
+              className="translate-y-0.5 cursor-pointer"
+            />
+          </div>
         ),
         cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => {
-              if (value) {
-                row.toggleSelected(true);
-              } else {
-                row.toggleSelected(false);
-                // If we have a deselection handler, use it for better cross-page tracking
-                if (handleRowDeselection) {
-                  handleRowDeselection(row.id);
+          <div className="truncate">
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={(value) => {
+                if (value) {
+                  row.toggleSelected(true);
+                } else {
+                  row.toggleSelected(false);
+                  // If we have a deselection handler, use it for better cross-page tracking
+                  if (handleRowDeselection) {
+                    handleRowDeselection(row.id);
+                  }
                 }
-              }
-            }}
-            aria-label="Select row"
-            className="translate-y-0.5 cursor-pointer"
-          />
+              }}
+              aria-label="Select row"
+              className="translate-y-0.5 cursor-pointer"
+            />
+          </div>
         ),
         enableSorting: false,
         enableHiding: false,

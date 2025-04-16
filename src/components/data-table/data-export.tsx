@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DownloadIcon, Loader2 } from "lucide-react";
 import { Table } from "@tanstack/react-table";
-import { exportData, exportToCSV, exportToExcel, ExportableData } from "@/components/data-table/utils/export-utils";
+import { exportData, exportToCSV, exportToExcel, ExportableData } from "./utils/export-utils";
 import { JSX, useState } from "react";
 import { toast } from "sonner";
 
@@ -237,7 +237,7 @@ export function DataTableExport<TData extends ExportableData>({
         return mapping;
       })();
       
-      const exportColumnWidths = columnWidths ? 
+      const exportColumnWidths = columnWidths ?
         visibleColumns.map((_, index) => columnWidths[index] || { wch: 15 }) :
         visibleColumns.map(() => ({ wch: 15 }));
       
@@ -280,7 +280,7 @@ export function DataTableExport<TData extends ExportableData>({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8" disabled={isLoading}>
+        <Button variant="outline" size="default" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -302,7 +302,7 @@ export function DataTableExport<TData extends ExportableData>({
               Export Selected as CSV
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleExport("excel")} disabled={isLoading}>
-              Export Selected as Excel
+              Export Selected as XLS
             </DropdownMenuItem>
           </>
         ) : (
@@ -311,7 +311,7 @@ export function DataTableExport<TData extends ExportableData>({
               Export Current Page as CSV
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleExport("excel")} disabled={isLoading}>
-              Export Current Page as Excel
+              Export Current Page as XLS
             </DropdownMenuItem>
             {getAllItems && (
               <>
@@ -325,7 +325,7 @@ export function DataTableExport<TData extends ExportableData>({
                   onClick={() => exportAllPages("excel")} 
                   disabled={isLoading}
                 >
-                  Export All Pages as Excel
+                  Export All Pages as XLS
                 </DropdownMenuItem>
               </>
             )}

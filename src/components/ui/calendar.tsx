@@ -395,7 +395,7 @@ function CaptionLabel({
     <Button
       className="h-7 w-full truncate text-sm font-medium"
       variant="ghost"
-      size="sm"
+      size="default"
       onClick={() => setNavView((prev) => (prev === "days" ? "years" : "days"))}
     >
       {navView === "days"

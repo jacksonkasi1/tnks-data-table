@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 
 // ** Import 3rd Party Libs
@@ -36,7 +35,6 @@ export function DeleteUserPopup({
   userName,
   resetSelection,
 }: DeleteUserPopupProps) {
-  const router = useRouter();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = React.useState(false);
 
@@ -53,9 +51,7 @@ export function DeleteUserPopup({
         if (resetSelection) {
           resetSelection();
         }
-        
         // Refresh data
-        router.refresh();
         await queryClient.invalidateQueries({ queryKey: ["users"] });
       } else {
         toast.error(response.error || "Failed to delete user");

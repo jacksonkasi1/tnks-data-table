@@ -15,12 +15,12 @@ import {
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { CalendarDatePicker } from "@/components/calendar-date-picker";
-import { DataTableViewOptions } from "@/components/data-table/view-options";
+import { DataTableViewOptions } from "./view-options";
 import { DataTableExport } from "./data-export";
-import { resetUrlState } from "@/components/data-table/utils/deep-utils";
-import { parseDateFromUrl } from "@/components/data-table/utils/url-state";
-import { TableConfig } from "@/components/data-table/utils/table-config";
-import { formatDate } from "@/components/data-table/utils/date-format";
+import { resetUrlState } from "./utils/deep-utils";
+import { parseDateFromUrl } from "./utils/url-state";
+import { TableConfig } from "./utils/table-config";
+import { formatDate } from "./utils/date-format";
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
@@ -265,7 +265,7 @@ export function DataTableToolbar<TData>({
             placeholder={`Search ${entityName}...`}
             value={localSearch}
             onChange={handleSearchChange}
-            className="h-8 w-[150px] lg:w-[250px]"
+            className="w-[150px] lg:w-[250px]"
           />
         )}
 
@@ -277,7 +277,7 @@ export function DataTableToolbar<TData>({
                 to: dates.to,
               }}
               onDateSelect={handleDateSelect}
-              className="h-9 w-fit cursor-pointer"
+              className="w-fit cursor-pointer"
               variant="outline"
             />
           </div>
@@ -287,7 +287,7 @@ export function DataTableToolbar<TData>({
           <Button
             variant="ghost"
             onClick={handleResetFilters}
-            className="h-8 px-2 lg:px-3"
+            className="px-2 lg:px-3"
           >
             Reset
             <Cross2Icon className="ml-2 h-4 w-4" />
@@ -312,15 +312,15 @@ export function DataTableToolbar<TData>({
         )}
 
         {config.enableColumnVisibility && (
-          <DataTableViewOptions table={table} />
+          <DataTableViewOptions table={table} columnMapping={columnMapping} />
         )}
 
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
-              size="sm"
-              className="h-8 w-8 p-0"
+              size="default"
+              className="p-0"
               title="Table Settings"
             >
               <Settings className="h-4 w-4" />
@@ -331,16 +331,13 @@ export function DataTableToolbar<TData>({
             <div className="grid gap-4">
               <div className="space-y-2">
                 <h4 className="font-medium leading-none">Table Settings</h4>
-                <p className="text-sm text-muted-foreground">
-                  Configure the table appearance and behavior.
-                </p>
               </div>
-              <Separator />
+
               <div className="grid gap-2">
                 {config.enableColumnResizing && resetColumnSizing && (
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="default"
                     className="justify-start"
                     onClick={(e) => {
                       e.preventDefault();
@@ -355,7 +352,7 @@ export function DataTableToolbar<TData>({
                 {resetColumnOrder && (
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="default"
                     className="justify-start"
                     onClick={(e) => {
                       e.preventDefault();
@@ -370,7 +367,7 @@ export function DataTableToolbar<TData>({
                 {config.enableRowSelection && (
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="default"
                     className="justify-start"
                     onClick={(e) => {
                       e.preventDefault();
@@ -389,7 +386,7 @@ export function DataTableToolbar<TData>({
                 {!table.getIsAllColumnsVisible() && (
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="default"
                     className="justify-start"
                     onClick={() => table.resetColumnVisibility()}
                   >
