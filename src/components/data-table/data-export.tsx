@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DownloadIcon, Loader2 } from "lucide-react";
 import { Table } from "@tanstack/react-table";
-import { exportData, exportToCSV, exportToExcel, ExportableData } from "@/components/data-table/utils/export-utils";
+import { exportData, exportToCSV, exportToExcel, ExportableData } from "./utils/export-utils";
 import { JSX, useState } from "react";
 import { toast } from "sonner";
 

@@ -15,12 +15,12 @@ import {
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { CalendarDatePicker } from "@/components/calendar-date-picker";
-import { DataTableViewOptions } from "@/components/data-table/view-options";
+import { DataTableViewOptions } from "./view-options";
 import { DataTableExport } from "./data-export";
-import { resetUrlState } from "@/components/data-table/utils/deep-utils";
-import { parseDateFromUrl } from "@/components/data-table/utils/url-state";
-import { TableConfig } from "@/components/data-table/utils/table-config";
-import { formatDate } from "@/components/data-table/utils/date-format";
+import { resetUrlState } from "./utils/deep-utils";
+import { parseDateFromUrl } from "./utils/url-state";
+import { TableConfig } from "./utils/table-config";
+import { formatDate } from "./utils/date-format";
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;

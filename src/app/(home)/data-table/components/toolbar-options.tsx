@@ -45,8 +45,8 @@ export const ToolbarOptions = ({
       {selectionCount > 0 && (
         <>
           <Button 
-            variant="outline" 
-            size="sm" 
+            variant="outline"
+            size="sm"
             onClick={() => setDeleteDialogOpen(true)}
           >
             <TrashIcon className="mr-2 size-4" aria-hidden="true" />

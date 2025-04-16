@@ -24,17 +24,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { DataTablePagination } from "@/components/data-table/pagination";
-import { DataTableToolbar } from "@/components/data-table/toolbar";
+import { DataTablePagination } from "./pagination";
+import { DataTableToolbar } from "./toolbar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { useTableConfig, TableConfig } from "@/components/data-table/utils/table-config";
-import { useTableColumnResize } from "@/components/data-table/hooks/use-table-column-resize";
-import { DataTableResizer } from "@/components/data-table/data-table-resizer";
+import { useTableConfig, TableConfig } from "./utils/table-config";
+import { useTableColumnResize } from "./hooks/use-table-column-resize";
+import { DataTableResizer } from "./data-table-resizer";
 
 // Import core utilities
-import { preprocessSearch } from "@/components/data-table/utils/search";
+import { preprocessSearch } from "./utils/search";
 import {
   createSortingHandler,
   createColumnFiltersHandler,
@@ -42,14 +42,14 @@ import {
   createPaginationHandler,
   createColumnSizingHandler,
   createSortingState
-} from "@/components/data-table/utils/table-state-handlers";
-import { createKeyboardNavigationHandler } from "@/components/data-table/utils/keyboard-navigation";
-import { createConditionalStateHook } from "@/components/data-table/utils/conditional-state";
+} from "./utils/table-state-handlers";
+import { createKeyboardNavigationHandler } from "./utils/keyboard-navigation";
+import { createConditionalStateHook } from "./utils/conditional-state";
 import {
   initializeColumnSizes,
   trackColumnResizing,
   cleanupColumnResizing
-} from "@/components/data-table/utils/column-sizing";
+} from "./utils/column-sizing";
 
 interface DataTableProps<TData, TValue> {
   // Allow overriding the table configuration
