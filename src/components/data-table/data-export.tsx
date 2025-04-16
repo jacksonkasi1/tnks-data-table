@@ -299,19 +299,19 @@ export function DataTableExport<TData extends ExportableData>({
         {hasSelection ? (
           <>
             <DropdownMenuItem onClick={() => handleExport("csv")} disabled={isLoading}>
-              Export Selected as CSV
+              CSV
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleExport("excel")} disabled={isLoading}>
-              Export Selected as Excel
+            XLS
             </DropdownMenuItem>
           </>
         ) : (
           <>
             <DropdownMenuItem onClick={() => handleExport("csv")} disabled={isLoading}>
-              Export Current Page as CSV
+              CSV
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleExport("excel")} disabled={isLoading}>
-              Export Current Page as Excel
+            XLS
             </DropdownMenuItem>
             {getAllItems && (
               <>
@@ -319,13 +319,13 @@ export function DataTableExport<TData extends ExportableData>({
                   onClick={() => exportAllPages("csv")}
                   disabled={isLoading}
                 >
-                  Export All Pages as CSV
+                  CSV
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => exportAllPages("excel")}
                   disabled={isLoading}
                 >
-                  Export All Pages as Excel
+                  XLS
                 </DropdownMenuItem>
               </>
             )}
