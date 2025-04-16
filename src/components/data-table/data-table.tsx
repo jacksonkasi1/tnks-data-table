@@ -105,7 +105,7 @@ interface DataTableProps<TData, TValue> {
   // Custom toolbar content render function
   renderToolbarContent?: (props: {
     selectedRows: TData[];
-    allSelectedIds: number[];
+    allSelectedIds: any[];
     totalSelectedCount: number;
     resetSelection: () => void;
   }) => React.ReactNode;
@@ -557,7 +557,7 @@ export function DataTable<TData, TValue>({
           headers={exportConfig.headers}
           customToolbarComponent={renderToolbarContent && renderToolbarContent({
             selectedRows: dataItems.filter((item) => selectedItemIds[String(item[idField])]),
-            allSelectedIds: Object.keys(selectedItemIds).map(id => parseInt(id, 10)),
+            allSelectedIds: Object.keys(selectedItemIds),
             totalSelectedCount: totalSelectedItems,
             resetSelection: clearAllSelections
           })}
