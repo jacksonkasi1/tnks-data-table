@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DownloadIcon, Loader2 } from "lucide-react";
 import { Table } from "@tanstack/react-table";
-import { exportData, exportToCSV, exportToExcel, ExportableData } from "./utils/export-utils";
+import { exportData, exportToCSV, exportToExcel, ExportableData } from "@/components/data-table/utils/export-utils";
 import { JSX, useState } from "react";
 import { toast } from "sonner";
 
@@ -40,7 +40,7 @@ export function DataTableExport<TData extends ExportableData>({
 
   const handleExport = async (type: "csv" | "excel") => {
     if (isLoading) return; // Prevent multiple export requests
-
+    
     // Create a data fetching function based on the current state
     const fetchExportData = async (): Promise<TData[]> => {
       // If we have selected items and a function to get their complete data
@@ -53,47 +53,47 @@ export function DataTableExport<TData extends ExportableData>({
             id: "export-loading",
           });
         }
-
+        
         // Fetch complete data for selected items
         const selectedItems = await getSelectedItems();
-
+        
         // Force dismiss all loading toasts
         toast.dismiss("export-loading");
         toast.dismiss("fetch-selected-items");
-
+        
         if (selectedItems.length === 0) {
           throw new Error(`Failed to retrieve complete data for selected ${entityName}`);
         }
-
+        
         // Order the items according to the current sorting in the table
         // This preserves the table's page order in the exported data
         const sortedItems = [...selectedItems];
         const sorting = table.getState().sorting;
-
+        
         if (sorting.length > 0) {
           const { id: sortField, desc: isDescending } = sorting[0];
-
+          
           sortedItems.sort((a, b) => {
             const valueA = a[sortField as keyof TData];
             const valueB = b[sortField as keyof TData];
-
+            
             if (valueA === valueB) return 0;
-
+            
             if (valueA === null || valueA === undefined) return isDescending ? 1 : -1;
             if (valueB === null || valueB === undefined) return isDescending ? -1 : 1;
-
+            
             if (typeof valueA === 'string' && typeof valueB === 'string') {
-              return isDescending
-                ? valueB.localeCompare(valueA)
+              return isDescending 
+                ? valueB.localeCompare(valueA) 
                 : valueA.localeCompare(valueB);
             }
-
-            return isDescending
-              ? (valueB > valueA ? 1 : -1)
+            
+            return isDescending 
+              ? (valueB > valueA ? 1 : -1) 
               : (valueA > valueB ? 1 : -1);
           });
         }
-
+        
         return sortedItems;
       } else if (getAllItems && !selectedData?.length) {
         // If we're exporting all data and have a method to get it with proper ordering
@@ -101,16 +101,16 @@ export function DataTableExport<TData extends ExportableData>({
           description: `Fetching all ${entityName} with current sorting...`,
           id: "export-loading",
         });
-
+        
         // Fetch all data with server-side sorting applied
         const allItems = await getAllItems();
-
+        
         toast.dismiss("export-loading");
-
+        
         if (allItems.length === 0) {
           throw new Error(`No ${entityName} available to export`);
         }
-
+        
         return allItems;
       } else {
         // Otherwise use the provided data (current page data)
@@ -149,7 +149,7 @@ export function DataTableExport<TData extends ExportableData>({
         orderedVisibleColumns.forEach(column => {
           // Try to get header text if available
           const headerText = column.columnDef.header as string;
-
+          
           if (headerText && typeof headerText === 'string') {
             mapping[column.id] = headerText;
           } else {
@@ -164,7 +164,7 @@ export function DataTableExport<TData extends ExportableData>({
       })();
 
       // Filter column widths to match visible columns and their order
-      const exportColumnWidths = columnWidths ?
+      const exportColumnWidths = columnWidths ? 
         orderedVisibleColumns.map((column, index) => {
           const originalIndex = visibleColumns.findIndex(vc => vc.id === column.id);
           return columnWidths[originalIndex] || { wch: 15 };
@@ -194,37 +194,37 @@ export function DataTableExport<TData extends ExportableData>({
   const exportAllPages = async (type: "csv" | "excel") => {
     if (isLoading || !getAllItems) return;
     setIsLoading(true);
-
+    
     try {
       // Show toast for long operations
       const loadingToast = toast.loading("Preparing export data...", {
         description: `Fetching all ${entityName}...`
       });
-
+      
       // Fetch all data with server-side sorting
       const allData = await getAllItems();
-
+      
       // Clear loading toast
       toast.dismiss(loadingToast);
-
+      
       if (allData.length === 0) {
         toast.error("Export failed", {
           description: "No data available to export."
         });
         return;
       }
-
+      
       // Get visible columns and apply export
       const visibleColumns = table.getAllColumns()
         .filter(column => column.getIsVisible())
         .filter(column => column.id !== 'actions' && column.id !== 'select');
-
+      
       const exportHeaders = visibleColumns.map(column => column.id);
       const exportColumnMapping = columnMapping || (() => {
         const mapping: Record<string, string> = {};
         visibleColumns.forEach(column => {
           const headerText = column.columnDef.header as string;
-
+          
           if (headerText && typeof headerText === 'string') {
             mapping[column.id] = headerText;
           } else {
@@ -236,29 +236,29 @@ export function DataTableExport<TData extends ExportableData>({
         });
         return mapping;
       })();
-
-      const exportColumnWidths = columnWidths ?
+      
+      const exportColumnWidths = columnWidths ? 
         visibleColumns.map((_, index) => columnWidths[index] || { wch: 15 }) :
         visibleColumns.map(() => ({ wch: 15 }));
-
+      
       // Generate timestamp for filename
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const filename = `${entityName}-all-pages-export-${timestamp}`;
-
+      
       // Export based on type
       let success = false;
       if (type === "csv") {
-        success = exportToCSV(allData, filename, exportHeaders, exportColumnMapping);
+        success = exportToCSV(allData, filename, exportHeaders);
       } else {
         success = exportToExcel(
-          allData,
-          filename,
-          exportColumnMapping,
+          allData, 
+          filename, 
+          exportColumnMapping, 
           exportColumnWidths,
           exportHeaders
         );
       }
-
+      
       if (success) {
         toast.success("Export successful", {
           description: `Exported all ${allData.length} ${entityName} to ${type.toUpperCase()}.`,
@@ -299,33 +299,33 @@ export function DataTableExport<TData extends ExportableData>({
         {hasSelection ? (
           <>
             <DropdownMenuItem onClick={() => handleExport("csv")} disabled={isLoading}>
-              CSV
+              Export Selected as CSV
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleExport("excel")} disabled={isLoading}>
-            XLS
+              Export Selected as XLS
             </DropdownMenuItem>
           </>
         ) : (
           <>
             <DropdownMenuItem onClick={() => handleExport("csv")} disabled={isLoading}>
-              CSV
+              Export Current Page as CSV
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleExport("excel")} disabled={isLoading}>
-            XLS
+              Export Current Page as XLS
             </DropdownMenuItem>
             {getAllItems && (
               <>
-                <DropdownMenuItem
-                  onClick={() => exportAllPages("csv")}
+                <DropdownMenuItem 
+                  onClick={() => exportAllPages("csv")} 
                   disabled={isLoading}
                 >
-                  CSV
+                  Export All Pages as CSV
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => exportAllPages("excel")}
+                <DropdownMenuItem 
+                  onClick={() => exportAllPages("excel")} 
                   disabled={isLoading}
                 >
-                  XLS
+                  Export All Pages as XLS
                 </DropdownMenuItem>
               </>
             )}
