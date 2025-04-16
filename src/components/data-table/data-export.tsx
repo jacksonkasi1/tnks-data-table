@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DownloadIcon, Loader2 } from "lucide-react";
 import { Table } from "@tanstack/react-table";
-import { exportData, exportToCSV, exportToExcel, ExportableData } from "@/components/data-table/utils/export-utils";
+import { exportData, exportToCSV, exportToExcel, ExportableData } from "./utils/export-utils";
 import { JSX, useState } from "react";
 import { toast } from "sonner";
 
@@ -237,7 +237,7 @@ export function DataTableExport<TData extends ExportableData>({
         return mapping;
       })();
       
-      const exportColumnWidths = columnWidths ? 
+      const exportColumnWidths = columnWidths ?
         visibleColumns.map((_, index) => columnWidths[index] || { wch: 15 }) :
         visibleColumns.map(() => ({ wch: 15 }));
       
