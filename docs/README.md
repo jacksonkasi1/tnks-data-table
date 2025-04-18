@@ -44,7 +44,7 @@ This documentation provides comprehensive guidance on how to implement, configur
 
 ## Server
 
-Check out the API development document to understand the default configuration for this table. [👉 Click here](./SERVER.md)
+Check out the API development document to understand the default configuration for this table. [👉 Click here](./src/SERVER.md)
 
 ### Key Benefits
 
@@ -1885,16 +1885,30 @@ const firstItem = data?.items?.[0]?.title ?? "No items";
 
 ### DataTableConfig Options
 
-| Option                     | Type      | Default | Description                        |
-| -------------------------- | --------- | ------- | ---------------------------------- |
-| `enableRowSelection`       | `boolean` | `false` | Enable row selection               |
-| `enableClickRowSelect`     | `boolean` | `false` | Allow clicking on row to select it |
-| `enableKeyboardNavigation` | `boolean` | `true`  | Enable keyboard navigation         |
-| `enableSearch`             | `boolean` | `true`  | Show search input                  |
-| `enableDateFilter`         | `boolean` | `false` | Show date range filter             |
-| `enableColumnVisibility`   | `boolean` | `true`  | Allow toggling column visibility   |
-| `enableUrlState`           | `boolean` | `true`  | Save table state in URL            |
-| `columnResizingTableId`    | `string`  | -       | ID for column resizing persistence |
+| Option                     | Type                        | Default     | Description                              |
+| -------------------------- | --------------------------- | ----------- | ---------------------------------------- |
+| `enableRowSelection`       | `boolean`                   | `false`     | Enable row selection                     |
+| `enableClickRowSelect`     | `boolean`                   | `false`     | Allow clicking on row to select it       |
+| `enableKeyboardNavigation` | `boolean`                   | `true`      | Enable keyboard navigation               |
+| `enableSearch`             | `boolean`                   | `true`      | Show search input                        |
+| `enableDateFilter`         | `boolean`                   | `false`     | Show date range filter                   |
+| `enableColumnVisibility`   | `boolean`                   | `true`      | Allow toggling column visibility         |
+| `enableUrlState`           | `boolean`                   | `true`      | Save table state in URL                  |
+| `columnResizingTableId`    | `string`                    | -           | ID for column resizing persistence       |
+| `size`                     | `'sm' \| 'default' \| 'lg'` | `'default'` | Size for buttons and inputs in the table |
+
+The `size` prop affects the following components:
+
+- Pagination buttons
+- "Rows per page" select component
+- Navigation buttons (First, Previous, Next, Last)
+- Toolbar Components
+
+Available sizes:
+
+- `'sm'`: Small size (h-7)
+- `'default'`: Default size (h-8 / default)
+- `'lg'`: Large size (h-11)
 
 ### ExportConfig Options
 
