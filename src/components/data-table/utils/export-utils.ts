@@ -187,26 +187,32 @@ export async function exportData<T extends ExportableData>(
     entityName?: string;
   }
 ): Promise<boolean> {
+  // Use a consistent toast ID to ensure only one toast is shown at a time
+  const TOAST_ID = "export-data-toast";
+  
   try {
     // Start loading
     if (onLoadingStart) onLoadingStart();
 
-    // Show toast for long operations
-    const loadingToast = toast.loading("Preparing export data...", {
-      description: "Fetching data for export..."
+    // Show toast for long operations using consistent ID
+    toast.loading("Preparing export...", {
+      description: "Fetching data for export...",
+      id: TOAST_ID
     });
 
     // Get the data
     const exportData = await getData();
 
-    // Clear all loading toasts
-    toast.dismiss(loadingToast);
-    toast.dismiss("fetch-selected-items");
-    toast.dismiss("export-loading");
+    // Update the same toast for processing
+    toast.loading("Processing data...", {
+      description: "Generating export file...",
+      id: TOAST_ID
+    });
 
     if (exportData.length === 0) {
       toast.error("Export failed", {
-        description: "No data available to export."
+        description: "No data available to export.",
+        id: TOAST_ID
       });
       return false;
     }
@@ -225,6 +231,7 @@ export async function exportData<T extends ExportableData>(
       if (success) {
         toast.success("Export successful", {
           description: `Exported ${exportData.length} ${entityName} to CSV.`,
+          id: TOAST_ID
         });
       }
     } else {
@@ -238,6 +245,7 @@ export async function exportData<T extends ExportableData>(
       if (success) {
         toast.success("Export successful", {
           description: `Exported ${exportData.length} ${entityName} to Excel.`,
+          id: TOAST_ID
         });
       }
     }
@@ -245,12 +253,10 @@ export async function exportData<T extends ExportableData>(
     return success;
   } catch (error) {
     console.error("Error exporting data:", error);
-    // Clear all loading toasts in case of error too
-    toast.dismiss("fetch-selected-items");
-    toast.dismiss("export-loading");
-
+    
     toast.error("Export failed", {
-      description: "There was a problem exporting the data. Please try again."
+      description: "There was a problem exporting the data. Please try again.",
+      id: TOAST_ID
     });
     return false;
   } finally {

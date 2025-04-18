@@ -48,18 +48,14 @@ export function DataTableExport<TData extends ExportableData>({
         // Check if data is on current page or needs to be fetched
         if (selectedData.some(item => Object.keys(item).length === 0)) {
           // We have placeholder data, need to fetch complete data
-          toast.loading("Preparing export data...", {
+          toast.loading("Preparing export...", {
             description: `Fetching complete data for selected ${entityName}.`,
-            id: "export-loading",
+            id: "export-data-toast",
           });
         }
         
         // Fetch complete data for selected items
         const selectedItems = await getSelectedItems();
-        
-        // Force dismiss all loading toasts
-        toast.dismiss("export-loading");
-        toast.dismiss("fetch-selected-items");
         
         if (selectedItems.length === 0) {
           throw new Error(`Failed to retrieve complete data for selected ${entityName}`);
@@ -97,15 +93,13 @@ export function DataTableExport<TData extends ExportableData>({
         return sortedItems;
       } else if (getAllItems && !selectedData?.length) {
         // If we're exporting all data and have a method to get it with proper ordering
-        toast.loading("Preparing export data...", {
+        toast.loading("Preparing export...", {
           description: `Fetching all ${entityName} with current sorting...`,
-          id: "export-loading",
+          id: "export-data-toast",
         });
         
         // Fetch all data with server-side sorting applied
         const allItems = await getAllItems();
-        
-        toast.dismiss("export-loading");
         
         if (allItems.length === 0) {
           throw new Error(`No ${entityName} available to export`);
@@ -184,10 +178,13 @@ export function DataTableExport<TData extends ExportableData>({
           columnWidths: exportColumnWidths
         }
       );
-    } finally {
-      // Ensure all toasts are dismissed regardless of outcome
-      toast.dismiss("export-loading");
-      toast.dismiss("fetch-selected-items");
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      toast.error("Export failed", {
+        description: "There was a problem exporting. Please try again.",
+        id: "export-data-toast"
+      });
+      setIsLoading(false);
     }
   };
 
@@ -197,19 +194,18 @@ export function DataTableExport<TData extends ExportableData>({
     
     try {
       // Show toast for long operations
-      const loadingToast = toast.loading("Preparing export data...", {
-        description: `Fetching all ${entityName}...`
+      toast.loading("Preparing export...", {
+        description: `Fetching all ${entityName}...`,
+        id: "export-data-toast"
       });
       
       // Fetch all data with server-side sorting
       const allData = await getAllItems();
       
-      // Clear loading toast
-      toast.dismiss(loadingToast);
-      
       if (allData.length === 0) {
         toast.error("Export failed", {
-          description: "No data available to export."
+          description: "No data available to export.",
+          id: "export-data-toast"
         });
         return;
       }
@@ -241,6 +237,12 @@ export function DataTableExport<TData extends ExportableData>({
         visibleColumns.map((_, index) => columnWidths[index] || { wch: 15 }) :
         visibleColumns.map(() => ({ wch: 15 }));
       
+      // Update toast for processing
+      toast.loading("Processing data...", {
+        description: "Generating export file...",
+        id: "export-data-toast"
+      });
+      
       // Generate timestamp for filename
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const filename = `${entityName}-all-pages-export-${timestamp}`;
@@ -262,12 +264,14 @@ export function DataTableExport<TData extends ExportableData>({
       if (success) {
         toast.success("Export successful", {
           description: `Exported all ${allData.length} ${entityName} to ${type.toUpperCase()}.`,
+          id: "export-data-toast"
         });
       }
     } catch (error) {
       console.error("Error exporting all pages:", error);
       toast.error("Export failed", {
-        description: "There was a problem exporting all pages. Please try again."
+        description: "There was a problem exporting all pages. Please try again.",
+        id: "export-data-toast"
       });
     } finally {
       setIsLoading(false);
