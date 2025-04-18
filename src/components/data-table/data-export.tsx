@@ -23,6 +23,7 @@ interface DataTableExportProps<TData extends ExportableData> {
   columnMapping?: Record<string, string>;
   columnWidths?: Array<{ wch: number }>;
   headers?: string[];
+  size?: 'sm' | 'default' | 'lg';
 }
 
 export function DataTableExport<TData extends ExportableData>({
@@ -34,7 +35,8 @@ export function DataTableExport<TData extends ExportableData>({
   entityName = "items",
   columnMapping,
   columnWidths,
-  headers
+  headers,
+  size = 'default'
 }: DataTableExportProps<TData>): JSX.Element {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -284,7 +286,7 @@ export function DataTableExport<TData extends ExportableData>({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="default" disabled={isLoading}>
+        <Button variant="outline" size={size} disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

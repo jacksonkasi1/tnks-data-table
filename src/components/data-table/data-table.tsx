@@ -683,6 +683,7 @@ export function DataTable<TData, TValue>({
           totalItems={data?.pagination.total_items || 0}
           totalSelectedItems={totalSelectedItems}
           pageSizeOptions={pageSizeOptions || [10, 20, 30, 40, 50]}
+          size={tableConfig.size}
         />
       )}
     </div>

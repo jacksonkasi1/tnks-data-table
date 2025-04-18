@@ -15,12 +15,21 @@ import {
     SelectTrigger,
     SelectValue,
   } from "@/components/ui/select";
+
+  const getButtonSizeClass = (size: 'sm' | 'default' | 'lg') => {
+    switch(size) {
+      case 'sm': return 'h-7 w-7 p-0';
+      case 'lg': return 'h-11 w-11 p-0';
+      default: return 'h-8 w-8 p-0';
+    }
+  };
   
   interface DataTablePaginationProps<TData> {
     table: Table<TData>;
     totalItems?: number; // Total number of items from API
     totalSelectedItems?: number; // Total selected items across all pages
     pageSizeOptions?: number[]; // Custom page size options
+    size?: 'sm' | 'default' | 'lg'; // Size prop for components
   }
   
   export function DataTablePagination<TData>({
@@ -28,7 +37,11 @@ import {
     totalItems = 0,
     totalSelectedItems = 0,
     pageSizeOptions = [10, 20, 30, 40, 50], // Default options if none provided
+    size = 'default'
   }: DataTablePaginationProps<TData>) {
+    // Convert 'lg' size to 'default' for SelectTrigger since it only accepts 'sm' | 'default'
+    const selectSize = size === 'lg' ? 'default' : size;
+    
     return (
       <div className="flex w-full flex-col items-center justify-between gap-4 overflow-auto px-2 py-1 sm:flex-row sm:gap-8">
         <div className="flex-1 text-sm text-muted-foreground">
@@ -45,7 +58,7 @@ import {
                 table.setPageSize(Number(value));
               }}
             >
-              <SelectTrigger className="h-8 w-[70px] cursor-pointer">
+              <SelectTrigger className={`cursor-pointer`} size={selectSize}>
                 <SelectValue placeholder={table.getState().pagination.pageSize} />
               </SelectTrigger>
               <SelectContent side="top" className="cursor-pointer">
@@ -65,7 +78,7 @@ import {
             <Button
               aria-label="Go to first page"
               variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex cursor-pointer"
+              className={`${getButtonSizeClass(size)} hidden lg:flex cursor-pointer`}
               onClick={() => table.setPageIndex(0)}
               disabled={!table.getCanPreviousPage()}
             >
@@ -74,7 +87,7 @@ import {
             <Button
               aria-label="Go to previous page"
               variant="outline"
-              className="h-8 w-8 p-0 cursor-pointer"
+              className={`${getButtonSizeClass(size)} cursor-pointer`}
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
@@ -83,7 +96,7 @@ import {
             <Button
               aria-label="Go to next page"
               variant="outline"
-              className="h-8 w-8 p-0 cursor-pointer"
+              className={`${getButtonSizeClass(size)} cursor-pointer`}
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
             >
@@ -92,7 +105,7 @@ import {
             <Button
               aria-label="Go to last page"
               variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex cursor-pointer"
+              className={`${getButtonSizeClass(size)} hidden lg:flex cursor-pointer`}
               onClick={() => table.setPageIndex(table.getPageCount() - 1)}
               disabled={!table.getCanNextPage()}
             >

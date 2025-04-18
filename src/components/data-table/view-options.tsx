@@ -24,6 +24,7 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 interface DataTableViewOptionsProps<TData> {
   table: Table<TData>;
   columnMapping?: Record<string, string>;
+  size?: 'sm' | 'default' | 'lg';
 }
 
 // Local storage key for column order
@@ -32,6 +33,7 @@ const COLUMN_ORDER_STORAGE_KEY = "data-table-column-order";
 export function DataTableViewOptions<TData>({
   table,
   columnMapping,
+  size = 'default',
 }: DataTableViewOptionsProps<TData>) {
   // Get columns that can be hidden
   const columns = React.useMemo(
@@ -166,7 +168,7 @@ export function DataTableViewOptions<TData>({
           aria-label="Toggle columns"
           role="combobox"
           variant="outline"
-          size="default"
+          size={size}
           className="ml-auto hidden lg:flex"
         >
           <Settings2 className="mr-2 h-4 w-4" />

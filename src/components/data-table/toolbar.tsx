@@ -22,6 +22,31 @@ import { parseDateFromUrl } from "./utils/url-state";
 import { TableConfig } from "./utils/table-config";
 import { formatDate } from "./utils/date-format";
 
+// Helper functions for component sizing
+const getInputSizeClass = (size: 'sm' | 'default' | 'lg') => {
+  switch(size) {
+    case 'sm': return 'h-8';
+    case 'lg': return 'h-11';
+    default: return '';
+  }
+};
+
+const getButtonSizeClass = (size: 'sm' | 'default' | 'lg', isIcon = false) => {
+  if (isIcon) {
+    switch(size) {
+      case 'sm': return 'h-8 w-8';
+      case 'lg': return 'h-11 w-11';
+      default: return '';
+    }
+  } else {
+    switch(size) {
+      case 'sm': return 'h-8 px-3';
+      case 'lg': return 'h-11 px-5';
+      default: return '';
+    }
+  }
+};
+
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
   setSearch: (value: string | ((prev: string) => string)) => void;
@@ -265,7 +290,7 @@ export function DataTableToolbar<TData>({
             placeholder={`Search ${entityName}...`}
             value={localSearch}
             onChange={handleSearchChange}
-            className="w-[150px] lg:w-[250px]"
+            className={`w-[150px] lg:w-[250px] ${getInputSizeClass(config.size)}`}
           />
         )}
 
@@ -277,7 +302,7 @@ export function DataTableToolbar<TData>({
                 to: dates.to,
               }}
               onDateSelect={handleDateSelect}
-              className="w-fit cursor-pointer"
+              className={`w-fit cursor-pointer ${getInputSizeClass(config.size)}`}
               variant="outline"
             />
           </div>
@@ -287,7 +312,7 @@ export function DataTableToolbar<TData>({
           <Button
             variant="ghost"
             onClick={handleResetFilters}
-            className="px-2 lg:px-3"
+            className={getButtonSizeClass(config.size)}
           >
             Reset
             <Cross2Icon className="ml-2 h-4 w-4" />
@@ -308,11 +333,16 @@ export function DataTableToolbar<TData>({
             columnMapping={columnMapping}
             columnWidths={columnWidths}
             headers={headers}
+            size={config.size}
           />
         )}
 
         {config.enableColumnVisibility && (
-          <DataTableViewOptions table={table} columnMapping={columnMapping} />
+          <DataTableViewOptions 
+            table={table} 
+            columnMapping={columnMapping}
+            size={config.size}
+          />
         )}
 
         <Popover>
@@ -320,7 +350,7 @@ export function DataTableToolbar<TData>({
             <Button
               variant="outline"
               size="icon"
-              className="p-0"
+              className={getButtonSizeClass(config.size, true)}
               title="Table Settings"
             >
               <Settings className="h-4 w-4" />
@@ -337,7 +367,7 @@ export function DataTableToolbar<TData>({
                 {config.enableColumnResizing && resetColumnSizing && (
                   <Button
                     variant="outline"
-                    size="default"
+                    size={config.size}
                     className="justify-start"
                     onClick={(e) => {
                       e.preventDefault();
@@ -352,7 +382,7 @@ export function DataTableToolbar<TData>({
                 {resetColumnOrder && (
                   <Button
                     variant="outline"
-                    size="default"
+                    size={config.size}
                     className="justify-start"
                     onClick={(e) => {
                       e.preventDefault();
@@ -367,7 +397,7 @@ export function DataTableToolbar<TData>({
                 {config.enableRowSelection && (
                   <Button
                     variant="outline"
-                    size="default"
+                    size={config.size}
                     className="justify-start"
                     onClick={(e) => {
                       e.preventDefault();
@@ -386,7 +416,7 @@ export function DataTableToolbar<TData>({
                 {!table.getIsAllColumnsVisible() && (
                   <Button
                     variant="outline"
-                    size="default"
+                    size={config.size}
                     className="justify-start"
                     onClick={() => table.resetColumnVisibility()}
                   >

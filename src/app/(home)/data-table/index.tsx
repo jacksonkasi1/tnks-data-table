@@ -45,6 +45,7 @@ export default function UserTable() {
         enableDateFilter: true,
         enableColumnVisibility: true,
         enableUrlState: true,
+        size: "default",
         columnResizingTableId: "user-table",
       }}
     />
