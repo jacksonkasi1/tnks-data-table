@@ -1,7 +1,8 @@
 "use client";
 
-import * as React from "react";
+import type * as React from "react";
 import {
+  type ColumnSizingState,
   flexRender,
   getCoreRowModel,
   getFacetedRowModel,
@@ -11,7 +12,7 @@ import {
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
-  type ColumnResizeMode,
+  type ColumnResizeMode
 } from "@tanstack/react-table";
 import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 
@@ -149,7 +150,7 @@ export function DataTable<TData, TValue>({
   // Internal states
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<Error | null>(null);
   const [data, setData] = useState<{
     data: TData[];
     pagination: {
@@ -199,7 +200,7 @@ export function DataTable<TData, TValue>({
   const handleRowDeselection = useCallback((rowId: string) => {
     if (!dataItems.length) return;
 
-    const rowIndex = parseInt(rowId, 10);
+    const rowIndex = Number.parseInt(rowId, 10);
     const item = dataItems[rowIndex];
 
     if (item) {
@@ -232,8 +233,8 @@ export function DataTable<TData, TValue>({
       // Process changes for current page
       if (dataItems.length) {
         // First handle explicit selections in newRowSelection
-        Object.entries(newRowSelection).forEach(([rowId, isSelected]) => {
-          const rowIndex = parseInt(rowId, 10);
+        for (const [rowId, isSelected] of Object.entries(newRowSelection)) {
+          const rowIndex = Number.parseInt(rowId, 10);
           if (rowIndex >= 0 && rowIndex < dataItems.length) {
             const item = dataItems[rowIndex];
             const itemId = String(item[idField]);
@@ -244,7 +245,7 @@ export function DataTable<TData, TValue>({
               delete next[itemId];
             }
           }
-        });
+        }
 
         // Then handle implicit deselections (rows that were selected but aren't in newRowSelection)
         dataItems.forEach((item, index) => {
@@ -271,7 +272,7 @@ export function DataTable<TData, TValue>({
 
     // Get IDs of selected items
     const selectedIdsArray = Object.keys(selectedItemIds).map(id =>
-      typeof id === 'string' ? parseInt(id, 10) : id as number
+      typeof id === 'string' ? Number.parseInt(id, 10) : id as number
     );
 
     // Find items from current page that are selected
@@ -341,7 +342,7 @@ export function DataTable<TData, TValue>({
           setError(null);
         } catch (err) {
           setIsError(true);
-          setError(err);
+          setError(err instanceof Error ? err : new Error("Unknown error"));
           console.error("Error fetching data:", err);
         } finally {
           setIsLoading(false);
@@ -375,7 +376,7 @@ export function DataTable<TData, TValue>({
       }
       if (queryResult.isError) {
         setIsError(true);
-        setError(queryResult.error);
+        setError(queryResult.error instanceof Error ? queryResult.error : new Error("Unknown error"));
       }
     }
   }, [queryResult]);
@@ -390,7 +391,7 @@ export function DataTable<TData, TValue>({
   );
 
   // Ref for the table container for keyboard navigation
-  const tableContainerRef = useRef<HTMLDivElement>(null!);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // Get columns with the deselection handler (memoize to avoid recreation on render)
   const columns = useMemo(() => {
@@ -428,22 +429,28 @@ export function DataTable<TData, TValue>({
 
   const handleColumnFiltersChange = useCallback(
     createColumnFiltersHandler(setColumnFilters),
-    [setColumnFilters]
+    []
   );
 
   const handleColumnVisibilityChange = useCallback(
     createColumnVisibilityHandler(setColumnVisibility),
-    [setColumnVisibility]
+    []
   );
 
   const handlePaginationChange = useCallback(
     createPaginationHandler(setPage, setPageSize, page, pageSize),
-    [setPage, setPageSize, page, pageSize]
+    []
   );
 
   const handleColumnSizingChange = useCallback(
-    createColumnSizingHandler(setColumnSizing, columnSizing),
-    [columnSizing, setColumnSizing]
+    (updaterOrValue: ColumnSizingState | ((prev: ColumnSizingState) => ColumnSizingState)) => {
+      if (typeof updaterOrValue === 'function') {
+        setColumnSizing(current => updaterOrValue(current));
+      } else {
+        setColumnSizing(updaterOrValue);
+      }
+    },
+    [setColumnSizing]
   );
 
   // Column order change handler
@@ -516,7 +523,7 @@ export function DataTable<TData, TValue>({
       console.log(`Row ${rowIndex} activated`, row);
       // Example action on keyboard activation
     }),
-    [table]
+    []
   );
 
   // Initialize default column sizes when columns are available and no saved sizes exist
@@ -557,7 +564,7 @@ export function DataTable<TData, TValue>({
   useEffect(() => {
     // Force the table's sorting state to match URL parameters
     table.setSorting(sorting);
-  }, [sortBy, sortOrder, table, sorting]);
+  }, [table, sorting]);
 
   // Handle error state
   if (isError) {
@@ -596,7 +603,7 @@ export function DataTable<TData, TValue>({
           columnMapping={exportConfig.columnMapping}
           columnWidths={exportConfig.columnWidths}
           headers={exportConfig.headers}
-          customToolbarComponent={renderToolbarContent && renderToolbarContent({
+          customToolbarComponent={renderToolbarContent?.({
             selectedRows: dataItems.filter((item) => selectedItemIds[String(item[idField])]),
             allSelectedIds: Object.keys(selectedItemIds),
             totalSelectedCount: totalSelectedItems,
@@ -608,8 +615,6 @@ export function DataTable<TData, TValue>({
       <div
         ref={tableContainerRef}
         className="overflow-y-auto rounded-md border table-container"
-        role="grid"
-        tabIndex={0}
         aria-label="Data table"
         onKeyDown={tableConfig.enableKeyboardNavigation ? handleKeyDown : undefined}
       >
@@ -618,14 +623,13 @@ export function DataTable<TData, TValue>({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
                 key={headerGroup.id}
-                role="row"
               >
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     className="px-2 py-2 relative text-left group/th"
                     key={header.id}
                     colSpan={header.colSpan}
-                    role="columnheader"
+                    scope="col"
                     tabIndex={-1}
                     style={{
                       width: header.getSize(),
@@ -652,15 +656,13 @@ export function DataTable<TData, TValue>({
               // Loading state
               Array.from({ length: pageSize }).map((_, i) => (
                 <TableRow
-                  key={`skeleton-${i}`}
-                  role="row"
+                  key={`loading-row-${crypto.randomUUID()}`}
                   tabIndex={-1}
                 >
-                  {Array.from({ length: columns.length }).map((_, j) => (
+                  {Array.from({ length: columns.length }).map((_, j, array) => (
                     <TableCell
-                      key={`skeleton-cell-${j}`}
+                      key={`skeleton-cell-${crypto.randomUUID()}`}
                       className="px-4 py-2 truncate max-w-0 text-left"
-                      role="gridcell"
                       tabIndex={-1}
                     >
                       <Skeleton className="h-6 w-full" />
@@ -675,15 +677,15 @@ export function DataTable<TData, TValue>({
                   key={row.id}
                   id={`row-${rowIndex}`}
                   data-row-index={rowIndex}
-                  data-state={row.getIsSelected() && "selected"}
+                  data-state={row.getIsSelected() ? "selected" : undefined}
                   tabIndex={0}
-                  role="row"
                   aria-selected={row.getIsSelected()}
                   onClick={tableConfig.enableClickRowSelect ? () => row.toggleSelected() : undefined}
                   onFocus={(e) => {
                     // Add a data attribute to the currently focused row
-                    document.querySelectorAll('[data-focused="true"]')
-                      .forEach(el => el.removeAttribute('data-focused'));
+                    for (const el of document.querySelectorAll('[data-focused="true"]')) {
+                      el.removeAttribute('data-focused');
+                    }
                     e.currentTarget.setAttribute('data-focused', 'true');
                   }}
                 >
@@ -693,7 +695,6 @@ export function DataTable<TData, TValue>({
                       key={cell.id}
                       id={`cell-${rowIndex}-${cellIndex}`}
                       data-cell-index={cellIndex}
-                      role="gridcell"
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
