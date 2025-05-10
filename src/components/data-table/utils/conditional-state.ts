@@ -1,5 +1,10 @@
-import { useState, Dispatch, SetStateAction } from "react";
+import { useState } from "react";
 import { useUrlState } from "./url-state";
+
+/**
+ * Type for the setState function that might return a Promise
+ */
+type SetStateWithPromise<T> = (value: T | ((prevValue: T) => T)) => Promise<URLSearchParams> | undefined;
 
 /**
  * Creates a state hook that can conditionally use URL state or regular React state
@@ -13,7 +18,7 @@ export function createConditionalStateHook(enableUrlState: boolean) {
     key: string, 
     defaultValue: T, 
     options = {}
-  ): readonly [T, Dispatch<SetStateAction<T>>] {
+  ): readonly [T, SetStateWithPromise<T>] {
     // For non-URL state, use regular React state
     const [state, setState] = useState<T>(defaultValue);
     
@@ -21,7 +26,7 @@ export function createConditionalStateHook(enableUrlState: boolean) {
     if (enableUrlState) {
       return useUrlState<T>(key, defaultValue, options);
     }
-    
+
     // Otherwise use regular React state
     return [state, setState] as const;
   };

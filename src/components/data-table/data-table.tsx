@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import {
-  ColumnDef,
   flexRender,
   getCoreRowModel,
   getFacetedRowModel,
@@ -11,7 +10,8 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-  ColumnResizeMode,
+  type ColumnDef,
+  type ColumnResizeMode,
 } from "@tanstack/react-table";
 import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 
@@ -29,7 +29,7 @@ import { DataTableToolbar } from "./toolbar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { useTableConfig, TableConfig } from "./utils/table-config";
+import { useTableConfig, type TableConfig } from "./utils/table-config";
 import { useTableColumnResize } from "./hooks/use-table-column-resize";
 import { DataTableResizer } from "./data-table-resizer";
 
@@ -318,17 +318,23 @@ export function DataTable<TData, TValue>({
     const isQueryHook = (fetchDataFn as any).isQueryHook === true;
 
     if (!isQueryHook) {
+      // Create refs to capture the current sort values at the time of fetching
+      const currentSortBy = sortBy;
+      const currentSortOrder = sortOrder;
+      
       const fetchData = async () => {
         try {
           setIsLoading(true);
+          console.log(`Fetching with sort_by: ${currentSortBy}, sort_order: ${currentSortOrder}`);
+          
           const result = await (fetchDataFn as any)({
             page,
             limit: pageSize,
             search: preprocessSearch(search),
             from_date: dateRange.from_date,
             to_date: dateRange.to_date,
-            sort_by: sortBy,
-            sort_order: sortOrder,
+            sort_by: currentSortBy, // Use captured value
+            sort_order: currentSortOrder, // Use captured value
           });
           setData(result);
           setIsError(false);
@@ -348,7 +354,14 @@ export function DataTable<TData, TValue>({
 
   // If fetchDataFn is a React Query hook, call it directly with parameters
   const queryResult = (fetchDataFn as any).isQueryHook === true
-    ? (fetchDataFn as any)(page, pageSize, search, dateRange, sortBy, sortOrder)
+    ? (fetchDataFn as any)(
+        page, 
+        pageSize, 
+        search, 
+        dateRange, 
+        sortBy, // Pass the current sortBy value
+        sortOrder // Pass the current sortOrder value
+      )
     : null;
 
   // If using React Query, update state based on query result
@@ -387,8 +400,30 @@ export function DataTable<TData, TValue>({
 
   // Create event handlers using utility functions
   const handleSortingChange = useCallback(
-    createSortingHandler(setSortBy, setSortOrder),
-    [setSortBy, setSortOrder]
+    (updaterOrValue: any) => {
+      // Extract the new sorting state
+      const newSorting = typeof updaterOrValue === 'function'
+        ? updaterOrValue(sorting)
+        : updaterOrValue;
+      
+      if (newSorting.length > 0) {
+        const columnId = newSorting[0].id;
+        const direction = newSorting[0].desc ? "desc" : "asc";
+        
+        console.log(`Setting sort in URL: column=${columnId}, direction=${direction}`);
+        
+        // Use Promise.all for batch updates to ensure they're applied together
+        Promise.all([
+          setSortBy(columnId),
+          setSortOrder(direction)
+        ]).then(() => {
+          console.log(`URL updated: sortBy=${columnId}, sortOrder=${direction}`);
+        }).catch(err => {
+          console.error("Failed to update URL sorting params:", err);
+        });
+      }
+    },
+    [setSortBy, setSortOrder, sorting]
   );
 
   const handleColumnFiltersChange = useCallback(
@@ -517,6 +552,12 @@ export function DataTable<TData, TValue>({
       console.error('Failed to remove column order from localStorage:', error);
     }
   }, [table]);
+
+  // Add synchronization effect to ensure URL is the source of truth
+  useEffect(() => {
+    // Force the table's sorting state to match URL parameters
+    table.setSorting(sorting);
+  }, [sortBy, sortOrder, table, sorting]);
 
   // Handle error state
   if (isError) {

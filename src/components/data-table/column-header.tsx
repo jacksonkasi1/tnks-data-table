@@ -4,7 +4,7 @@ import {
     CaretSortIcon,
     EyeNoneIcon
   } from "@radix-ui/react-icons";
-  import { Column } from "@tanstack/react-table";
+  import type { Column } from "@tanstack/react-table";
   
   import { cn } from "@/lib/utils";
   import { Button } from "@/components/ui/button";
@@ -30,20 +30,36 @@ import {
     if (!column.getCanSort()) {
       return <div className={cn(className)}>{title}</div>;
     }
-  
+    
+    // Get the current sort direction for this column
+    const currentDirection = column.getIsSorted();
+    
+    // Use direct method to set sort with an explicit direction
+    const setSorting = (direction: "asc" | "desc" | false) => {
+      // If we're clearing sort, use an empty array
+      if (direction === false) {
+        column.toggleSorting(undefined, false);
+        return;
+      }
+      
+      // Set explicit sort with the direction
+      // The second param (false) prevents multi-sort
+      column.toggleSorting(direction === "desc", false);
+    };
+
     return (
       <div className={cn("flex items-center space-x-2", className)}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              size="default"
-              className="h-8 data-[state=open]:bg-accent"
+              size="sm"
+              className="data-[state=open]:bg-accent -ml-3 h-8 focus-visible:ring-0 focus-visible:ring-offset-0"
             >
               <span>{title}</span>
-              {column.getIsSorted() === "desc" ? (
+              {currentDirection === "desc" ? (
                 <ArrowDownIcon className="ml-2 h-4 w-4" />
-              ) : column.getIsSorted() === "asc" ? (
+              ) : currentDirection === "asc" ? (
                 <ArrowUpIcon className="ml-2 h-4 w-4" />
               ) : (
                 <CaretSortIcon className="ml-2 h-4 w-4" />
@@ -51,18 +67,18 @@ import {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => column.toggleSorting(false)}>
+            <DropdownMenuItem onClick={() => setSorting("asc")}>
               <ArrowUpIcon className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
               Asc
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => column.toggleSorting(true)}>
+            <DropdownMenuItem onClick={() => setSorting("desc")}>
               <ArrowDownIcon className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
               Desc
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => column.toggleVisibility(false)}>
+            <DropdownMenuItem onClick={() => setSorting("asc")}>
               <EyeNoneIcon className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
-              Hide
+              Reset
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
