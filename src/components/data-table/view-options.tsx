@@ -1,6 +1,6 @@
 "use client";
 
-import type { Table } from "@tanstack/react-table";
+import type { Table, Column } from "@tanstack/react-table";
 import { Check, GripVertical, Settings2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +24,7 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 interface DataTableViewOptionsProps<TData> {
   table: Table<TData>;
   columnMapping?: Record<string, string>;
+  size?: 'sm' | 'default' | 'lg';
 }
 
 // Local storage key for column order
@@ -32,6 +33,7 @@ const COLUMN_ORDER_STORAGE_KEY = "data-table-column-order";
 export function DataTableViewOptions<TData>({
   table,
   columnMapping,
+  size = 'default',
 }: DataTableViewOptionsProps<TData>) {
   // Get columns that can be hidden
   const columns = React.useMemo(
@@ -49,8 +51,8 @@ export function DataTableViewOptions<TData>({
   const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);
 
   // Order columns based on the current table column order
+  const columnOrder = table.getState().columnOrder;
   const orderedColumns = useMemo(() => {
-    const columnOrder = table.getState().columnOrder;
 
     if (!columnOrder.length) {
       return columns;
@@ -67,7 +69,7 @@ export function DataTableViewOptions<TData>({
 
       return aIndex - bIndex;
     });
-  }, [columns, table.getState().columnOrder]);
+  }, [columns, columnOrder]);
 
   // Load column order from localStorage on initial render
   useEffect(() => {
@@ -148,7 +150,7 @@ export function DataTableViewOptions<TData>({
   }, [table]);
 
   // Get column display label
-  const getColumnLabel = useCallback((column: any) => {
+  const getColumnLabel = useCallback((column: Column<TData, unknown>) => {
     // First check if we have a mapping for this column
     if (columnMapping && column.id in columnMapping) {
       return columnMapping[column.id];
@@ -164,9 +166,8 @@ export function DataTableViewOptions<TData>({
       <PopoverTrigger asChild>
         <Button
           aria-label="Toggle columns"
-          role="combobox"
-          variant="outline"
-          size="default"
+          variant="outline" 
+          size={size}
           className="ml-auto hidden lg:flex"
         >
           <Settings2 className="mr-2 h-4 w-4" />

@@ -59,6 +59,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.30.6",
+    "eslint-config-next": "15.3.2",
     "tailwindcss": "^4",
     "tsx": "^4.19.3",
     "typescript": "^5"

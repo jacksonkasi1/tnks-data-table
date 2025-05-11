@@ -19,7 +19,7 @@ import { User } from "./schema";
 
 export default function UserTable() {
   return (
-    <DataTable<User, any>
+    <DataTable<User, unknown>
       getColumns={getColumns}
       exportConfig={useExportConfig()}
       fetchDataFn={useUsersData}
@@ -45,6 +45,7 @@ export default function UserTable() {
         enableDateFilter: true,
         enableColumnVisibility: true,
         enableUrlState: true,
+        size: "default",
         columnResizingTableId: "user-table",
       }}
     />

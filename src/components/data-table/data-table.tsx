@@ -1,8 +1,8 @@
 "use client";
 
-import * as React from "react";
+import type * as React from "react";
 import {
-  ColumnDef,
+  type ColumnSizingState,
   flexRender,
   getCoreRowModel,
   getFacetedRowModel,
@@ -11,7 +11,8 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-  ColumnResizeMode,
+  type ColumnDef,
+  type ColumnResizeMode
 } from "@tanstack/react-table";
 import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 
@@ -29,7 +30,7 @@ import { DataTableToolbar } from "./toolbar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { useTableConfig, TableConfig } from "./utils/table-config";
+import { useTableConfig, type TableConfig } from "./utils/table-config";
 import { useTableColumnResize } from "./hooks/use-table-column-resize";
 import { DataTableResizer } from "./data-table-resizer";
 
@@ -51,6 +52,34 @@ import {
   cleanupColumnResizing
 } from "./utils/column-sizing";
 
+// Define types for the data fetching function params and result
+interface DataFetchParams {
+  page: number;
+  limit: number;
+  search: string;
+  from_date: string;
+  to_date: string;
+  sort_by: string;
+  sort_order: string;
+}
+
+interface DataFetchResult<TData> {
+  success: boolean;
+  data: TData[];
+  pagination: {
+    page: number;
+    limit: number;
+    total_pages: number;
+    total_items: number;
+  };
+}
+
+// Types for table handlers
+type PaginationUpdater<TData> = (prev: { pageIndex: number; pageSize: number }) => { pageIndex: number; pageSize: number };
+type SortingUpdater = (prev: { id: string; desc: boolean }[]) => { id: string; desc: boolean }[];
+type ColumnOrderUpdater = (prev: string[]) => string[];
+type RowSelectionUpdater = (prev: Record<string, boolean>) => Record<string, boolean>;
+
 interface DataTableProps<TData, TValue> {
   // Allow overriding the table configuration
   config?: Partial<TableConfig>;
@@ -59,34 +88,11 @@ interface DataTableProps<TData, TValue> {
   getColumns: (handleRowDeselection: ((rowId: string) => void) | null | undefined) => ColumnDef<TData, TValue>[];
 
   // Data fetching function
-  fetchDataFn: ((params: {
-    page: number;
-    limit: number;
-    search: string;
-    from_date: string;
-    to_date: string;
-    sort_by: string;
-    sort_order: string;
-  }) => Promise<{
-    success: boolean;
-    data: TData[];
-    pagination: {
-      page: number;
-      limit: number;
-      total_pages: number;
-      total_items: number;
-    };
-  }>) | ((
-    page: number,
-    pageSize: number,
-    search: string,
-    dateRange: { from_date: string; to_date: string },
-    sortBy: string,
-    sortOrder: string
-  ) => any);
+  fetchDataFn: ((params: DataFetchParams) => Promise<DataFetchResult<TData>>) | 
+               ((page: number, pageSize: number, search: string, dateRange: { from_date: string; to_date: string }, sortBy: string, sortOrder: string) => unknown);
 
   // Function to fetch specific items by their IDs
-  fetchByIdsFn?: (ids: any[]) => Promise<TData[]>;
+  fetchByIdsFn?: (ids: number[] | string[]) => Promise<TData[]>;
 
   // Export configuration
   exportConfig: {
@@ -105,7 +111,7 @@ interface DataTableProps<TData, TValue> {
   // Custom toolbar content render function
   renderToolbarContent?: (props: {
     selectedRows: TData[];
-    allSelectedIds: any[];
+    allSelectedIds: (string | number)[];
     totalSelectedCount: number;
     resetSelection: () => void;
   }) => React.ReactNode;
@@ -144,12 +150,12 @@ export function DataTable<TData, TValue>({
   const [sortBy, setSortBy] = useConditionalUrlState("sortBy", "created_at");
   const [sortOrder, setSortOrder] = useConditionalUrlState<"asc" | "desc">("sortOrder", "desc");
   const [columnVisibility, setColumnVisibility] = useConditionalUrlState<Record<string, boolean>>("columnVisibility", {});
-  const [columnFilters, setColumnFilters] = useConditionalUrlState<Array<{ id: string; value: any }>>("columnFilters", []);
+  const [columnFilters, setColumnFilters] = useConditionalUrlState<Array<{ id: string; value: unknown }>>("columnFilters", []);
 
   // Internal states
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<Error | null>(null);
   const [data, setData] = useState<{
     data: TData[];
     pagination: {
@@ -199,7 +205,7 @@ export function DataTable<TData, TValue>({
   const handleRowDeselection = useCallback((rowId: string) => {
     if (!dataItems.length) return;
 
-    const rowIndex = parseInt(rowId, 10);
+    const rowIndex = Number.parseInt(rowId, 10);
     const item = dataItems[rowIndex];
 
     if (item) {
@@ -219,7 +225,7 @@ export function DataTable<TData, TValue>({
   }, []);
 
   // PERFORMANCE FIX: Optimized row selection handler
-  const handleRowSelectionChange = useCallback((updaterOrValue: any) => {
+  const handleRowSelectionChange = useCallback((updaterOrValue: RowSelectionUpdater | Record<string, boolean>) => {
     // Determine the new row selection value
     const newRowSelection = typeof updaterOrValue === 'function'
       ? updaterOrValue(rowSelection)
@@ -232,8 +238,8 @@ export function DataTable<TData, TValue>({
       // Process changes for current page
       if (dataItems.length) {
         // First handle explicit selections in newRowSelection
-        Object.entries(newRowSelection).forEach(([rowId, isSelected]) => {
-          const rowIndex = parseInt(rowId, 10);
+        for (const [rowId, isSelected] of Object.entries(newRowSelection)) {
+          const rowIndex = Number.parseInt(rowId, 10);
           if (rowIndex >= 0 && rowIndex < dataItems.length) {
             const item = dataItems[rowIndex];
             const itemId = String(item[idField]);
@@ -244,9 +250,9 @@ export function DataTable<TData, TValue>({
               delete next[itemId];
             }
           }
-        });
+        }
 
-        // Then handle implicit deselections (rows that were selected but aren't in newRowSelection)
+        // Then handle implicit deselection (rows that were selected but aren't in newRowSelection)
         dataItems.forEach((item, index) => {
           const itemId = String(item[idField]);
           const rowId = String(index);
@@ -271,7 +277,7 @@ export function DataTable<TData, TValue>({
 
     // Get IDs of selected items
     const selectedIdsArray = Object.keys(selectedItemIds).map(id =>
-      typeof id === 'string' ? parseInt(id, 10) : id as number
+      typeof id === 'string' ? Number.parseInt(id, 10) : id as number
     );
 
     // Find items from current page that are selected
@@ -315,27 +321,32 @@ export function DataTable<TData, TValue>({
   // Fetch data
   useEffect(() => {
     // Check if the fetchDataFn is a query hook
-    const isQueryHook = (fetchDataFn as any).isQueryHook === true;
+    const isQueryHook = (fetchDataFn as { isQueryHook?: boolean }).isQueryHook === true;
 
     if (!isQueryHook) {
+      // Create refs to capture the current sort values at the time of fetching
+      const currentSortBy = sortBy;
+      const currentSortOrder = sortOrder;
+      
       const fetchData = async () => {
         try {
           setIsLoading(true);
-          const result = await (fetchDataFn as any)({
+          
+          const result = await (fetchDataFn as (params: DataFetchParams) => Promise<DataFetchResult<TData>>)({
             page,
             limit: pageSize,
             search: preprocessSearch(search),
             from_date: dateRange.from_date,
             to_date: dateRange.to_date,
-            sort_by: sortBy,
-            sort_order: sortOrder,
+            sort_by: currentSortBy,
+            sort_order: currentSortOrder,
           });
           setData(result);
           setIsError(false);
           setError(null);
         } catch (err) {
           setIsError(true);
-          setError(err);
+          setError(err instanceof Error ? err : new Error("Unknown error"));
           console.error("Error fetching data:", err);
         } finally {
           setIsLoading(false);
@@ -347,8 +358,21 @@ export function DataTable<TData, TValue>({
   }, [page, pageSize, search, dateRange, sortBy, sortOrder, fetchDataFn]);
 
   // If fetchDataFn is a React Query hook, call it directly with parameters
-  const queryResult = (fetchDataFn as any).isQueryHook === true
-    ? (fetchDataFn as any)(page, pageSize, search, dateRange, sortBy, sortOrder)
+  const queryResult = (fetchDataFn as { isQueryHook?: boolean }).isQueryHook === true
+    ? (fetchDataFn as (page: number, pageSize: number, search: string, dateRange: { from_date: string; to_date: string }, sortBy: string, sortOrder: string) => { 
+        isLoading: boolean; 
+        isSuccess: boolean; 
+        isError: boolean; 
+        data?: DataFetchResult<TData>; 
+        error?: Error 
+      })(
+        page, 
+        pageSize, 
+        search, 
+        dateRange, 
+        sortBy,
+        sortOrder
+      )
     : null;
 
   // If using React Query, update state based on query result
@@ -362,7 +386,7 @@ export function DataTable<TData, TValue>({
       }
       if (queryResult.isError) {
         setIsError(true);
-        setError(queryResult.error);
+        setError(queryResult.error instanceof Error ? queryResult.error : new Error("Unknown error"));
       }
     }
   }, [queryResult]);
@@ -377,7 +401,7 @@ export function DataTable<TData, TValue>({
   );
 
   // Ref for the table container for keyboard navigation
-  const tableContainerRef = useRef<HTMLDivElement>(null!);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // Get columns with the deselection handler (memoize to avoid recreation on render)
   const columns = useMemo(() => {
@@ -387,32 +411,85 @@ export function DataTable<TData, TValue>({
 
   // Create event handlers using utility functions
   const handleSortingChange = useCallback(
-    createSortingHandler(setSortBy, setSortOrder),
-    [setSortBy, setSortOrder]
+    (updaterOrValue: SortingUpdater | { id: string; desc: boolean }[]) => {
+      // Extract the new sorting state
+      const newSorting = typeof updaterOrValue === 'function'
+        ? updaterOrValue(sorting)
+        : updaterOrValue;
+      
+      if (newSorting.length > 0) {
+        const columnId = newSorting[0].id;
+        const direction = newSorting[0].desc ? "desc" : "asc";
+        
+        // Use Promise.all for batch updates to ensure they're applied together
+        Promise.all([
+          setSortBy(columnId),
+          setSortOrder(direction)
+        ]).catch(err => {
+          console.error("Failed to update URL sorting params:", err);
+        });
+      }
+    },
+    [setSortBy, setSortOrder, sorting]
   );
 
   const handleColumnFiltersChange = useCallback(
     createColumnFiltersHandler(setColumnFilters),
-    [setColumnFilters]
+    []
   );
 
   const handleColumnVisibilityChange = useCallback(
     createColumnVisibilityHandler(setColumnVisibility),
-    [setColumnVisibility]
+    []
   );
 
   const handlePaginationChange = useCallback(
-    createPaginationHandler(setPage, setPageSize, page, pageSize),
-    [setPage, setPageSize, page, pageSize]
+    (updaterOrValue: PaginationUpdater<TData> | { pageIndex: number; pageSize: number }) => {
+      // Extract the new pagination state
+      const newPagination = typeof updaterOrValue === 'function'
+        ? updaterOrValue({ pageIndex: page - 1, pageSize })
+        : updaterOrValue;
+      
+      // Special handling: When page size changes, always reset to page 1
+      if (newPagination.pageSize !== pageSize) {
+        // First, directly update URL to ensure it's in sync
+        const url = new URL(window.location.href);
+        url.searchParams.set('pageSize', String(newPagination.pageSize));
+        url.searchParams.set('page', '1'); // Always reset to page 1
+        window.history.replaceState({}, '', url.toString());
+        
+        // Then update our state
+        setPageSize(newPagination.pageSize);
+        setPage(1);
+        return;
+      }
+      
+      // Only update page if it's changed - this handles normal page navigation
+      if ((newPagination.pageIndex + 1) !== page) {
+        const setPagePromise = setPage(newPagination.pageIndex + 1);
+        if (setPagePromise && typeof setPagePromise.catch === 'function') {
+          setPagePromise.catch(err => {
+            console.error("Failed to update page param:", err);
+          });
+        }
+      }
+    },
+    [page, pageSize, setPage, setPageSize]
   );
 
   const handleColumnSizingChange = useCallback(
-    createColumnSizingHandler(setColumnSizing, columnSizing),
-    [columnSizing, setColumnSizing]
+    (updaterOrValue: ColumnSizingState | ((prev: ColumnSizingState) => ColumnSizingState)) => {
+      if (typeof updaterOrValue === 'function') {
+        setColumnSizing(current => updaterOrValue(current));
+      } else {
+        setColumnSizing(updaterOrValue);
+      }
+    },
+    [setColumnSizing]
   );
 
   // Column order change handler
-  const handleColumnOrderChange = useCallback((updaterOrValue: any) => {
+  const handleColumnOrderChange = useCallback((updaterOrValue: ColumnOrderUpdater | string[]) => {
     const newColumnOrder = typeof updaterOrValue === 'function'
       ? updaterOrValue(columnOrder)
       : updaterOrValue;
@@ -478,11 +555,20 @@ export function DataTable<TData, TValue>({
   // Create keyboard navigation handler
   const handleKeyDown = useCallback(
     createKeyboardNavigationHandler(table, (row, rowIndex) => {
-      console.log(`Row ${rowIndex} activated`, row);
       // Example action on keyboard activation
     }),
-    [table]
+    []
   );
+
+  // Add an effect to validate page number when page size changes
+  useEffect(() => {
+    // This effect ensures page is valid after page size changes
+    const totalPages = data?.pagination.total_pages || 0;
+    
+    if (totalPages > 0 && page > totalPages) {
+      setPage(1);
+    }
+  }, [data?.pagination?.total_pages, page, setPage]);
 
   // Initialize default column sizes when columns are available and no saved sizes exist
   useEffect(() => {
@@ -517,6 +603,27 @@ export function DataTable<TData, TValue>({
       console.error('Failed to remove column order from localStorage:', error);
     }
   }, [table]);
+
+  // Add synchronization effect to ensure URL is the source of truth
+  useEffect(() => {
+    // Force the table's sorting state to match URL parameters
+    table.setSorting(sorting);
+  }, [table, sorting]);
+
+  // Keep pagination in sync with URL parameters
+  useEffect(() => {
+    // Make sure table pagination state matches URL state
+    const tableState = table.getState().pagination;
+    if (tableState.pageIndex !== page - 1 || tableState.pageSize !== pageSize) {
+      // Avoid unnecessary updates that might cause infinite loops
+      if (tableState.pageSize !== pageSize || Math.abs(tableState.pageIndex - (page - 1)) > 0) {
+        table.setPagination({
+          pageIndex: page - 1,
+          pageSize: pageSize
+        });
+      }
+    }
+  }, [table, page, pageSize]);
 
   // Handle error state
   if (isError) {
@@ -555,7 +662,7 @@ export function DataTable<TData, TValue>({
           columnMapping={exportConfig.columnMapping}
           columnWidths={exportConfig.columnWidths}
           headers={exportConfig.headers}
-          customToolbarComponent={renderToolbarContent && renderToolbarContent({
+          customToolbarComponent={renderToolbarContent?.({
             selectedRows: dataItems.filter((item) => selectedItemIds[String(item[idField])]),
             allSelectedIds: Object.keys(selectedItemIds),
             totalSelectedCount: totalSelectedItems,
@@ -567,8 +674,6 @@ export function DataTable<TData, TValue>({
       <div
         ref={tableContainerRef}
         className="overflow-y-auto rounded-md border table-container"
-        role="grid"
-        tabIndex={0}
         aria-label="Data table"
         onKeyDown={tableConfig.enableKeyboardNavigation ? handleKeyDown : undefined}
       >
@@ -577,14 +682,13 @@ export function DataTable<TData, TValue>({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
                 key={headerGroup.id}
-                role="row"
               >
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     className="px-2 py-2 relative text-left group/th"
                     key={header.id}
                     colSpan={header.colSpan}
-                    role="columnheader"
+                    scope="col"
                     tabIndex={-1}
                     style={{
                       width: header.getSize(),
@@ -611,15 +715,13 @@ export function DataTable<TData, TValue>({
               // Loading state
               Array.from({ length: pageSize }).map((_, i) => (
                 <TableRow
-                  key={`skeleton-${i}`}
-                  role="row"
+                  key={`loading-row-${crypto.randomUUID()}`}
                   tabIndex={-1}
                 >
-                  {Array.from({ length: columns.length }).map((_, j) => (
+                  {Array.from({ length: columns.length }).map((_, j, array) => (
                     <TableCell
-                      key={`skeleton-cell-${j}`}
+                      key={`skeleton-cell-${crypto.randomUUID()}`}
                       className="px-4 py-2 truncate max-w-0 text-left"
-                      role="gridcell"
                       tabIndex={-1}
                     >
                       <Skeleton className="h-6 w-full" />
@@ -634,15 +736,15 @@ export function DataTable<TData, TValue>({
                   key={row.id}
                   id={`row-${rowIndex}`}
                   data-row-index={rowIndex}
-                  data-state={row.getIsSelected() && "selected"}
+                  data-state={row.getIsSelected() ? "selected" : undefined}
                   tabIndex={0}
-                  role="row"
                   aria-selected={row.getIsSelected()}
                   onClick={tableConfig.enableClickRowSelect ? () => row.toggleSelected() : undefined}
                   onFocus={(e) => {
                     // Add a data attribute to the currently focused row
-                    document.querySelectorAll('[data-focused="true"]')
-                      .forEach(el => el.removeAttribute('data-focused'));
+                    for (const el of document.querySelectorAll('[data-focused="true"]')) {
+                      el.removeAttribute('data-focused');
+                    }
                     e.currentTarget.setAttribute('data-focused', 'true');
                   }}
                 >
@@ -652,7 +754,6 @@ export function DataTable<TData, TValue>({
                       key={cell.id}
                       id={`cell-${rowIndex}-${cellIndex}`}
                       data-cell-index={cellIndex}
-                      role="gridcell"
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
@@ -683,6 +784,7 @@ export function DataTable<TData, TValue>({
           totalItems={data?.pagination.total_items || 0}
           totalSelectedItems={totalSelectedItems}
           pageSizeOptions={pageSizeOptions || [10, 20, 30, 40, 50]}
+          size={tableConfig.size}
         />
       )}
     </div>

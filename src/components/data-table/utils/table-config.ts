@@ -39,6 +39,10 @@ export interface TableConfig {
   // Enable/disable toolbar
   enableToolbar: boolean;
   
+  // Control the size of buttons and inputs throughout the table
+  // sm: small, default: standard, lg: large
+  size: 'sm' | 'default' | 'lg';
+  
   // Unique ID for storing column sizing in localStorage
   // This allows multiple tables to have independent sizing states
   columnResizingTableId?: string;
@@ -46,7 +50,7 @@ export interface TableConfig {
 
 // Default configuration
 const defaultConfig: TableConfig = {
-  enableRowSelection: false,      // Row selection disabled by default
+  enableRowSelection: true,      // Row selection enabled by default
   enableKeyboardNavigation: false, // Keyboard navigation disabled by default
   enableClickRowSelect: false,    // Clicking row to select disabled by default
   enablePagination: true,         // Pagination enabled by default
@@ -58,6 +62,7 @@ const defaultConfig: TableConfig = {
   enableUrlState: true,           // URL state persistence enabled by default
   enableColumnResizing: true,     // Column resizing enabled by default
   enableToolbar: true,            // Toolbar enabled by default
+  size: 'default',                // Default size for buttons and inputs
   columnResizingTableId: undefined, // No table ID by default
 };
 

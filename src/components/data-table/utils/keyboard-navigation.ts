@@ -1,5 +1,5 @@
-import { Table } from "@tanstack/react-table";
-import { KeyboardEvent } from "react";
+import type { Table } from "@tanstack/react-table";
+import type { KeyboardEvent } from "react";
 
 /**
  * Creates a keyboard navigation handler for data tables
@@ -35,7 +35,7 @@ export function createKeyboardNavigationHandler<TData>(
           const rowId = rowElement.getAttribute('data-row-index') || rowElement.id;
           if (rowId) {
             // Find the row by index and toggle its selection
-            const rowIndex = parseInt(rowId.replace(/^row-/, ''), 10);
+            const rowIndex = Number.parseInt(rowId.replace(/^row-/, ''), 10);
             const row = table.getRowModel().rows[rowIndex];
             if (row) {
               if (e.key === " ") {

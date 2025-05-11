@@ -3,7 +3,7 @@ import * as XLSX from "xlsx";
 
 
 // Generic type for exportable data - should have string keys and values that can be converted to string
-export type ExportableData = Record<string, any>;
+export type ExportableData = Record<string, string | number | boolean | null | undefined>;
 
 /**
  * Convert array of objects to CSV string
@@ -25,14 +25,14 @@ function convertToCSV<T extends ExportableData>(data: T[], headers: string[], co
         ? `"${mappedHeader.replace(/"/g, '""')}"`
         : mappedHeader;
     });
-    csvContent = headerRow.join(",") + "\n";
+    csvContent = `${headerRow.join(",")}\n`;
   } else {
     // Use original headers
-    csvContent = headers.join(",") + "\n";
+    csvContent = `${headers.join(",")}\n`;
   }
 
   // Add data rows
-  data.forEach(item => {
+  for (const item of data) {
     const row = headers.map(header => {
       // Get the value for this header
       const value = item[header as keyof T];
@@ -47,8 +47,8 @@ function convertToCSV<T extends ExportableData>(data: T[], headers: string[], co
       return escapedValue;
     });
 
-    csvContent += row.join(",") + "\n";
-  });
+    csvContent += `${row.join(",")}\n`;
+  }
 
   return csvContent;
 }
@@ -86,12 +86,12 @@ export function exportToCSV<T extends ExportableData>(
   try {
     // Filter data to only include specified headers
     const filteredData = data.map(item => {
-      const filteredItem: Record<string, any> = {};
-      headers.forEach(header => {
+      const filteredItem: Record<string, string | number | boolean | null | undefined> = {};
+      for (const header of headers) {
         if (header in item) {
           filteredItem[header] = item[header];
         }
-      });
+      }
       return filteredItem;
     });
 
@@ -130,14 +130,14 @@ export function exportToExcel<T extends ExportableData>(
 
     // Map data to worksheet format, only including mapped columns
     const worksheetData = data.map(item => {
-      const row: Record<string, any> = {};
+      const row: Record<string, string | number | boolean | null | undefined> = {};
       // If headers are provided, only include those columns
       const columnsToExport = headers || Object.keys(mapping);
-      columnsToExport.forEach(key => {
+      for (const key of columnsToExport) {
         if (key in item) {
           row[mapping[key]] = item[key];
         }
-      });
+      }
       return row;
     });
 

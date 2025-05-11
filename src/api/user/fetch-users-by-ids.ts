@@ -6,10 +6,13 @@ const API_BASE_URL = "/api";
 /**
  * Fetch specific users by their IDs
  */
-export async function fetchUsersByIds(userIds: number[]): Promise<User[]> {
+export async function fetchUsersByIds(userIds: string[] | number[]): Promise<User[]> {
   if (userIds.length === 0) {
     return [];
   }
+
+  // Convert all IDs to numbers for consistent processing
+  const numericIds = userIds.map(id => typeof id === 'string' ? parseInt(id, 10) : id);
 
   // Use a more efficient approach with batching
   // Define a reasonable batch size to avoid URL length limits
@@ -17,8 +20,8 @@ export async function fetchUsersByIds(userIds: number[]): Promise<User[]> {
   const results: User[] = [];
 
   // Process in batches
-  for (let i = 0; i < userIds.length; i += BATCH_SIZE) {
-    const batchIds = userIds.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < numericIds.length; i += BATCH_SIZE) {
+    const batchIds = numericIds.slice(i, i + BATCH_SIZE);
     
     try {
       // Build parameter string with multiple IDs
@@ -62,14 +65,14 @@ export async function fetchUsersByIds(userIds: number[]): Promise<User[]> {
   
   // Find which user IDs we're missing
   const foundIds = Array.from(userMap.keys());
-  const missingIds = userIds.filter(id => !foundIds.includes(id));
+  const missingIds = numericIds.filter(id => !foundIds.includes(id));
 
   if (missingIds.length > 0) {
     console.warn(`Failed to fetch data for ${missingIds.length} users: ${missingIds.join(", ")}`);
   }
   
   // Return the results in the same order as the input IDs where possible
-  return userIds
+  return numericIds
     .map(id => userMap.get(id))
     .filter((user): user is User => user !== undefined);
 }

@@ -1,5 +1,10 @@
-import { useState, Dispatch, SetStateAction } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useUrlState } from "./url-state";
+
+/**
+ * Type for the setState function that might return a Promise
+ */
+type SetStateWithPromise<T> = (value: T | ((prevValue: T) => T)) => Promise<URLSearchParams> | undefined;
 
 /**
  * Creates a state hook that can conditionally use URL state or regular React state
@@ -13,16 +18,24 @@ export function createConditionalStateHook(enableUrlState: boolean) {
     key: string, 
     defaultValue: T, 
     options = {}
-  ): readonly [T, Dispatch<SetStateAction<T>>] {
-    // For non-URL state, use regular React state
-    const [state, setState] = useState<T>(defaultValue);
+  ): readonly [T, SetStateWithPromise<T>] {
+    // Always call both hooks to satisfy React hooks rules
+    const [regularState, setRegularState] = useState<T>(defaultValue);
+    const [urlState, setUrlState] = useUrlState<T>(key, defaultValue, options);
     
-    // Only use URL state if enabled in config
-    if (enableUrlState) {
-      return useUrlState<T>(key, defaultValue, options);
-    }
+    // Create a compatible setState function for regular state that matches the SetStateWithPromise signature
+    const setRegularStateWrapper = useCallback((valueOrUpdater: T | ((prevValue: T) => T)) => {
+      setRegularState(valueOrUpdater);
+      return undefined; // Return undefined instead of void to match the type
+    }, []);
     
-    // Otherwise use regular React state
-    return [state, setState] as const;
+    // Return the appropriate state and setter based on config
+    return useMemo(() => {
+      if (enableUrlState) {
+        return [urlState, setUrlState] as const;
+      }
+      
+      return [regularState, setRegularStateWrapper] as const;
+    }, [enableUrlState, regularState, urlState, setUrlState, setRegularStateWrapper]);
   };
 } 

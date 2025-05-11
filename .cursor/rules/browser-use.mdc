@@ -1,0 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+After making a change, test it in the browser at http://localhost:3000/
+
+using the Autobrowser MCP. Assume the server is already running.
