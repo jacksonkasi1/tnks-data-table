@@ -326,16 +326,15 @@ export function DataTable<TData, TValue>({
       const fetchData = async () => {
         try {
           setIsLoading(true);
-          console.log(`Fetching with sort_by: ${currentSortBy}, sort_order: ${currentSortOrder}`);
-          
+
           const result = await (fetchDataFn as any)({
             page,
             limit: pageSize,
             search: preprocessSearch(search),
             from_date: dateRange.from_date,
             to_date: dateRange.to_date,
-            sort_by: currentSortBy, // Use captured value
-            sort_order: currentSortOrder, // Use captured value
+            sort_by: currentSortBy,
+            sort_order: currentSortOrder,
           });
           setData(result);
           setIsError(false);
@@ -411,14 +410,11 @@ export function DataTable<TData, TValue>({
         const columnId = newSorting[0].id;
         const direction = newSorting[0].desc ? "desc" : "asc";
         
-        console.log(`Setting sort in URL: column=${columnId}, direction=${direction}`);
-        
         // Use Promise.all for batch updates to ensure they're applied together
         Promise.all([
           setSortBy(columnId),
           setSortOrder(direction)
         ]).then(() => {
-          console.log(`URL updated: sortBy=${columnId}, sortOrder=${direction}`);
         }).catch(err => {
           console.error("Failed to update URL sorting params:", err);
         });
@@ -451,9 +447,6 @@ export function DataTable<TData, TValue>({
         
         // Then immediately reset page to 1, don't use Promise.all as it may cause timing issues
         setPage(1);
-        
-        // Force a log for debugging
-        console.log(`Page size changed to ${newPagination.pageSize}, resetting to page 1`);
         return;
       }
       
@@ -545,7 +538,6 @@ export function DataTable<TData, TValue>({
   // Create keyboard navigation handler
   const handleKeyDown = useCallback(
     createKeyboardNavigationHandler(table, (row, rowIndex) => {
-      console.log(`Row ${rowIndex} activated`, row);
       // Example action on keyboard activation
     }),
     []
@@ -558,7 +550,6 @@ export function DataTable<TData, TValue>({
     
     if (totalPages > 0 && page > totalPages) {
       // If current page number is higher than total pages, reset to page 1
-      console.log(`Invalid page number detected: page=${page} but totalPages=${totalPages}. Resetting to page 1.`);
       setPage(1);
     }
   }, [pageSize, data?.pagination?.total_pages, page, setPage]);
@@ -608,7 +599,6 @@ export function DataTable<TData, TValue>({
     // Make sure table pagination state matches URL state
     const tableState = table.getState().pagination;
     if (tableState.pageIndex !== page - 1 || tableState.pageSize !== pageSize) {
-      console.log(`Syncing table pagination with URL: page=${page}, pageSize=${pageSize}`);
       table.setPagination({
         pageIndex: page - 1,
         pageSize: pageSize
