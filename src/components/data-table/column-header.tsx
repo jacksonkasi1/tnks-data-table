@@ -2,7 +2,6 @@ import {
     ArrowDownIcon,
     ArrowUpIcon,
     CaretSortIcon,
-    EyeNoneIcon
   } from "@radix-ui/react-icons";
   import type { Column } from "@tanstack/react-table";
   
@@ -76,10 +75,6 @@ import {
               Desc
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setSorting("asc")}>
-              <EyeNoneIcon className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
-              Reset
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

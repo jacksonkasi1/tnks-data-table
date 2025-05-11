@@ -438,8 +438,34 @@ export function DataTable<TData, TValue>({
   );
 
   const handlePaginationChange = useCallback(
-    createPaginationHandler(setPage, setPageSize, page, pageSize),
-    []
+    (updaterOrValue) => {
+      // Extract the new pagination state
+      const newPagination = typeof updaterOrValue === 'function'
+        ? updaterOrValue({ pageIndex: page - 1, pageSize })
+        : updaterOrValue;
+      
+      // Create a Promise collection for batching URL updates
+      const updates = [];
+      
+      // Only update pageSize if it's changed
+      if (newPagination.pageSize !== pageSize) {
+        updates.push(setPageSize(newPagination.pageSize));
+      }
+      
+      // Only update page if it's changed
+      if ((newPagination.pageIndex + 1) !== page) {
+        updates.push(setPage(newPagination.pageIndex + 1));
+      }
+      
+      // Wait for all updates to complete if there are any
+      if (updates.length > 0) {
+        return Promise.all(updates).then(() => {
+          // This ensures we return something expected by the table component
+          return;
+        });
+      }
+    },
+    [page, pageSize, setPage, setPageSize]
   );
 
   const handleColumnSizingChange = useCallback(

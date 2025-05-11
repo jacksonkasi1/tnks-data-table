@@ -56,6 +56,7 @@ import {
               value={`${table.getState().pagination.pageSize}`}
               onValueChange={(value) => {
                 table.setPageSize(Number(value));
+                console.log(`Page size changed to ${value}`);
               }}
             >
               <SelectTrigger className={`cursor-pointer`} size={selectSize}>

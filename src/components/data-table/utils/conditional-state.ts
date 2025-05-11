@@ -20,14 +20,20 @@ export function createConditionalStateHook(enableUrlState: boolean) {
     options = {}
   ): readonly [T, SetStateWithPromise<T>] {
     // For non-URL state, use regular React state
-    const [state, setState] = useState<T>(defaultValue);
+    const [state, setStateInternal] = useState<T>(defaultValue);
     
     // Only use URL state if enabled in config
     if (enableUrlState) {
       return useUrlState<T>(key, defaultValue, options);
     }
 
-    // Otherwise use regular React state
+    // Create a compatible setState function that matches the SetStateWithPromise signature
+    const setState: SetStateWithPromise<T> = (valueOrUpdater) => {
+      setStateInternal(valueOrUpdater);
+      return undefined; // Return undefined instead of void to match the type
+    };
+
+    // Otherwise use regular React state with the compatible wrapper
     return [state, setState] as const;
   };
 } 
