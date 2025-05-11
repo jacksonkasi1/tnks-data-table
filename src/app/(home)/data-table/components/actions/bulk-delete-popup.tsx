@@ -24,7 +24,7 @@ interface BulkDeletePopupProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedUsers: { id: number; name: string }[];
-  allSelectedIds?: number[];
+  allSelectedIds?: (string | number)[];
   totalSelectedCount?: number;
   resetSelection: () => void;
 }
@@ -52,7 +52,8 @@ export function BulkDeletePopup({
       
       // Delete users sequentially
       for (const id of idsToDelete) {
-        const response = await deleteUser(id);
+        const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+        const response = await deleteUser(numericId);
         if (!response.success) {
           throw new Error(`Failed to delete user ID ${id}`);
         }

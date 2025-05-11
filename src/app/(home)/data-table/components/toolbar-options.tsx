@@ -16,7 +16,7 @@ interface ToolbarOptionsProps {
   // Current page selected users with name data
   selectedUsers: { id: number; name: string }[];
   // All selected user IDs across all pages (for operations that only need IDs)
-  allSelectedUserIds?: number[];
+  allSelectedUserIds?: (string | number)[];
   // Total count of selected items across all pages
   totalSelectedCount: number;
   resetSelection: () => void;

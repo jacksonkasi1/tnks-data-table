@@ -19,7 +19,7 @@ import { User } from "./schema";
 
 export default function UserTable() {
   return (
-    <DataTable<User, any>
+    <DataTable<User, unknown>
       getColumns={getColumns}
       exportConfig={useExportConfig()}
       fetchDataFn={useUsersData}
