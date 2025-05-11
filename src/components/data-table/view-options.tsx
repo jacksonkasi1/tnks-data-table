@@ -1,6 +1,6 @@
 "use client";
 
-import type { Table } from "@tanstack/react-table";
+import type { Table, Column } from "@tanstack/react-table";
 import { Check, GripVertical, Settings2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,8 +51,8 @@ export function DataTableViewOptions<TData>({
   const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);
 
   // Order columns based on the current table column order
+  const columnOrder = table.getState().columnOrder;
   const orderedColumns = useMemo(() => {
-    const columnOrder = table.getState().columnOrder;
 
     if (!columnOrder.length) {
       return columns;
@@ -69,7 +69,7 @@ export function DataTableViewOptions<TData>({
 
       return aIndex - bIndex;
     });
-  }, [columns, table.getState().columnOrder]);
+  }, [columns, columnOrder]);
 
   // Load column order from localStorage on initial render
   useEffect(() => {
@@ -150,7 +150,7 @@ export function DataTableViewOptions<TData>({
   }, [table]);
 
   // Get column display label
-  const getColumnLabel = useCallback((column: any) => {
+  const getColumnLabel = useCallback((column: Column<TData, unknown>) => {
     // First check if we have a mapping for this column
     if (columnMapping && column.id in columnMapping) {
       return columnMapping[column.id];
@@ -166,8 +166,7 @@ export function DataTableViewOptions<TData>({
       <PopoverTrigger asChild>
         <Button
           aria-label="Toggle columns"
-          role="combobox"
-          variant="outline"
+          variant="outline" 
           size={size}
           className="ml-auto hidden lg:flex"
         >

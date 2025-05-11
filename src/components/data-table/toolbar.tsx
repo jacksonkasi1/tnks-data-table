@@ -1,7 +1,7 @@
 "use client";
 
 import { Cross2Icon } from "@radix-ui/react-icons";
-import { Table } from "@tanstack/react-table";
+import type { Table } from "@tanstack/react-table";
 import { useEffect, useState, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Settings, Undo2, TrashIcon, EyeOff, CheckSquare, MoveHorizontal } from "lucide-react";
@@ -13,18 +13,17 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
 import { CalendarDatePicker } from "@/components/calendar-date-picker";
 import { DataTableViewOptions } from "./view-options";
 import { DataTableExport } from "./data-export";
 import { resetUrlState } from "./utils/deep-utils";
 import { parseDateFromUrl } from "./utils/url-state";
-import { TableConfig } from "./utils/table-config";
+import type { TableConfig } from "./utils/table-config";
 import { formatDate } from "./utils/date-format";
 
 // Helper functions for component sizing
 const getInputSizeClass = (size: 'sm' | 'default' | 'lg') => {
-  switch(size) {
+  switch (size) {
     case 'sm': return 'h-8';
     case 'lg': return 'h-11';
     default: return '';
@@ -33,17 +32,16 @@ const getInputSizeClass = (size: 'sm' | 'default' | 'lg') => {
 
 const getButtonSizeClass = (size: 'sm' | 'default' | 'lg', isIcon = false) => {
   if (isIcon) {
-    switch(size) {
+    switch (size) {
       case 'sm': return 'h-8 w-8';
       case 'lg': return 'h-11 w-11';
       default: return '';
     }
-  } else {
-    switch(size) {
-      case 'sm': return 'h-8 px-3';
-      case 'lg': return 'h-11 px-5';
-      default: return '';
-    }
+  }
+  switch (size) {
+    case 'sm': return 'h-8 px-3';
+    case 'lg': return 'h-11 px-5';
+    default: return '';
   }
 };
 
@@ -54,9 +52,9 @@ interface DataTableToolbarProps<TData> {
     value:
       | { from_date: string; to_date: string }
       | ((prev: { from_date: string; to_date: string }) => {
-          from_date: string;
-          to_date: string;
-        })
+        from_date: string;
+        to_date: string;
+      })
   ) => void;
   totalSelectedItems?: number;
   deleteSelection?: () => void;
@@ -132,6 +130,7 @@ export function DataTableToolbar<TData>({
     }
   }, [searchParams, setLocalSearch, localSearch]);
 
+  const tableSearch = (table.getState().globalFilter as string) || "";
   // Also update local search when table globalFilter changes
   useEffect(() => {
     // Skip if local update is in progress
@@ -139,11 +138,10 @@ export function DataTableToolbar<TData>({
       return;
     }
 
-    const tableSearch = (table.getState().globalFilter as string) || "";
     if (tableSearch !== localSearch && tableSearch !== "") {
       setLocalSearch(tableSearch);
     }
-  }, [table.getState().globalFilter, setLocalSearch, localSearch]);
+  }, [tableSearch, setLocalSearch, localSearch]);
 
   // Get date range from URL if available
   const getInitialDates = (): {
@@ -180,13 +178,13 @@ export function DataTableToolbar<TData>({
   );
 
   // Load initial date range from URL params when component mounts
+  const initialDates = getInitialDates();
   useEffect(() => {
-    const initialDates = getInitialDates();
     if (initialDates.from || initialDates.to) {
       setDates(initialDates);
       setDatesModified(true);
     }
-  }, []);
+  }, [initialDates]);
 
   // Determine if any filters are active
   const isFiltered = tableFiltered || !!localSearch || datesModified;
@@ -325,7 +323,7 @@ export function DataTableToolbar<TData>({
 
         {config.enableExport && (
           <DataTableExport
-            table={table as any}
+            table={table}
             data={allItems}
             selectedData={selectedItems}
             getSelectedItems={getSelectedItems}
@@ -338,8 +336,8 @@ export function DataTableToolbar<TData>({
         )}
 
         {config.enableColumnVisibility && (
-          <DataTableViewOptions 
-            table={table} 
+          <DataTableViewOptions
+            table={table}
             columnMapping={columnMapping}
             size={config.size}
           />
