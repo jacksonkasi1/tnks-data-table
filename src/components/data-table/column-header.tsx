@@ -53,7 +53,7 @@ import {
             <Button
               variant="ghost"
               size="sm"
-              className="data-[state=open]:bg-accent -ml-3 h-8 focus-visible:ring-0 focus-visible:ring-offset-0"
+              className="data-[state=open]:bg-accent h-8 focus-visible:ring-0 focus-visible:ring-offset-0"
             >
               <span>{title}</span>
               {currentDirection === "desc" ? (
