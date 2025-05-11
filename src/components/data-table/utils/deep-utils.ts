@@ -1,18 +1,21 @@
 type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
 
+// Define a type for comparing values that can handle most common types
+type Comparable = string | number | boolean | object | null | undefined | TypedArray | Date | RegExp | Set<unknown> | Map<unknown, unknown>;
+
 /**
  * Optimized deep equality check for objects and arrays
  * @param a First value to compare
  * @param b Second value to compare
  * @returns Boolean indicating if values are deeply equal
  */
-export function isDeepEqual(a: any, b: any): boolean {
+export function isDeepEqual(a: Comparable, b: Comparable): boolean {
   // Use a WeakMap to track object pairs we've compared to handle circular references
-  const visited = new WeakMap();
+  const visited = new WeakMap<object, object>();
   
   return compare(a, b);
   
-  function compare(a: any, b: any): boolean {
+  function compare(a: Comparable, b: Comparable): boolean {
     // Fast path for primitives and identical references
     if (a === b) return true;
     
@@ -21,7 +24,8 @@ export function isDeepEqual(a: any, b: any): boolean {
     
     // Handle different types quickly
     const typeA = typeof a;
-    if (typeA !== typeof b) return false;
+    const typeB = typeof b;
+    if (typeA !== typeB) return false;
     
     // Fast non-recursive paths for common types
     if (typeA !== 'object') return false; // We already checked a === b for primitives
@@ -42,7 +46,7 @@ export function isDeepEqual(a: any, b: any): boolean {
       // For small arrays, use direct comparison
       if (a.length < 20) {
         for (let i = 0; i < a.length; i++) {
-          if (!compare(a[i], b[i])) return false;
+          if (!compare(a[i] as Comparable, b[i] as Comparable)) return false;
         }
         return true;
       }
@@ -62,7 +66,7 @@ export function isDeepEqual(a: any, b: any): boolean {
       
       // Then compare actual positions
       for (let i = 0; i < a.length; i++) {
-        if (!compare(a[i], b[i])) return false;
+        if (!compare(a[i] as Comparable, b[i] as Comparable)) return false;
       }
       
       return true;
@@ -73,7 +77,7 @@ export function isDeepEqual(a: any, b: any): boolean {
       if (!(b instanceof Set) || a.size !== b.size) return false;
       
       // Convert to arrays and compare
-      return compare([...a], [...b]);
+      return compare([...a] as Comparable, [...b] as Comparable);
     }
     
     // Special handling for Map
@@ -81,7 +85,7 @@ export function isDeepEqual(a: any, b: any): boolean {
       if (!(b instanceof Map) || a.size !== b.size) return false;
       
       for (const [key, val] of a.entries()) {
-        if (!b.has(key) || !compare(val, b.get(key))) return false;
+        if (!b.has(key) || !compare(val as Comparable, b.get(key) as Comparable)) return false;
       }
       
       return true;
@@ -100,17 +104,17 @@ export function isDeepEqual(a: any, b: any): boolean {
       }
       
       // For other typed arrays
-      return compare(Array.from(a as any), Array.from(b as any));
+      return compare(Array.from(a as TypedArray), Array.from(b as TypedArray));
     }
     
     // Handle plain objects with circular reference detection
     if (a.constructor === Object && b.constructor === Object) {
       // Check for circular references
-      if (visited.has(a)) {
-        return visited.get(a) === b;
+      if (visited.has(a as object)) {
+        return visited.get(a as object) === b;
       }
       
-      visited.set(a, b);
+      visited.set(a as object, b as object);
       
       const keysA = Object.keys(a);
       const keysB = Object.keys(b);
@@ -129,7 +133,7 @@ export function isDeepEqual(a: any, b: any): boolean {
       
       // Compare values
       for (const key of keysA) {
-        if (!compare(a[key], b[key])) return false;
+        if (!compare((a as Record<string, unknown>)[key] as Comparable, (b as Record<string, unknown>)[key] as Comparable)) return false;
       }
       
       return true;
@@ -144,10 +148,10 @@ export function isDeepEqual(a: any, b: any): boolean {
     const keysB = Object.keys(b);
     
     if (keysA.length !== keysB.length) return false;
-    
+
     for (const key of keysA) {
       if (!Object.prototype.hasOwnProperty.call(b, key)) return false;
-      if (!compare(a[key], b[key])) return false;
+      if (!compare((a as Record<string, unknown>)[key] as Comparable, (b as Record<string, unknown>)[key] as Comparable)) return false;
     }
     
     return true;
@@ -158,14 +162,15 @@ export function isDeepEqual(a: any, b: any): boolean {
  * Memoizes the result of a function based on its arguments
  * This helps prevent redundant expensive operations
  */
-export function memoize<T>(fn: (...args: any[]) => T): (...args: any[]) => T {
-  const cache = new Map();
+export function memoize<T>(fn: (...args: unknown[]) => T): (...args: unknown[]) => T {
+  const cache = new Map<string, T>();
   
-  return (...args: any[]): T => {
+  return (...args: unknown[]): T => {
     const key = JSON.stringify(args);
     
     if (cache.has(key)) {
-      return cache.get(key);
+      const cachedValue = cache.get(key);
+      return cachedValue !== undefined ? cachedValue : fn(...args);
     }
     
     const result = fn(...args);
@@ -180,13 +185,13 @@ export function memoize<T>(fn: (...args: any[]) => T): (...args: any[]) => T {
  * @param func The function to debounce
  * @param wait The number of milliseconds to delay
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout | null = null;
 
-  return function(...args: Parameters<T>) {
+  return (...args: Parameters<T>) => {
     const later = () => {
       timeout = null;
       func(...args);
@@ -202,6 +207,6 @@ export function debounce<T extends (...args: any[]) => any>(
  * @param router Next.js router instance
  * @param pathname Current pathname
  */
-export function resetUrlState(router: any, pathname: string): void {
+export function resetUrlState(router: { replace: (path: string) => void }, pathname: string): void {
   router.replace(pathname);
 }
