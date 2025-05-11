@@ -444,24 +444,23 @@ export function DataTable<TData, TValue>({
         ? updaterOrValue({ pageIndex: page - 1, pageSize })
         : updaterOrValue;
       
-      // Create a Promise collection for batching URL updates
-      const updates = [];
-      
-      // Only update pageSize if it's changed
+      // Special handling: When page size changes, always reset to page 1
       if (newPagination.pageSize !== pageSize) {
-        updates.push(setPageSize(newPagination.pageSize));
+        // First, update the page size
+        setPageSize(newPagination.pageSize);
+        
+        // Then immediately reset page to 1, don't use Promise.all as it may cause timing issues
+        setPage(1);
+        
+        // Force a log for debugging
+        console.log(`Page size changed to ${newPagination.pageSize}, resetting to page 1`);
+        return;
       }
       
-      // Only update page if it's changed
+      // Only update page if it's changed - this handles normal page navigation
       if ((newPagination.pageIndex + 1) !== page) {
-        updates.push(setPage(newPagination.pageIndex + 1));
-      }
-      
-      // Wait for all updates to complete if there are any
-      if (updates.length > 0) {
-        return Promise.all(updates).then(() => {
-          // This ensures we return something expected by the table component
-          return;
+        setPage(newPagination.pageIndex + 1).catch(err => {
+          console.error("Failed to update page param:", err);
         });
       }
     },
@@ -552,6 +551,18 @@ export function DataTable<TData, TValue>({
     []
   );
 
+  // Add an effect to validate page number when page size changes
+  useEffect(() => {
+    // This effect ensures page is valid after page size changes
+    const totalPages = data?.pagination.total_pages || 0;
+    
+    if (totalPages > 0 && page > totalPages) {
+      // If current page number is higher than total pages, reset to page 1
+      console.log(`Invalid page number detected: page=${page} but totalPages=${totalPages}. Resetting to page 1.`);
+      setPage(1);
+    }
+  }, [pageSize, data?.pagination?.total_pages, page, setPage]);
+
   // Initialize default column sizes when columns are available and no saved sizes exist
   useEffect(() => {
     initializeColumnSizes(columns, tableId, setColumnSizing);
@@ -591,6 +602,19 @@ export function DataTable<TData, TValue>({
     // Force the table's sorting state to match URL parameters
     table.setSorting(sorting);
   }, [table, sorting]);
+
+  // Keep pagination in sync with URL parameters
+  useEffect(() => {
+    // Make sure table pagination state matches URL state
+    const tableState = table.getState().pagination;
+    if (tableState.pageIndex !== page - 1 || tableState.pageSize !== pageSize) {
+      console.log(`Syncing table pagination with URL: page=${page}, pageSize=${pageSize}`);
+      table.setPagination({
+        pageIndex: page - 1,
+        pageSize: pageSize
+      });
+    }
+  }, [table, page, pageSize]);
 
   // Handle error state
   if (isError) {

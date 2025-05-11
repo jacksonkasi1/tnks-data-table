@@ -55,8 +55,20 @@ import {
             <Select
               value={`${table.getState().pagination.pageSize}`}
               onValueChange={(value) => {
-                table.setPageSize(Number(value));
-                console.log(`Page size changed to ${value}`);
+                // Use the table's pagination change handler to update both table state and URL
+                table.setPagination({
+                  pageIndex: 0, // Reset to first page
+                  pageSize: Number(value)
+                });
+                
+                // Force URL update via direct window manipulation as a backup method
+                // This ensures the URL gets updated even if there are async timing issues
+                const url = new URL(window.location.href);
+                url.searchParams.set('pageSize', value);
+                url.searchParams.set('page', '1'); // Always reset to page 1
+                window.history.replaceState({}, '', url.toString());
+                
+                console.log(`Page size changed to ${value}, reset to page 1, URL updated`);
               }}
             >
               <SelectTrigger className={`cursor-pointer`} size={selectSize}>
@@ -80,7 +92,7 @@ import {
               aria-label="Go to first page"
               variant="outline"
               className={`${getButtonSizeClass(size)} hidden lg:flex cursor-pointer`}
-              onClick={() => table.setPageIndex(0)}
+              onClick={() => table.setPagination({ pageIndex: 0, pageSize: table.getState().pagination.pageSize })}
               disabled={!table.getCanPreviousPage()}
             >
               <DoubleArrowLeftIcon className="h-4 w-4" aria-hidden="true" />
@@ -89,7 +101,10 @@ import {
               aria-label="Go to previous page"
               variant="outline"
               className={`${getButtonSizeClass(size)} cursor-pointer`}
-              onClick={() => table.previousPage()}
+              onClick={() => table.setPagination({
+                pageIndex: table.getState().pagination.pageIndex - 1,
+                pageSize: table.getState().pagination.pageSize
+              })}
               disabled={!table.getCanPreviousPage()}
             >
               <ChevronLeftIcon className="h-4 w-4" aria-hidden="true" />
@@ -98,7 +113,10 @@ import {
               aria-label="Go to next page"
               variant="outline"
               className={`${getButtonSizeClass(size)} cursor-pointer`}
-              onClick={() => table.nextPage()}
+              onClick={() => table.setPagination({
+                pageIndex: table.getState().pagination.pageIndex + 1,
+                pageSize: table.getState().pagination.pageSize
+              })}
               disabled={!table.getCanNextPage()}
             >
               <ChevronRightIcon className="h-4 w-4" aria-hidden="true" />
@@ -107,7 +125,10 @@ import {
               aria-label="Go to last page"
               variant="outline"
               className={`${getButtonSizeClass(size)} hidden lg:flex cursor-pointer`}
-              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+              onClick={() => table.setPagination({
+                pageIndex: table.getPageCount() - 1,
+                pageSize: table.getState().pagination.pageSize
+              })}
               disabled={!table.getCanNextPage()}
             >
               <DoubleArrowRightIcon className="h-4 w-4" aria-hidden="true" />
