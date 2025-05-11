@@ -36,6 +36,6 @@ export function createConditionalStateHook(enableUrlState: boolean) {
       };
       
       return [regularState, setStateWrapper] as const;
-    }, [enableUrlState, regularState, urlState, setRegularState, setUrlState]);
+    }, [enableUrlState, regularState, urlState, setUrlState]);
   };
 } 
