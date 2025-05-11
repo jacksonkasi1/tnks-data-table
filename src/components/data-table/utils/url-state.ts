@@ -1,5 +1,5 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useState, useEffect, useRef } from "react";
+import { useCallback, useState, useEffect, useRef, useMemo } from "react";
 import { isDeepEqual } from "./deep-utils";
 
 // Flag to track if we're currently in a batch update
@@ -117,12 +117,14 @@ export function useUrlState<T>(
   const prevSearchParamsRef = useRef<URLSearchParams | null>(null);
 
   // Deep compare objects/arrays before updating state
-  const areEqual = (a: T, b: T): boolean => {
-    if (typeof a === "object" && typeof b === "object") {
-      return isDeepEqual(a, b);
-    }
-    return a === b;
-  };
+  const areEqual = useMemo(() => {
+    return (a: T, b: T): boolean => {
+      if (typeof a === "object" && typeof b === "object") {
+        return isDeepEqual(a, b);
+      }
+      return a === b;
+    };
+  }, []);
 
   // Update state when URL changes, but only if we're not the ones changing it
   useEffect(() => {
@@ -162,7 +164,7 @@ export function useUrlState<T>(
       // If our pending update has been applied, we can remove it from the map
       pendingUpdates.delete(key);
     }
-  }, [searchParams, getValueFromUrl, key, value]);
+  }, [searchParams, getValueFromUrl, key, value, areEqual]);
 
   // Synchronously update URL now instead of waiting
   const updateUrlNow = useCallback(
@@ -242,14 +244,13 @@ export function useUrlState<T>(
       });
     },
     [
-      pathname,
-      router,
       searchParams,
       key,
       serialize,
       value,
       defaultValue,
       updateUrlNow,
+      areEqual
     ]
   );
 
