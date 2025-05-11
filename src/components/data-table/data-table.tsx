@@ -52,6 +52,34 @@ import {
   cleanupColumnResizing
 } from "./utils/column-sizing";
 
+// Define types for the data fetching function params and result
+interface DataFetchParams {
+  page: number;
+  limit: number;
+  search: string;
+  from_date: string;
+  to_date: string;
+  sort_by: string;
+  sort_order: string;
+}
+
+interface DataFetchResult<TData> {
+  success: boolean;
+  data: TData[];
+  pagination: {
+    page: number;
+    limit: number;
+    total_pages: number;
+    total_items: number;
+  };
+}
+
+// Types for table handlers
+type PaginationUpdater<TData> = (prev: { pageIndex: number; pageSize: number }) => { pageIndex: number; pageSize: number };
+type SortingUpdater = (prev: { id: string; desc: boolean }[]) => { id: string; desc: boolean }[];
+type ColumnOrderUpdater = (prev: string[]) => string[];
+type RowSelectionUpdater = (prev: Record<string, boolean>) => Record<string, boolean>;
+
 interface DataTableProps<TData, TValue> {
   // Allow overriding the table configuration
   config?: Partial<TableConfig>;
@@ -60,34 +88,11 @@ interface DataTableProps<TData, TValue> {
   getColumns: (handleRowDeselection: ((rowId: string) => void) | null | undefined) => ColumnDef<TData, TValue>[];
 
   // Data fetching function
-  fetchDataFn: ((params: {
-    page: number;
-    limit: number;
-    search: string;
-    from_date: string;
-    to_date: string;
-    sort_by: string;
-    sort_order: string;
-  }) => Promise<{
-    success: boolean;
-    data: TData[];
-    pagination: {
-      page: number;
-      limit: number;
-      total_pages: number;
-      total_items: number;
-    };
-  }>) | ((
-    page: number,
-    pageSize: number,
-    search: string,
-    dateRange: { from_date: string; to_date: string },
-    sortBy: string,
-    sortOrder: string
-  ) => any);
+  fetchDataFn: ((params: DataFetchParams) => Promise<DataFetchResult<TData>>) | 
+               ((page: number, pageSize: number, search: string, dateRange: { from_date: string; to_date: string }, sortBy: string, sortOrder: string) => unknown);
 
   // Function to fetch specific items by their IDs
-  fetchByIdsFn?: (ids: any[]) => Promise<TData[]>;
+  fetchByIdsFn?: (ids: number[] | string[]) => Promise<TData[]>;
 
   // Export configuration
   exportConfig: {
@@ -106,7 +111,7 @@ interface DataTableProps<TData, TValue> {
   // Custom toolbar content render function
   renderToolbarContent?: (props: {
     selectedRows: TData[];
-    allSelectedIds: any[];
+    allSelectedIds: (string | number)[];
     totalSelectedCount: number;
     resetSelection: () => void;
   }) => React.ReactNode;
@@ -145,7 +150,7 @@ export function DataTable<TData, TValue>({
   const [sortBy, setSortBy] = useConditionalUrlState("sortBy", "created_at");
   const [sortOrder, setSortOrder] = useConditionalUrlState<"asc" | "desc">("sortOrder", "desc");
   const [columnVisibility, setColumnVisibility] = useConditionalUrlState<Record<string, boolean>>("columnVisibility", {});
-  const [columnFilters, setColumnFilters] = useConditionalUrlState<Array<{ id: string; value: any }>>("columnFilters", []);
+  const [columnFilters, setColumnFilters] = useConditionalUrlState<Array<{ id: string; value: unknown }>>("columnFilters", []);
 
   // Internal states
   const [isLoading, setIsLoading] = useState(true);
@@ -220,7 +225,7 @@ export function DataTable<TData, TValue>({
   }, []);
 
   // PERFORMANCE FIX: Optimized row selection handler
-  const handleRowSelectionChange = useCallback((updaterOrValue: any) => {
+  const handleRowSelectionChange = useCallback((updaterOrValue: RowSelectionUpdater | Record<string, boolean>) => {
     // Determine the new row selection value
     const newRowSelection = typeof updaterOrValue === 'function'
       ? updaterOrValue(rowSelection)
@@ -247,7 +252,7 @@ export function DataTable<TData, TValue>({
           }
         }
 
-        // Then handle implicit deselections (rows that were selected but aren't in newRowSelection)
+        // Then handle implicit deselection (rows that were selected but aren't in newRowSelection)
         dataItems.forEach((item, index) => {
           const itemId = String(item[idField]);
           const rowId = String(index);
@@ -316,7 +321,7 @@ export function DataTable<TData, TValue>({
   // Fetch data
   useEffect(() => {
     // Check if the fetchDataFn is a query hook
-    const isQueryHook = (fetchDataFn as any).isQueryHook === true;
+    const isQueryHook = (fetchDataFn as { isQueryHook?: boolean }).isQueryHook === true;
 
     if (!isQueryHook) {
       // Create refs to capture the current sort values at the time of fetching
@@ -326,8 +331,8 @@ export function DataTable<TData, TValue>({
       const fetchData = async () => {
         try {
           setIsLoading(true);
-
-          const result = await (fetchDataFn as any)({
+          
+          const result = await (fetchDataFn as (params: DataFetchParams) => Promise<DataFetchResult<TData>>)({
             page,
             limit: pageSize,
             search: preprocessSearch(search),
@@ -353,14 +358,20 @@ export function DataTable<TData, TValue>({
   }, [page, pageSize, search, dateRange, sortBy, sortOrder, fetchDataFn]);
 
   // If fetchDataFn is a React Query hook, call it directly with parameters
-  const queryResult = (fetchDataFn as any).isQueryHook === true
-    ? (fetchDataFn as any)(
+  const queryResult = (fetchDataFn as { isQueryHook?: boolean }).isQueryHook === true
+    ? (fetchDataFn as (page: number, pageSize: number, search: string, dateRange: { from_date: string; to_date: string }, sortBy: string, sortOrder: string) => { 
+        isLoading: boolean; 
+        isSuccess: boolean; 
+        isError: boolean; 
+        data?: DataFetchResult<TData>; 
+        error?: Error 
+      })(
         page, 
         pageSize, 
         search, 
         dateRange, 
-        sortBy, // Pass the current sortBy value
-        sortOrder // Pass the current sortOrder value
+        sortBy,
+        sortOrder
       )
     : null;
 
@@ -400,7 +411,7 @@ export function DataTable<TData, TValue>({
 
   // Create event handlers using utility functions
   const handleSortingChange = useCallback(
-    (updaterOrValue: any) => {
+    (updaterOrValue: SortingUpdater | { id: string; desc: boolean }[]) => {
       // Extract the new sorting state
       const newSorting = typeof updaterOrValue === 'function'
         ? updaterOrValue(sorting)
@@ -414,8 +425,7 @@ export function DataTable<TData, TValue>({
         Promise.all([
           setSortBy(columnId),
           setSortOrder(direction)
-        ]).then(() => {
-        }).catch(err => {
+        ]).catch(err => {
           console.error("Failed to update URL sorting params:", err);
         });
       }
@@ -434,7 +444,7 @@ export function DataTable<TData, TValue>({
   );
 
   const handlePaginationChange = useCallback(
-    (updaterOrValue) => {
+    (updaterOrValue: PaginationUpdater<TData> | { pageIndex: number; pageSize: number }) => {
       // Extract the new pagination state
       const newPagination = typeof updaterOrValue === 'function'
         ? updaterOrValue({ pageIndex: page - 1, pageSize })
@@ -452,9 +462,12 @@ export function DataTable<TData, TValue>({
       
       // Only update page if it's changed - this handles normal page navigation
       if ((newPagination.pageIndex + 1) !== page) {
-        setPage(newPagination.pageIndex + 1).catch(err => {
-          console.error("Failed to update page param:", err);
-        });
+        const setPagePromise = setPage(newPagination.pageIndex + 1);
+        if (setPagePromise && typeof setPagePromise.catch === 'function') {
+          setPagePromise.catch(err => {
+            console.error("Failed to update page param:", err);
+          });
+        }
       }
     },
     [page, pageSize, setPage, setPageSize]
@@ -472,7 +485,7 @@ export function DataTable<TData, TValue>({
   );
 
   // Column order change handler
-  const handleColumnOrderChange = useCallback((updaterOrValue: any) => {
+  const handleColumnOrderChange = useCallback((updaterOrValue: ColumnOrderUpdater | string[]) => {
     const newColumnOrder = typeof updaterOrValue === 'function'
       ? updaterOrValue(columnOrder)
       : updaterOrValue;
@@ -549,10 +562,9 @@ export function DataTable<TData, TValue>({
     const totalPages = data?.pagination.total_pages || 0;
     
     if (totalPages > 0 && page > totalPages) {
-      // If current page number is higher than total pages, reset to page 1
       setPage(1);
     }
-  }, [pageSize, data?.pagination?.total_pages, page, setPage]);
+  }, [data?.pagination?.total_pages, page, setPage]);
 
   // Initialize default column sizes when columns are available and no saved sizes exist
   useEffect(() => {
