@@ -55,18 +55,19 @@ export function DataTablePagination<TData>({
           <Select
             value={`${table.getState().pagination.pageSize}`}
             onValueChange={(value) => {
-              // Use the table's pagination change handler to update both table state and URL
-              table.setPagination({
-                pageIndex: 0, // Reset to first page
-                pageSize: Number(value)
-              });
-
-              // Force URL update via direct window manipulation as a backup method
-              // This ensures the URL gets updated even if there are async timing issues
+              // Force URL update via direct window manipulation first
+              // This ensures the URL gets updated before the table state changes
               const url = new URL(window.location.href);
               url.searchParams.set('pageSize', value);
               url.searchParams.set('page', '1'); // Always reset to page 1
               window.history.replaceState({}, '', url.toString());
+              
+              // Then use the table's pagination change handler to update table state
+              // This order ensures the URL is already set when the table state updates
+              table.setPagination({
+                pageIndex: 0, // Reset to first page
+                pageSize: Number(value)
+              });
             }}
           >
             <SelectTrigger className="cursor-pointer" size={selectSize}>

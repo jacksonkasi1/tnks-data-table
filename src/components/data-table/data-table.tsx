@@ -452,10 +452,14 @@ export function DataTable<TData, TValue>({
       
       // Special handling: When page size changes, always reset to page 1
       if (newPagination.pageSize !== pageSize) {
-        // First, update the page size
-        setPageSize(newPagination.pageSize);
+        // First, directly update URL to ensure it's in sync
+        const url = new URL(window.location.href);
+        url.searchParams.set('pageSize', String(newPagination.pageSize));
+        url.searchParams.set('page', '1'); // Always reset to page 1
+        window.history.replaceState({}, '', url.toString());
         
-        // Then immediately reset page to 1, don't use Promise.all as it may cause timing issues
+        // Then update our state
+        setPageSize(newPagination.pageSize);
         setPage(1);
         return;
       }
@@ -611,10 +615,13 @@ export function DataTable<TData, TValue>({
     // Make sure table pagination state matches URL state
     const tableState = table.getState().pagination;
     if (tableState.pageIndex !== page - 1 || tableState.pageSize !== pageSize) {
-      table.setPagination({
-        pageIndex: page - 1,
-        pageSize: pageSize
-      });
+      // Avoid unnecessary updates that might cause infinite loops
+      if (tableState.pageSize !== pageSize || Math.abs(tableState.pageIndex - (page - 1)) > 0) {
+        table.setPagination({
+          pageIndex: page - 1,
+          pageSize: pageSize
+        });
+      }
     }
   }, [table, page, pageSize]);
 

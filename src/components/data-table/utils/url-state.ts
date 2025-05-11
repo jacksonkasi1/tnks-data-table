@@ -210,12 +210,17 @@ export function useUrlState<T>(
       // Set flag to prevent recursive updates
       isUpdatingUrl.current = true;
 
+      // Handle pageSize and page relationship - ensure page is reset to 1 when pageSize changes
+      if (key === "pageSize") {
+        pendingUpdates.set("page", 1); // Reset to page 1 when pageSize changes
+      }
+
       // If we're in a batch update, delay URL change
       if (isInBatchUpdate) {
         return Promise.resolve(new URLSearchParams(searchParams.toString()));
       }
 
-      // Start a batch update to collect multiple URL changes
+      // Start a batch update to collect multiple URL changes in the current event loop
       isInBatchUpdate = true;
 
       // Use microtask to batch all URL changes in the current event loop
@@ -233,6 +238,12 @@ export function useUrlState<T>(
             } else {
               params.set(key, serialize(resolvedValue));
             }
+          }
+
+          // Handle pageSize and page relationship in URL
+          if (key === "pageSize" && pendingUpdates.has("page")) {
+            params.set("page", "1"); // Reset to page 1 in URL
+            pendingUpdates.delete("page"); // Remove from pending updates
           }
 
           // End the batch update

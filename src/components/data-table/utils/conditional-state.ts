@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useUrlState } from "./url-state";
 
 /**
@@ -23,19 +23,19 @@ export function createConditionalStateHook(enableUrlState: boolean) {
     const [regularState, setRegularState] = useState<T>(defaultValue);
     const [urlState, setUrlState] = useUrlState<T>(key, defaultValue, options);
     
-    // Use useMemo to conditionally decide which state and setter to use
+    // Create a compatible setState function for regular state that matches the SetStateWithPromise signature
+    const setRegularStateWrapper = useCallback((valueOrUpdater: T | ((prevValue: T) => T)) => {
+      setRegularState(valueOrUpdater);
+      return undefined; // Return undefined instead of void to match the type
+    }, []);
+    
+    // Return the appropriate state and setter based on config
     return useMemo(() => {
       if (enableUrlState) {
         return [urlState, setUrlState] as const;
       }
       
-      // Create a compatible setState function that matches the SetStateWithPromise signature
-      const setStateWrapper: SetStateWithPromise<T> = (valueOrUpdater) => {
-        setRegularState(valueOrUpdater);
-        return undefined; // Return undefined instead of void to match the type
-      };
-      
-      return [regularState, setStateWrapper] as const;
-    }, [enableUrlState, regularState, urlState, setUrlState]);
+      return [regularState, setRegularStateWrapper] as const;
+    }, [enableUrlState, regularState, urlState, setUrlState, setRegularStateWrapper]);
   };
 } 
