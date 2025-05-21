@@ -6,7 +6,7 @@ import { isDeepEqual } from "./deep-utils";
 let isInBatchUpdate = false;
 
 // Used to prevent multiple URL state hooks from trampling over each other
-interface PendingUpdateEntry<T = any> {
+interface PendingUpdateEntry<T = unknown> {
   value: T;
   defaultValue: T;
   serialize: (value: T) => string;
@@ -212,8 +212,8 @@ export function useUrlState<T>(
       pendingUpdates.set(key, {
         value: resolvedValue,
         defaultValue,
-        serialize,
-        areEqual,
+        serialize: serialize as (value: unknown) => string,
+        areEqual: areEqual as (a: unknown, b: unknown) => boolean,
       });
 
       // Set state locally first for immediate UI response
@@ -234,7 +234,7 @@ export function useUrlState<T>(
           serialize: (v: number) => String(v),
           areEqual: (a: number, b: number) => a === b,
         };
-        pendingUpdates.set("page", { ...pageEntry, value: 1 });
+        pendingUpdates.set("page", { ...pageEntry, value: 1 } as PendingUpdateEntry<unknown>);
       }
 
       // If we're in a batch update, delay URL change
