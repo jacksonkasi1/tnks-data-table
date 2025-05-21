@@ -133,6 +133,14 @@ export function useUrlState<T>(
     };
   }, []);
 
+  // Keep a ref to track the current value to avoid dependency on the state variable
+  const currentValueRef = useRef<T>(value);
+  
+  // Update currentValueRef whenever value changes
+  useEffect(() => {
+    currentValueRef.current = value;
+  }, [value]);
+
   // Update state when URL changes, but only if we're not the ones changing it
   useEffect(() => {
     // Skip if we're the ones currently updating the URL
@@ -158,20 +166,22 @@ export function useUrlState<T>(
     const newValue = getValueFromUrl();
 
     // Check if this is a value we just set ourselves
+    // Using refs to track state without creating dependencies
     if (
-      !areEqual(value, newValue) &&
-      !areEqual(lastSetValue.current, newValue)
+      !areEqual(lastSetValue.current, newValue) && 
+      !areEqual(currentValueRef.current, newValue)
     ) {
-      setValue(newValue);
+      // Prevent immediate re-triggering of this effect due to state update
       lastSetValue.current = newValue;
+      setValue(newValue);
     } else if (
       pendingUpdates.has(key) &&
-      areEqual(pendingUpdates.get(key) as T, newValue)
+      areEqual(pendingUpdates.get(key)?.value as unknown as T, newValue)
     ) {
       // If our pending update has been applied, we can remove it from the map
       pendingUpdates.delete(key);
     }
-  }, [searchParams, getValueFromUrl, key, value, areEqual]);
+  }, [searchParams, getValueFromUrl, key, areEqual]); // No dependency on value
 
   // Synchronously update URL now instead of waiting
   const updateUrlNow = useCallback(
@@ -185,6 +195,9 @@ export function useUrlState<T>(
       router.replace(
         `${pathname}${newParamsString ? `?${newParamsString}` : ""}`
       );
+
+      // Clear the updating flag after URL update
+      isUpdatingUrl.current = false;
 
       // Return the params for Promise chaining
       return Promise.resolve(params);
@@ -252,7 +265,7 @@ export function useUrlState<T>(
           const params = new URLSearchParams(searchParams.toString());
           let pageSizeChangedInBatch = false;
 
-          console.log('[url-state.ts] Microtask: pendingUpdates before processing:', new Map(pendingUpdates));
+          // console.log('[url-state.ts] Microtask: pendingUpdates before processing:', new Map(pendingUpdates));
 
           // Keep track if any sort parameters are in the current batch
           let sortByInBatch = false;
@@ -331,7 +344,7 @@ export function useUrlState<T>(
           // End the batch update
           isInBatchUpdate = false;
 
-          console.log('[url-state.ts] Microtask: final params before updateUrlNow:', params.toString());
+          // console.log('[url-state.ts] Microtask: final params before updateUrlNow:', params.toString());
           // Update the URL immediately and resolve
           updateUrlNow(params).then(resolve);
         });
