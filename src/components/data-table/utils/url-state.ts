@@ -254,6 +254,20 @@ export function useUrlState<T>(
 
           console.log('[url-state.ts] Microtask: pendingUpdates before processing:', new Map(pendingUpdates));
 
+          // Keep track if any sort parameters are in the current batch
+          let sortByInBatch = false;
+          let sortOrderInBatch = false;
+          
+          // Check if sortBy/sortOrder are already in the URL
+          const sortByInURL = params.has("sortBy");
+          const defaultSortOrder = "desc"; // Match the default from the component
+          
+          // First pass: identify which sort parameters are being updated
+          for (const [updateKey, _] of pendingUpdates.entries()) {
+            if (updateKey === "sortBy") sortByInBatch = true;
+            if (updateKey === "sortOrder") sortOrderInBatch = true;
+          }
+          
           // Iterate over all pending updates and apply them to the params
           for (const [updateKey, entry] of pendingUpdates.entries()) {
             const {
@@ -263,9 +277,34 @@ export function useUrlState<T>(
               areEqual: entryAreEqual,
             } = entry;
 
-            if (entryAreEqual(updateValue, entryDefaultValue)) {
+            // Special case: Always include sort-related parameters to ensure URL consistency
+            if (updateKey === "sortBy") {
+              // When setting sortBy, always include it in URL
+              params.set(updateKey, entrySerialize(updateValue));
+              
+              // If sortOrder isn't being updated in this batch, ensure it's included
+              if (!sortOrderInBatch) {
+                // Get current sortOrder value from URL or use default
+                const currentSortOrder = params.get("sortOrder") || defaultSortOrder;
+                params.set("sortOrder", currentSortOrder);
+              }
+            } 
+            else if (updateKey === "sortOrder") {
+              // Always include sortOrder when sortBy is present (either in URL or in this batch)
+              if (sortByInURL || sortByInBatch) {
+                params.set(updateKey, entrySerialize(updateValue));
+              }
+              else if (entryAreEqual(updateValue, entryDefaultValue)) {
+                params.delete(updateKey);
+              }
+              else {
+                params.set(updateKey, entrySerialize(updateValue));
+              }
+            }
+            else if (entryAreEqual(updateValue, entryDefaultValue)) {
               params.delete(updateKey);
-            } else {
+            } 
+            else {
               // Special handling for search parameter to preserve spaces
               if (updateKey === "search" && typeof updateValue === "string") {
                 // Use encodeURIComponent to properly encode spaces as %20 instead of +
