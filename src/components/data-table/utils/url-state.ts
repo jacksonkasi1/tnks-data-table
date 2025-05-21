@@ -6,7 +6,13 @@ import { isDeepEqual } from "./deep-utils";
 let isInBatchUpdate = false;
 
 // Used to prevent multiple URL state hooks from trampling over each other
-const pendingUpdates = new Map<string, unknown>();
+interface PendingUpdateEntry<T = any> {
+  value: T;
+  defaultValue: T;
+  serialize: (value: T) => string;
+  areEqual: (a: T, b: T) => boolean;
+}
+const pendingUpdates = new Map<string, PendingUpdateEntry>();
 
 // Track the last URL update to ensure it's properly applied
 const lastUrlUpdate = {
@@ -94,7 +100,8 @@ export function useUrlState<T>(
   const getValueFromUrl = useCallback(() => {
     // Check if we have a pending update for this key that hasn't been applied yet
     if (pendingUpdates.has(key)) {
-      return pendingUpdates.get(key) as T;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return pendingUpdates.get(key)?.value as T;
     }
 
     const paramValue = searchParams.get(key);
@@ -201,8 +208,13 @@ export function useUrlState<T>(
       // Save this value to our ref to prevent overrides
       lastSetValue.current = resolvedValue;
 
-      // Store the value in the pending updates map
-      pendingUpdates.set(key, resolvedValue);
+      // Store the value, defaultValue, serialize, and areEqual in the pending updates map
+      pendingUpdates.set(key, {
+        value: resolvedValue,
+        defaultValue,
+        serialize,
+        areEqual,
+      });
 
       // Set state locally first for immediate UI response
       setValue(resolvedValue);
@@ -212,7 +224,17 @@ export function useUrlState<T>(
 
       // Handle pageSize and page relationship - ensure page is reset to 1 when pageSize changes
       if (key === "pageSize") {
-        pendingUpdates.set("page", 1); // Reset to page 1 when pageSize changes
+        // If pageSize changes, "page" should be reset to 1.
+        // We need to ensure this "page" entry has appropriate functions.
+        // For now, assume standard defaults for "page" if it's not already managed by its own useUrlState.
+        // A more robust solution might involve a shared registry or context for URL state configurations.
+        const pageEntry: PendingUpdateEntry<number> = pendingUpdates.get("page") as PendingUpdateEntry<number> || {
+          value: 1,
+          defaultValue: 1, // Assuming default page is 1
+          serialize: (v: number) => String(v),
+          areEqual: (a: number, b: number) => a === b,
+        };
+        pendingUpdates.set("page", { ...pageEntry, value: 1 });
       }
 
       // If we're in a batch update, delay URL change
@@ -226,29 +248,51 @@ export function useUrlState<T>(
       // Use microtask to batch all URL changes in the current event loop
       return new Promise<URLSearchParams>((resolve) => {
         queueMicrotask(() => {
+          // Start with the current search params as a base
           const params = new URLSearchParams(searchParams.toString());
+          let pageSizeChangedInBatch = false;
 
-          if (areEqual(resolvedValue, defaultValue)) {
-            params.delete(key);
-          } else {
-            // Special handling for search parameter to preserve spaces
-            if (key === "search" && typeof resolvedValue === "string") {
-              // Use encodeURIComponent to properly encode spaces as %20 instead of +
-              params.set(key, encodeURIComponent(resolvedValue));
+          console.log('[url-state.ts] Microtask: pendingUpdates before processing:', new Map(pendingUpdates));
+
+          // Iterate over all pending updates and apply them to the params
+          for (const [updateKey, entry] of pendingUpdates.entries()) {
+            const {
+              value: updateValue,
+              defaultValue: entryDefaultValue,
+              serialize: entrySerialize,
+              areEqual: entryAreEqual,
+            } = entry;
+
+            if (entryAreEqual(updateValue, entryDefaultValue)) {
+              params.delete(updateKey);
             } else {
-              params.set(key, serialize(resolvedValue));
+              // Special handling for search parameter to preserve spaces
+              if (updateKey === "search" && typeof updateValue === "string") {
+                // Use encodeURIComponent to properly encode spaces as %20 instead of +
+                params.set(updateKey, encodeURIComponent(updateValue));
+              } else {
+                params.set(updateKey, entrySerialize(updateValue));
+              }
+            }
+            if (updateKey === "pageSize") {
+              pageSizeChangedInBatch = true;
             }
           }
 
-          // Handle pageSize and page relationship in URL
-          if (key === "pageSize" && pendingUpdates.has("page")) {
-            params.set("page", "1"); // Reset to page 1 in URL
-            pendingUpdates.delete("page"); // Remove from pending updates
+          // If pageSize was part of this batch update, ensure page is set to 1
+          // This handles the case where "page" might have been set to something else
+          // in the same batch, but a pageSize change should override it to 1.
+          if (pageSizeChangedInBatch) {
+            params.set("page", "1");
           }
+          
+          // Clear all pending updates as they've been processed
+          pendingUpdates.clear();
 
           // End the batch update
           isInBatchUpdate = false;
 
+          console.log('[url-state.ts] Microtask: final params before updateUrlNow:', params.toString());
           // Update the URL immediately and resolve
           updateUrlNow(params).then(resolve);
         });
