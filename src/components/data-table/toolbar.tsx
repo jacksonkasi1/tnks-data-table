@@ -2,7 +2,7 @@
 
 import { Cross2Icon } from "@radix-ui/react-icons";
 import type { Table } from "@tanstack/react-table";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Settings, Undo2, TrashIcon, EyeOff, CheckSquare, MoveHorizontal } from "lucide-react";
 
@@ -128,7 +128,7 @@ export function DataTableToolbar<TData>({
     if (decodedSearchFromUrl !== localSearch) {
       setLocalSearch(decodedSearchFromUrl);
     }
-  }, [searchParams, setLocalSearch, localSearch]);
+  }, [searchParams, localSearch]);
 
   const tableSearch = (table.getState().globalFilter as string) || "";
   // Also update local search when table globalFilter changes
@@ -141,22 +141,42 @@ export function DataTableToolbar<TData>({
     if (tableSearch !== localSearch && tableSearch !== "") {
       setLocalSearch(tableSearch);
     }
-  }, [tableSearch, setLocalSearch, localSearch]);
+  }, [tableSearch, localSearch]);
 
-  // Get date range from URL if available
-  const getInitialDates = (): {
+  // Reference to track if we're currently updating dates
+  const isUpdatingDates = useRef(false);
+  
+  // Reference to track the last set date values to prevent updates with equal values
+  const lastSetDates = useRef<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({ from: undefined, to: undefined });
+
+  // Memoize the getInitialDates function to prevent unnecessary recreations
+  const getInitialDates = useCallback((): {
     from: Date | undefined;
     to: Date | undefined;
   } => {
+    // If we're in the middle of an update, don't parse from URL to avoid cycles
+    if (isUpdatingDates.current) {
+      return lastSetDates.current;
+    }
+
     const dateRangeParam = searchParams.get("dateRange");
     if (dateRangeParam) {
       try {
         const parsed = JSON.parse(dateRangeParam);
+        
+        // Parse dates from URL param
+        const fromDate = parsed?.from_date ? parseDateFromUrl(parsed.from_date) : undefined;
+        const toDate = parsed?.to_date ? parseDateFromUrl(parsed.to_date) : undefined;
+        
+        // Cache these values
+        lastSetDates.current = { from: fromDate, to: toDate };
+        
         return {
-          from: parsed?.from_date
-            ? parseDateFromUrl(parsed.from_date)
-            : undefined,
-          to: parsed?.to_date ? parseDateFromUrl(parsed.to_date) : undefined,
+          from: fromDate,
+          to: toDate,
         };
       } catch (e) {
         console.warn("Error parsing dateRange from URL:", e);
@@ -164,7 +184,7 @@ export function DataTableToolbar<TData>({
       }
     }
     return { from: undefined, to: undefined };
-  };
+  }, [searchParams]);
 
   // Initial state with date values from URL
   const [dates, setDates] = useState<{
@@ -177,14 +197,14 @@ export function DataTableToolbar<TData>({
     !!dates.from || !!dates.to
   );
 
-  // Load initial date range from URL params when component mounts
-  const initialDates = getInitialDates();
+  // Load initial date range from URL params only once on component mount
   useEffect(() => {
+    const initialDates = getInitialDates();
     if (initialDates.from || initialDates.to) {
       setDates(initialDates);
       setDatesModified(true);
     }
-  }, [initialDates]);
+  }, [getInitialDates]); // Include memoized function as dependency
 
   // Determine if any filters are active
   const isFiltered = tableFiltered || !!localSearch || datesModified;
@@ -230,18 +250,68 @@ export function DataTableToolbar<TData>({
     }, 500);
   };
 
+  // Listen for URL parameter changes and update local state if needed
+  useEffect(() => {
+    // Skip this effect if we're currently updating the dates ourselves
+    if (isUpdatingDates.current) {
+      return;
+    }
+    
+    const newDates = getInitialDates();
+    
+    // Check if dates have actually changed to avoid unnecessary updates
+    const hasFromChanged = 
+      (newDates.from && !dates.from) || 
+      (!newDates.from && dates.from) || 
+      (newDates.from && dates.from && newDates.from.getTime() !== dates.from.getTime());
+      
+    const hasToChanged = 
+      (newDates.to && !dates.to) || 
+      (!newDates.to && dates.to) || 
+      (newDates.to && dates.to && newDates.to.getTime() !== dates.to.getTime());
+    
+    if (hasFromChanged || hasToChanged) {
+      setDates(newDates);
+      setDatesModified(!!(newDates.from || newDates.to));
+    }
+  }, [dates, getInitialDates]);
+
   // Handle date selection for filtering
   const handleDateSelect = ({ from, to }: { from: Date; to: Date }) => {
+    // Compare with previous dates to avoid unnecessary updates
+    const hasFromChanged = 
+      (from && !dates.from) || 
+      (!from && dates.from) || 
+      (from && dates.from && from.getTime() !== dates.from.getTime());
+      
+    const hasToChanged = 
+      (to && !dates.to) || 
+      (!to && dates.to) || 
+      (to && dates.to && to.getTime() !== dates.to.getTime());
+    
+    // Only update if dates have actually changed
+    if (!hasFromChanged && !hasToChanged) {
+      return;
+    }
+    
+    // Set flag to prevent update loops
+    isUpdatingDates.current = true;
+    
+    // Update internal state
     setDates({ from, to });
-
-    // Mark dates as modified when actual dates are selected
     setDatesModified(true);
+    lastSetDates.current = { from, to };
 
     // Convert dates to strings in YYYY-MM-DD format for the API
     setDateRange({
       from_date: from ? formatDate(from) : "",
       to_date: to ? formatDate(to) : "",
     });
+    
+    // Reset the updating flag after a delay
+    setTimeout(() => {
+      isUpdatingDates.current = false;
+    }, 100);
   };
 
   // Reset all filters and URL state

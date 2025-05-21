@@ -420,6 +420,8 @@ export function DataTable<TData, TValue>({
       if (newSorting.length > 0) {
         const columnId = newSorting[0].id;
         const direction = newSorting[0].desc ? "desc" : "asc";
+
+        console.log(`[data-table.tsx] handleSortingChange: Setting sortBy to '${columnId}', sortOrder to '${direction}'`);
         
         // Use Promise.all for batch updates to ensure they're applied together
         Promise.all([
