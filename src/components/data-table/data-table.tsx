@@ -420,7 +420,6 @@ export function DataTable<TData, TValue>({
       if (newSorting.length > 0) {
         const columnId = newSorting[0].id;
         const direction = newSorting[0].desc ? "desc" : "asc";
-        
         // Use Promise.all for batch updates to ensure they're applied together
         Promise.all([
           setSortBy(columnId),

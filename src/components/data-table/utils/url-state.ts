@@ -6,7 +6,13 @@ import { isDeepEqual } from "./deep-utils";
 let isInBatchUpdate = false;
 
 // Used to prevent multiple URL state hooks from trampling over each other
-const pendingUpdates = new Map<string, unknown>();
+interface PendingUpdateEntry<T = unknown> {
+  value: T;
+  defaultValue: T;
+  serialize: (value: T) => string;
+  areEqual: (a: T, b: T) => boolean;
+}
+const pendingUpdates = new Map<string, PendingUpdateEntry>();
 
 // Track the last URL update to ensure it's properly applied
 const lastUrlUpdate = {
@@ -94,7 +100,8 @@ export function useUrlState<T>(
   const getValueFromUrl = useCallback(() => {
     // Check if we have a pending update for this key that hasn't been applied yet
     if (pendingUpdates.has(key)) {
-      return pendingUpdates.get(key) as T;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return pendingUpdates.get(key)?.value as T;
     }
 
     const paramValue = searchParams.get(key);
@@ -126,6 +133,14 @@ export function useUrlState<T>(
     };
   }, []);
 
+  // Keep a ref to track the current value to avoid dependency on the state variable
+  const currentValueRef = useRef<T>(value);
+  
+  // Update currentValueRef whenever value changes
+  useEffect(() => {
+    currentValueRef.current = value;
+  }, [value]);
+
   // Update state when URL changes, but only if we're not the ones changing it
   useEffect(() => {
     // Skip if we're the ones currently updating the URL
@@ -151,20 +166,22 @@ export function useUrlState<T>(
     const newValue = getValueFromUrl();
 
     // Check if this is a value we just set ourselves
+    // Using refs to track state without creating dependencies
     if (
-      !areEqual(value, newValue) &&
-      !areEqual(lastSetValue.current, newValue)
+      !areEqual(lastSetValue.current, newValue) && 
+      !areEqual(currentValueRef.current, newValue)
     ) {
-      setValue(newValue);
+      // Prevent immediate re-triggering of this effect due to state update
       lastSetValue.current = newValue;
+      setValue(newValue);
     } else if (
       pendingUpdates.has(key) &&
-      areEqual(pendingUpdates.get(key) as T, newValue)
+      areEqual(pendingUpdates.get(key)?.value as unknown as T, newValue)
     ) {
       // If our pending update has been applied, we can remove it from the map
       pendingUpdates.delete(key);
     }
-  }, [searchParams, getValueFromUrl, key, value, areEqual]);
+  }, [searchParams, getValueFromUrl, key, areEqual]); // No dependency on value
 
   // Synchronously update URL now instead of waiting
   const updateUrlNow = useCallback(
@@ -178,6 +195,9 @@ export function useUrlState<T>(
       router.replace(
         `${pathname}${newParamsString ? `?${newParamsString}` : ""}`
       );
+
+      // Clear the updating flag after URL update
+      isUpdatingUrl.current = false;
 
       // Return the params for Promise chaining
       return Promise.resolve(params);
@@ -201,8 +221,13 @@ export function useUrlState<T>(
       // Save this value to our ref to prevent overrides
       lastSetValue.current = resolvedValue;
 
-      // Store the value in the pending updates map
-      pendingUpdates.set(key, resolvedValue);
+      // Store the value, defaultValue, serialize, and areEqual in the pending updates map
+      pendingUpdates.set(key, {
+        value: resolvedValue,
+        defaultValue,
+        serialize: serialize as (value: unknown) => string,
+        areEqual: areEqual as (a: unknown, b: unknown) => boolean,
+      });
 
       // Set state locally first for immediate UI response
       setValue(resolvedValue);
@@ -212,7 +237,17 @@ export function useUrlState<T>(
 
       // Handle pageSize and page relationship - ensure page is reset to 1 when pageSize changes
       if (key === "pageSize") {
-        pendingUpdates.set("page", 1); // Reset to page 1 when pageSize changes
+        // If pageSize changes, "page" should be reset to 1.
+        // We need to ensure this "page" entry has appropriate functions.
+        // For now, assume standard defaults for "page" if it's not already managed by its own useUrlState.
+        // A more robust solution might involve a shared registry or context for URL state configurations.
+        const pageEntry: PendingUpdateEntry<number> = pendingUpdates.get("page") as PendingUpdateEntry<number> || {
+          value: 1,
+          defaultValue: 1, // Assuming default page is 1
+          serialize: (v: number) => String(v),
+          areEqual: (a: number, b: number) => a === b,
+        };
+        pendingUpdates.set("page", { ...pageEntry, value: 1 } as PendingUpdateEntry<unknown>);
       }
 
       // If we're in a batch update, delay URL change
@@ -226,25 +261,83 @@ export function useUrlState<T>(
       // Use microtask to batch all URL changes in the current event loop
       return new Promise<URLSearchParams>((resolve) => {
         queueMicrotask(() => {
+          // Start with the current search params as a base
           const params = new URLSearchParams(searchParams.toString());
+          let pageSizeChangedInBatch = false;
 
-          if (areEqual(resolvedValue, defaultValue)) {
-            params.delete(key);
-          } else {
-            // Special handling for search parameter to preserve spaces
-            if (key === "search" && typeof resolvedValue === "string") {
-              // Use encodeURIComponent to properly encode spaces as %20 instead of +
-              params.set(key, encodeURIComponent(resolvedValue));
-            } else {
-              params.set(key, serialize(resolvedValue));
+          // Keep track if any sort parameters are in the current batch
+          let sortByInBatch = false;
+          let sortOrderInBatch = false;
+          
+          // Check if sortBy/sortOrder are already in the URL
+          const sortByInURL = params.has("sortBy");
+          const defaultSortOrder = "desc"; // Match the default from the component
+          
+          // First pass: identify which sort parameters are being updated
+          for (const [updateKey, _] of pendingUpdates.entries()) {
+            if (updateKey === "sortBy") sortByInBatch = true;
+            if (updateKey === "sortOrder") sortOrderInBatch = true;
+          }
+          
+          // Iterate over all pending updates and apply them to the params
+          for (const [updateKey, entry] of pendingUpdates.entries()) {
+            const {
+              value: updateValue,
+              defaultValue: entryDefaultValue,
+              serialize: entrySerialize,
+              areEqual: entryAreEqual,
+            } = entry;
+
+            // Special case: Always include sort-related parameters to ensure URL consistency
+            if (updateKey === "sortBy") {
+              // When setting sortBy, always include it in URL
+              params.set(updateKey, entrySerialize(updateValue));
+              
+              // If sortOrder isn't being updated in this batch, ensure it's included
+              if (!sortOrderInBatch) {
+                // Get current sortOrder value from URL or use default
+                const currentSortOrder = params.get("sortOrder") || defaultSortOrder;
+                params.set("sortOrder", currentSortOrder);
+              }
+            } 
+            else if (updateKey === "sortOrder") {
+              // Always include sortOrder when sortBy is present (either in URL or in this batch)
+              if (sortByInURL || sortByInBatch) {
+                params.set(updateKey, entrySerialize(updateValue));
+              }
+              else if (entryAreEqual(updateValue, entryDefaultValue)) {
+                params.delete(updateKey);
+              }
+              else {
+                params.set(updateKey, entrySerialize(updateValue));
+              }
+            }
+            else if (entryAreEqual(updateValue, entryDefaultValue)) {
+              params.delete(updateKey);
+            } 
+            else {
+              // Special handling for search parameter to preserve spaces
+              if (updateKey === "search" && typeof updateValue === "string") {
+                // Use encodeURIComponent to properly encode spaces as %20 instead of +
+                params.set(updateKey, encodeURIComponent(updateValue));
+              } else {
+                params.set(updateKey, entrySerialize(updateValue));
+              }
+            }
+            if (updateKey === "pageSize") {
+              pageSizeChangedInBatch = true;
             }
           }
 
-          // Handle pageSize and page relationship in URL
-          if (key === "pageSize" && pendingUpdates.has("page")) {
-            params.set("page", "1"); // Reset to page 1 in URL
-            pendingUpdates.delete("page"); // Remove from pending updates
+          // If pageSize was part of this batch update, ensure page is set to 1
+          // This handles the case where "page" might have been set to something else
+          // in the same batch, but a pageSize change should override it to 1.
+          if (pageSizeChangedInBatch) {
+            params.set("page", "1");
           }
+          
+          // Clear all pending updates as they've been processed
+          pendingUpdates.clear();
 
           // End the batch update
           isInBatchUpdate = false;
