@@ -410,10 +410,27 @@ export function DataTable<TData, TValue>({
   }, [getColumns, handleRowDeselection, tableConfig.enableRowSelection]);
 
   // Create event handlers using utility functions
-  const handleSortingChange = useCallback((columnId: string, direction: SortingState[0]['desc']) => {
-    setSortBy(columnId);
-    setSortOrder(direction);
-  }, [setSortBy, setSortOrder]);
+  const handleSortingChange = useCallback(
+    (updaterOrValue: SortingUpdater | { id: string; desc: boolean }[]) => {
+      // Extract the new sorting state
+      const newSorting = typeof updaterOrValue === 'function'
+        ? updaterOrValue(sorting)
+        : updaterOrValue;
+      
+      if (newSorting.length > 0) {
+        const columnId = newSorting[0].id;
+        const direction = newSorting[0].desc ? "desc" : "asc";
+        // Use Promise.all for batch updates to ensure they're applied together
+        Promise.all([
+          setSortBy(columnId),
+          setSortOrder(direction)
+        ]).catch(err => {
+          console.error("Failed to update URL sorting params:", err);
+        });
+      }
+    },
+    [setSortBy, setSortOrder, sorting]
+  );
 
   const handleColumnFiltersChange = useCallback(
     createColumnFiltersHandler(setColumnFilters),

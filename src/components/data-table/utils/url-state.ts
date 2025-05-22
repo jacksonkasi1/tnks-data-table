@@ -265,8 +265,6 @@ export function useUrlState<T>(
           const params = new URLSearchParams(searchParams.toString());
           let pageSizeChangedInBatch = false;
 
-          // console.log('[url-state.ts] Microtask: pendingUpdates before processing:', new Map(pendingUpdates));
-
           // Keep track if any sort parameters are in the current batch
           let sortByInBatch = false;
           let sortOrderInBatch = false;
@@ -344,7 +342,6 @@ export function useUrlState<T>(
           // End the batch update
           isInBatchUpdate = false;
 
-          // console.log('[url-state.ts] Microtask: final params before updateUrlNow:', params.toString());
           // Update the URL immediately and resolve
           updateUrlNow(params).then(resolve);
         });
