@@ -22,6 +22,7 @@
    - [Row Selection](#row-selection)
    - [Toolbar Customization](#toolbar-customization)
    - [Export Options](#export-options)
+   - [Case Formatting](#case-formatting)
 9. [Server Implementation](#server-implementation)
    - [API Endpoints](#api-endpoints)
    - [Request & Response Formats](#request--response-formats)
@@ -96,6 +97,8 @@ The Data Table includes the following features:
 - ✅ Form handling with React Hook Form
 - ✅ Toast notifications
 - ✅ URL state persistence
+- ✅ **Flexible case formatting** (snake_case, camelCase, PascalCase, kebab-case)
+- ✅ **Custom parameter mapping** for any API format
 
 ---
 
@@ -930,6 +933,47 @@ export function useExportConfig() {
   };
 }
 ```
+
+### Case Formatting
+
+The data table supports flexible case formatting for API parameters, allowing integration with backends that expect different naming conventions.
+
+#### Supported Formats
+
+- **snake_case** (default): `sort_by`, `sort_order`, `from_date`, `to_date`
+- **camelCase**: `sortBy`, `sortOrder`, `fromDate`, `toDate`
+- **PascalCase**: `SortBy`, `SortOrder`, `FromDate`, `ToDate`
+- **kebab-case**: `sort-by`, `sort-order`, `from-date`, `to-date`
+
+#### Configuration
+
+```typescript
+// CamelCase parameters
+<DataTable
+  config={{
+    parameterFormat: 'camelCase'
+  }}
+  fetchDataFn={fetchDataFn}
+  // ... other props
+/>
+
+// Custom parameter mapping
+<DataTable
+  config={{
+    parameterMapping: (params) => ({
+      currentPage: params.page,
+      itemsPerPage: params.limit,
+      searchTerm: params.search,
+      orderBy: params.sort_by,
+      orderDirection: params.sort_order
+    })
+  }}
+  fetchDataFn={fetchDataFn}
+  // ... other props
+/>
+```
+
+📖 **Detailed Documentation:** [Case Formatting Guide](./docs/CASE_FORMATTING.md)
 
 ---
 

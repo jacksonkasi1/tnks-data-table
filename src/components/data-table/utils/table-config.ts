@@ -2,6 +2,8 @@
  * Table configuration options
  * This file provides centralized configuration for the data table features
  */
+import type { CaseFormat } from './case-conversion';
+
 export interface TableConfig {
   // Enable/disable row selection
   enableRowSelection: boolean;
@@ -46,6 +48,14 @@ export interface TableConfig {
   // Unique ID for storing column sizing in localStorage
   // This allows multiple tables to have independent sizing states
   columnResizingTableId?: string;
+  
+  // API parameter formatting options
+  // Specify the case format for API parameters (snake_case, camelCase, PascalCase, kebab-case)
+  parameterFormat: CaseFormat;
+  
+  // Custom parameter mapping function
+  // Allows for complete control over how parameters are mapped
+  parameterMapping?: (params: Record<string, any>) => Record<string, any>;
 }
 
 // Default configuration
@@ -64,6 +74,8 @@ const defaultConfig: TableConfig = {
   enableToolbar: true,            // Toolbar enabled by default
   size: 'default',                // Default size for buttons and inputs
   columnResizingTableId: undefined, // No table ID by default
+  parameterFormat: 'snake_case',  // Default to snake_case for backward compatibility
+  parameterMapping: undefined,    // No custom mapping by default
 };
 
 /**

@@ -51,6 +51,10 @@ import {
   trackColumnResizing,
   cleanupColumnResizing
 } from "./utils/column-sizing";
+import { 
+  createParameterMapping, 
+  createCustomParameterMapping 
+} from "./utils/case-conversion";
 
 // Define types for the data fetching function params and result
 interface DataFetchParams {
@@ -62,6 +66,9 @@ interface DataFetchParams {
   sort_by: string;
   sort_order: string;
 }
+
+// Generic flexible parameters type that can be mapped to different case formats
+type FlexibleParams = Record<string, any>;
 
 interface DataFetchResult<TData> {
   success: boolean;
@@ -87,8 +94,8 @@ interface DataTableProps<TData, TValue> {
   // Column definitions generator
   getColumns: (handleRowDeselection: ((rowId: string) => void) | null | undefined) => ColumnDef<TData, TValue>[];
 
-  // Data fetching function
-  fetchDataFn: ((params: DataFetchParams) => Promise<DataFetchResult<TData>>) | 
+  // Data fetching function - supports both legacy format and flexible format
+  fetchDataFn: ((params: DataFetchParams | FlexibleParams) => Promise<DataFetchResult<TData>>) | 
                ((page: number, pageSize: number, search: string, dateRange: { from_date: string; to_date: string }, sortBy: string, sortOrder: string) => unknown);
 
   // Function to fetch specific items by their IDs
@@ -332,7 +339,8 @@ export function DataTable<TData, TValue>({
         try {
           setIsLoading(true);
           
-          const result = await (fetchDataFn as (params: DataFetchParams) => Promise<DataFetchResult<TData>>)({
+          // Create base parameters
+          const baseParams = {
             page,
             limit: pageSize,
             search: preprocessSearch(search),
@@ -340,7 +348,21 @@ export function DataTable<TData, TValue>({
             to_date: dateRange.to_date,
             sort_by: currentSortBy,
             sort_order: currentSortOrder,
-          });
+          };
+          
+          // Apply parameter mapping based on configuration
+          let mappedParams: DataFetchParams | FlexibleParams = baseParams;
+          
+          if (tableConfig.parameterMapping) {
+            // Use custom parameter mapping if provided
+            mappedParams = tableConfig.parameterMapping(baseParams);
+          } else if (tableConfig.parameterFormat !== 'snake_case') {
+            // Use automatic case conversion for non-snake_case formats
+            const parameterMapper = createParameterMapping(tableConfig.parameterFormat);
+            mappedParams = parameterMapper(baseParams);
+          }
+          
+          const result = await (fetchDataFn as (params: DataFetchParams | FlexibleParams) => Promise<DataFetchResult<TData>>)(mappedParams);
           setData(result);
           setIsError(false);
           setError(null);
