@@ -28,6 +28,12 @@ export function Header() {
               Users
             </Link>
             <Link
+              href="/text-formatting-demo"
+              className="text-sm font-medium transition-colors hover:text-primary"
+            >
+              Text Demo
+            </Link>
+            <Link
               href="/settings"
               className="text-sm font-medium transition-colors hover:text-primary"
             >
