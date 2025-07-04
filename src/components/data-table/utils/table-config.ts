@@ -2,6 +2,8 @@
  * Table configuration options
  * This file provides centralized configuration for the data table features
  */
+import type { TextFormatterOptions } from './text-formatter';
+
 export interface TableConfig {
   // Enable/disable row selection
   enableRowSelection: boolean;
@@ -46,6 +48,10 @@ export interface TableConfig {
   // Unique ID for storing column sizing in localStorage
   // This allows multiple tables to have independent sizing states
   columnResizingTableId?: string;
+  
+  // Text formatting options for column names
+  // Controls how column IDs are converted to display names
+  textFormatting?: TextFormatterOptions;
 }
 
 // Default configuration
@@ -64,6 +70,11 @@ const defaultConfig: TableConfig = {
   enableToolbar: true,            // Toolbar enabled by default
   size: 'default',                // Default size for buttons and inputs
   columnResizingTableId: undefined, // No table ID by default
+  textFormatting: {               // Default text formatting options
+    convention: 'snake_case',     // Default to snake_case for backward compatibility
+    capitalize: true,             // Capitalize first letter
+    capitalizeAll: false          // Don't capitalize all words
+  }
 };
 
 /**

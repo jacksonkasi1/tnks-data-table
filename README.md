@@ -15,6 +15,7 @@
 7. [API Integration](#api-integration)
 8. [Advanced Configuration](#advanced-configuration)
    - [Column Configuration](#column-configuration)
+   - [Text Formatting](#text-formatting)
    - [Row Actions](#row-actions)
    - [Filtering & Sorting](#filtering--sorting)
    - [Pagination](#pagination)
@@ -75,6 +76,7 @@ The Data Table includes the following features:
 - ✅ Responsive layout
 - ✅ Column resizing
 - ✅ Column visibility toggle
+- ✅ Flexible text formatting (snake_case, camelCase, PascalCase, kebab-case)
 - ✅ Date range filtering
 - ✅ Search functionality
 - ✅ Customizable toolbar
@@ -686,6 +688,65 @@ Columns are defined using TanStack Table's `ColumnDef` interface. Each column ca
   size: 200,
 }
 ```
+
+### Text Formatting
+
+The table now supports flexible text formatting for column headers, supporting multiple naming conventions:
+
+#### Automatic Detection
+
+The table automatically detects and formats column names based on their naming convention:
+
+```typescript
+// Different naming conventions are automatically formatted
+const columns = [
+  { accessorKey: "first_name" },    // Snake case → "First name"
+  { accessorKey: "firstName" },     // Camel case → "First Name"  
+  { accessorKey: "FirstName" },     // Pascal case → "First Name"
+  { accessorKey: "first-name" },    // Kebab case → "First name"
+];
+```
+
+#### Configuration Options
+
+Configure text formatting behavior through the table config:
+
+```typescript
+const config = {
+  textFormatting: {
+    convention: 'camelCase',  // Force specific convention
+    capitalize: true,         // Capitalize first letter
+    capitalizeAll: false      // Title case for all words
+  }
+};
+
+<DataTable config={config} {...otherProps} />
+```
+
+#### Custom Formatter
+
+Use a completely custom formatting function:
+
+```typescript
+const config = {
+  textFormatting: {
+    customFormatter: (text: string) => {
+      return text.replace(/([a-z])([A-Z])/g, '$1 $2')
+                 .replace(/_|-/g, ' ')
+                 .toLowerCase()
+                 .replace(/\b\w/g, l => l.toUpperCase());
+    }
+  }
+};
+```
+
+#### Backward Compatibility
+
+- Existing tables continue to work without changes
+- Column mappings take precedence over automatic formatting  
+- Default behavior remains snake_case for compatibility
+
+For detailed examples, see [Text Formatting Documentation](./docs/TEXT_FORMATTING.md).
 
 ### Row Actions
 

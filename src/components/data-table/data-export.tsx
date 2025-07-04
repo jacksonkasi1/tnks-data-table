@@ -12,6 +12,7 @@ import { Table } from "@tanstack/react-table";
 import { exportData, exportToCSV, exportToExcel, ExportableData } from "./utils/export-utils";
 import { JSX, useState } from "react";
 import { toast } from "sonner";
+import { autoFormatText, type TextFormatterOptions } from "./utils/text-formatter";
 
 interface DataTableExportProps<TData extends ExportableData> {
   table: Table<TData>;
@@ -24,6 +25,7 @@ interface DataTableExportProps<TData extends ExportableData> {
   columnWidths?: Array<{ wch: number }>;
   headers?: string[];
   size?: 'sm' | 'default' | 'lg';
+  textFormatting?: TextFormatterOptions;
 }
 
 export function DataTableExport<TData extends ExportableData>({
@@ -36,7 +38,8 @@ export function DataTableExport<TData extends ExportableData>({
   columnMapping,
   columnWidths,
   headers,
-  size = 'default'
+  size = 'default',
+  textFormatting
 }: DataTableExportProps<TData>): JSX.Element {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -149,11 +152,8 @@ export function DataTableExport<TData extends ExportableData>({
           if (headerText && typeof headerText === 'string') {
             mapping[column.id] = headerText;
           } else {
-            // Fallback to formatted column ID
-            mapping[column.id] = column.id
-              .split(/(?=[A-Z])|_/)
-              .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-              .join(' ');
+            // Fallback to flexible formatted column ID
+            mapping[column.id] = autoFormatText(column.id, textFormatting);
           }
         });
         return mapping;
@@ -177,7 +177,8 @@ export function DataTableExport<TData extends ExportableData>({
           entityName,
           headers: exportHeaders,
           columnMapping: exportColumnMapping,
-          columnWidths: exportColumnWidths
+          columnWidths: exportColumnWidths,
+          textFormatting
         }
       );
     } catch (error) {
@@ -226,10 +227,7 @@ export function DataTableExport<TData extends ExportableData>({
           if (headerText && typeof headerText === 'string') {
             mapping[column.id] = headerText;
           } else {
-            mapping[column.id] = column.id
-              .split(/(?=[A-Z])|_/)
-              .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-              .join(' ');
+            mapping[column.id] = autoFormatText(column.id, textFormatting);
           }
         });
         return mapping;
@@ -259,7 +257,8 @@ export function DataTableExport<TData extends ExportableData>({
           filename, 
           exportColumnMapping, 
           exportColumnWidths,
-          exportHeaders
+          exportHeaders,
+          textFormatting
         );
       }
       

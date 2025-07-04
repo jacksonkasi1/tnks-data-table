@@ -9,3 +9,4 @@ export * from './table-state-handlers';
 export * from './url-state';
 export * from './table-config';
 export * from './deep-utils';
+export * from './text-formatter';

@@ -402,6 +402,7 @@ export function DataTableToolbar<TData>({
             columnWidths={columnWidths}
             headers={headers}
             size={config.size}
+            textFormatting={config.textFormatting}
           />
         )}
 
@@ -410,6 +411,7 @@ export function DataTableToolbar<TData>({
             table={table}
             columnMapping={columnMapping}
             size={config.size}
+            config={config}
           />
         )}
 

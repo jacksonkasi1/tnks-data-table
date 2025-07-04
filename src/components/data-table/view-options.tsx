@@ -20,11 +20,14 @@ import {
 import { cn } from "@/lib/utils";
 import * as React from "react";
 import { useCallback, useEffect, useState, useMemo } from "react";
+import { autoFormatText } from "./utils/text-formatter";
+import type { TableConfig } from "./utils/table-config";
 
 interface DataTableViewOptionsProps<TData> {
   table: Table<TData>;
   columnMapping?: Record<string, string>;
   size?: 'sm' | 'default' | 'lg';
+  config?: TableConfig;
 }
 
 // Local storage key for column order
@@ -34,6 +37,7 @@ export function DataTableViewOptions<TData>({
   table,
   columnMapping,
   size = 'default',
+  config,
 }: DataTableViewOptionsProps<TData>) {
   // Get columns that can be hidden
   const columns = React.useMemo(
@@ -156,10 +160,12 @@ export function DataTableViewOptions<TData>({
       return columnMapping[column.id];
     }
     // Then check for meta label
-    return (column.columnDef.meta as { label?: string })?.label ??
-      // Finally fall back to formatted column ID
-      column.id.replace(/_/g, ' ');
-  }, [columnMapping]);
+    if ((column.columnDef.meta as { label?: string })?.label) {
+      return (column.columnDef.meta as { label?: string }).label;
+    }
+    // Finally fall back to flexible formatted column ID
+    return autoFormatText(column.id, config?.textFormatting);
+  }, [columnMapping, config?.textFormatting]);
 
   return (
     <Popover>

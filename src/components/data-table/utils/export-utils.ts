@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import { autoFormatText, type TextFormatterOptions } from "./text-formatter";
 
 
 // Generic type for exportable data - should have string keys and values that can be converted to string
@@ -113,7 +114,8 @@ export function exportToExcel<T extends ExportableData>(
   filename: string,
   columnMapping?: Record<string, string>, // Optional mapping of data keys to display names
   columnWidths?: Array<{ wch: number }>,
-  headers?: string[] // Add headers parameter to specify which columns to export
+  headers?: string[], // Add headers parameter to specify which columns to export
+  textFormatting?: TextFormatterOptions // Add text formatting options
 ): boolean {
   if (data.length === 0) {
     console.error("No data to export");
@@ -121,10 +123,10 @@ export function exportToExcel<T extends ExportableData>(
   }
 
   try {
-    // If no column mapping is provided, create one from the data keys
+    // If no column mapping is provided, create one from the data keys using flexible formatting
     const mapping = columnMapping ||
       Object.keys(data[0] || {}).reduce((acc, key) => {
-        acc[key] = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+        acc[key] = autoFormatText(key, textFormatting);
         return acc;
       }, {} as Record<string, string>);
 
@@ -185,6 +187,7 @@ export async function exportData<T extends ExportableData>(
     columnMapping?: Record<string, string>;
     columnWidths?: Array<{ wch: number }>;
     entityName?: string;
+    textFormatting?: TextFormatterOptions;
   }
 ): Promise<boolean> {
   // Use a consistent toast ID to ensure only one toast is shown at a time
@@ -240,7 +243,8 @@ export async function exportData<T extends ExportableData>(
         filename,
         options?.columnMapping,
         options?.columnWidths,
-        options?.headers // Pass headers to exportToExcel
+        options?.headers, // Pass headers to exportToExcel
+        options?.textFormatting // Pass text formatting options
       );
       if (success) {
         toast.success("Export successful", {
