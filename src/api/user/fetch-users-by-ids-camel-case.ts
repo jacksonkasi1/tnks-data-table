@@ -1,5 +1,5 @@
 // ** Import Types
-import { UserCamelCase } from "@/app/(home)/data-table-camel-case/schema/user-schema";
+import { UserCamelCase } from "@/app/(home)/example/users-camel-case/data-table/schema/user-schema";
 
 const API_BASE_URL = "/api";
 

@@ -1,4 +1,4 @@
-import UserCamelCaseTable from "@/app/(home)/data-table-camel-case";
+import UserCamelCaseTable from "./data-table";
 
 export default function UsersCamelCasePage() {
   return (
