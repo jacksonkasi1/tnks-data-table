@@ -358,7 +358,7 @@ export function DataTableToolbar<TData extends ExportableData>({
       <div className="flex flex-1 flex-wrap items-center gap-2">
         {config.enableSearch && (
           <Input
-            placeholder={`Search ${entityName}...`}
+            placeholder={config.searchPlaceholder || `Search ${entityName}...`}
             value={localSearch}
             onChange={handleSearchChange}
             className={`w-[150px] lg:w-[250px] ${getInputSizeClass(config.size)}`}

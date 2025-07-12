@@ -46,6 +46,10 @@ export interface TableConfig {
   // Unique ID for storing column sizing in localStorage
   // This allows multiple tables to have independent sizing states
   columnResizingTableId?: string;
+  
+  // Custom placeholder text for search input
+  // If not provided, defaults to "Search {entityName}..."
+  searchPlaceholder?: string;
 }
 
 // Default configuration
@@ -64,6 +68,7 @@ const defaultConfig: TableConfig = {
   enableToolbar: true,            // Toolbar enabled by default
   size: 'default',                // Default size for buttons and inputs
   columnResizingTableId: undefined, // No table ID by default
+  searchPlaceholder: undefined,   // No custom search placeholder by default
 };
 
 /**
