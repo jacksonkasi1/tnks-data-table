@@ -174,41 +174,259 @@ By following this structure, you can easily maintain and extend your data tables
 
 ### Prerequisites
 
-- Next.js 13+ with App Router
-- React 18+
-- TypeScript 5+
-- Tailwind CSS
-- Shadcn UI components
+- **Next.js 15+** with App Router
+- **React 19+**
+- **TypeScript 5+**
+- **Tailwind CSS**
+- **Shadcn UI components**
 
 ### Installation Steps
 
-1. **Install required dependencies**:
+#### 1. Install Required Dependencies
+
+Install all required packages for the data table to work properly:
 
 ```bash
-# Installing dependencies with Bun
-bun add @tanstack/react-table @tanstack/react-query zod @hookform/resolvers sonner date-fns
+# Core dependencies for data table functionality
+npm install @tanstack/react-table @tanstack/react-query @hookform/resolvers react-hook-form zod sonner date-fns date-fns-tz xlsx class-variance-authority clsx tailwind-merge lucide-react
+
+# Radix UI components (required for Shadcn UI)
+npm install @radix-ui/react-avatar @radix-ui/react-checkbox @radix-ui/react-dialog @radix-ui/react-dropdown-menu @radix-ui/react-icons @radix-ui/react-label @radix-ui/react-popover @radix-ui/react-select @radix-ui/react-separator @radix-ui/react-slot
+
+# Additional UI dependencies
+npm install react-day-picker cmdk
+
+# TypeScript types for XLSX
+npm install @types/xlsx
+
+# Optional: Development dependencies for better linting
+npm install --save-dev @tanstack/eslint-plugin-query
 ```
 
-2. **Copy the core data table components** to your project:
+Or with other package managers:
 
-Create a `/components/data-table` directory in your project and copy the following core components:
+```bash
+# Using Yarn
+yarn add @tanstack/react-table @tanstack/react-query @hookform/resolvers react-hook-form zod sonner date-fns date-fns-tz xlsx class-variance-authority clsx tailwind-merge lucide-react @radix-ui/react-avatar @radix-ui/react-checkbox @radix-ui/react-dialog @radix-ui/react-dropdown-menu @radix-ui/react-icons @radix-ui/react-label @radix-ui/react-popover @radix-ui/react-select @radix-ui/react-separator @radix-ui/react-slot react-day-picker cmdk @types/xlsx
 
-- `data-table.tsx`: Main component
-- `column-header.tsx`: Sortable column headers
-- `filters.tsx`: Filter components
-- `utils.ts`: Helper functions
+# Using pnpm
+pnpm add @tanstack/react-table @tanstack/react-query @hookform/resolvers react-hook-form zod sonner date-fns date-fns-tz xlsx class-variance-authority clsx tailwind-merge lucide-react @radix-ui/react-avatar @radix-ui/react-checkbox @radix-ui/react-dialog @radix-ui/react-dropdown-menu @radix-ui/react-icons @radix-ui/react-label @radix-ui/react-popover @radix-ui/react-select @radix-ui/react-separator @radix-ui/react-slot react-day-picker cmdk @types/xlsx
 
-3. **Set up the API layer**:
+# Using Bun
+bun add @tanstack/react-table @tanstack/react-query @hookform/resolvers react-hook-form zod sonner date-fns date-fns-tz xlsx class-variance-authority clsx tailwind-merge lucide-react @radix-ui/react-avatar @radix-ui/react-checkbox @radix-ui/react-dialog @radix-ui/react-dropdown-menu @radix-ui/react-icons @radix-ui/react-label @radix-ui/react-popover @radix-ui/react-select @radix-ui/react-separator @radix-ui/react-slot react-day-picker cmdk @types/xlsx
+```
 
-Create an API directory structure as shown in the file structure section above. Implement the necessary API functions for your entity.
+#### 2. Set Up Utility Functions
 
-4. **Create Schema Definitions**:
+Create the utility function file:
 
-Define your entity schema using Zod for type validation.
+```typescript
+// src/lib/utils.ts
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
 
-5. **Implement the Data Table**:
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+```
 
-Create your entity-specific table implementation following the structure outlined above.
+#### 3. Copy Required UI Components
+
+You need to have the following Shadcn UI components in your `src/components/ui/` directory:
+
+**Required UI Components:**
+- `alert.tsx` - For error states
+- `avatar.tsx` - For user avatars (optional)
+- `badge.tsx` - For status indicators
+- `button.tsx` - For buttons and actions
+- `calendar.tsx` - For date picker
+- `checkbox.tsx` - For row selection
+- `command.tsx` - For command palette functionality
+- `dialog.tsx` - For modal dialogs
+- `dropdown-menu.tsx` - For action menus
+- `form.tsx` - For form handling
+- `input.tsx` - For text inputs
+- `label.tsx` - For form labels
+- `popover.tsx` - For popover components
+- `select.tsx` - For select dropdowns
+- `separator.tsx` - For visual separators
+- `skeleton.tsx` - For loading states
+- `sonner.tsx` - For toast notifications
+- `table.tsx` - For table structure
+
+You can install these using Shadcn CLI:
+
+```bash
+# Install Shadcn UI CLI
+npx shadcn-ui@latest init
+
+# Add required components
+npx shadcn-ui@latest add alert avatar badge button calendar checkbox command dialog dropdown-menu form input label popover select separator skeleton sonner table
+```
+
+#### 4. Copy Custom Components
+
+Create these custom components in your project:
+
+**A. Calendar Date Picker Component**
+
+```typescript
+// src/components/calendar-date-picker.tsx
+// Copy from: src/components/calendar-date-picker.tsx in this repository
+```
+
+**B. Data Table Core Components**
+
+Create `/src/components/data-table/` directory and copy these files:
+
+```bash
+src/components/data-table/
+├── column-header.tsx           # Sortable column headers
+├── data-export.tsx            # Export functionality UI
+├── data-table-resizer.tsx     # Column resize handler
+├── data-table.tsx             # Main data table component
+├── pagination.tsx             # Pagination controls
+├── toolbar.tsx                # Table toolbar with filters
+├── view-options.tsx           # Column visibility options
+├── hooks/
+│   └── use-table-column-resize.ts  # Column resize hook
+└── utils/
+    ├── case-utils.ts          # Case format conversion utilities
+    ├── column-sizing.ts       # Column sizing utilities
+    ├── conditional-state.ts   # Conditional state management
+    ├── date-format.ts         # Date formatting utilities
+    ├── deep-utils.ts          # Deep object utilities
+    ├── export-utils.ts        # Export functionality
+    ├── index.ts               # Utility exports
+    ├── keyboard-navigation.ts # Keyboard navigation
+    ├── search.ts              # Search utilities
+    ├── table-config.ts        # Table configuration
+    ├── table-state-handlers.ts # State handlers
+    └── url-state.ts           # URL state management
+```
+
+**C. Format Utilities**
+
+```typescript
+// src/utils/format.ts
+// Copy from: src/utils/format.ts in this repository
+```
+
+#### 5. Set up React Query Provider
+
+Wrap your app with React Query provider:
+
+```typescript
+// src/app/layout.tsx or your root layout
+"use client";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 60 * 1000, // 1 minute
+        retry: false,
+      },
+    },
+  }));
+
+  return (
+    <html lang="en">
+      <body>
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+#### 6. Configure Toast Notifications
+
+Add the Sonner toaster to your layout:
+
+```typescript
+// src/app/layout.tsx
+import { Toaster } from "@/components/ui/sonner";
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body>
+        <QueryClientProvider client={queryClient}>
+          {children}
+          <Toaster />
+        </QueryClientProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+#### 7. Set Up API Layer
+
+Create your API directory structure:
+
+```bash
+src/api/
+└── [entity]/
+    ├── add-entity.ts           # Create operations
+    ├── delete-entity.ts        # Delete operations
+    ├── fetch-entities.ts       # List with filtering
+    └── fetch-entities-by-ids.ts # Bulk fetch by IDs
+```
+
+#### 8. Create Your First Data Table
+
+Follow the [Basic Usage](#basic-usage) section to create your first data table implementation.
+
+### Package Overview
+
+Here's what each major dependency does:
+
+| Package | Purpose |
+|---------|---------|
+| `@tanstack/react-table` | Core table functionality, sorting, filtering |
+| `@tanstack/react-query` | Data fetching, caching, and synchronization |
+| `@hookform/resolvers` | Form validation integration |
+| `react-hook-form` | Form state management |
+| `zod` | Runtime type validation and schemas |
+| `sonner` | Toast notifications |
+| `date-fns` | Date manipulation and formatting |
+| `date-fns-tz` | Timezone support for dates |
+| `xlsx` | Excel export functionality |
+| `class-variance-authority` | Utility for managing CSS classes |
+| `clsx` & `tailwind-merge` | CSS class utilities |
+| `lucide-react` | Icon library |
+| `react-day-picker` | Date picker component |
+| `cmdk` | Command palette functionality |
+| `@radix-ui/*` | Headless UI components (used by Shadcn) |
+
+### Troubleshooting Installation
+
+**Common Issues:**
+
+1. **TypeScript errors**: Make sure all `@types/*` packages are installed
+2. **Missing icons**: Ensure `lucide-react` is properly installed
+3. **Style issues**: Verify Tailwind CSS is configured correctly
+4. **Export functionality not working**: Check that `xlsx` and `@types/xlsx` are installed
+
+**Version Compatibility:**
+- This data table is built for Next.js 15+ and React 19+
+- For older versions, you may need to adjust some dependencies
+- All Radix UI components should be on their latest versions for best compatibility
 
 ---
 
