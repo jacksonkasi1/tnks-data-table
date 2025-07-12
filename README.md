@@ -1110,6 +1110,60 @@ export const ToolbarOptions = ({
 };
 ```
 
+### Search Customization
+
+The data table search input supports custom placeholder text to provide better context for users:
+
+#### Custom Search Placeholder
+
+You can customize the search input placeholder text by providing the `searchPlaceholder` option in your table configuration:
+
+```typescript
+// Basic usage with custom placeholder
+<DataTable<Entity, any>
+  getColumns={getColumns}
+  exportConfig={useExportConfig()}
+  fetchDataFn={useEntitiesData}
+  fetchByIdsFn={fetchEntitiesByIds}
+  idField="id"
+  config={{
+    enableRowSelection: true,
+    enableSearch: true,
+    searchPlaceholder: "Search by name, email, or ID...", // Custom placeholder
+    enableDateFilter: true,
+    enableColumnVisibility: true,
+    enableUrlState: true,
+  }}
+/>
+```
+
+#### Default Behavior
+
+If no custom placeholder is provided, the search input will use the default format: `"Search {entityName}..."` where `entityName` is taken from your export configuration.
+
+#### Examples of Custom Placeholders
+
+```typescript
+// For different types of data tables
+config={{
+  searchPlaceholder: "Search users by name or email...",
+}}
+
+config={{
+  searchPlaceholder: "Find orders by ID, customer, or status...",
+}}
+
+config={{
+  searchPlaceholder: "Search products by name, SKU, or category...",
+}}
+
+config={{
+  searchPlaceholder: "Type to filter results...", // Simple placeholder
+}}
+```
+
+This feature helps provide more context to users about what fields they can search on and what format their search should take.
+
 ### Export Options
 
 The data table supports exporting data in various formats. Configure export options:
@@ -2284,6 +2338,7 @@ const firstItem = data?.items?.[0]?.title ?? "No items";
 | `enableColumnVisibility`   | `boolean`                   | `true`      | Allow toggling column visibility         |
 | `enableUrlState`           | `boolean`                   | `true`      | Save table state in URL                  |
 | `columnResizingTableId`    | `string`                    | -           | ID for column resizing persistence       |
+| `searchPlaceholder`        | `string`                    | -           | Custom placeholder text for search input |
 | `size`                     | `'sm' \| 'default' \| 'lg'` | `'default'` | Size for buttons and inputs in the table |
 
 The `size` prop affects the following components:

@@ -62,6 +62,7 @@ export default function UserCamelCaseTable() {
         enableUrlState: true,
         size: "default",
         columnResizingTableId: "user-camel-case-table",
+        searchPlaceholder: "Search users"
       }}
     />
   );

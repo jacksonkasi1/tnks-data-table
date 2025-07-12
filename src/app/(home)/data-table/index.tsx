@@ -47,6 +47,7 @@ export default function UserTable() {
         enableUrlState: true,
         size: "default",
         columnResizingTableId: "user-table",
+        searchPlaceholder: "Search users"
       }}
     />
   );
