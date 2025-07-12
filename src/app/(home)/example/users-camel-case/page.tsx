@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import UserCamelCaseTable from "./data-table";
 
 export default function UsersCamelCasePage() {
@@ -9,7 +10,9 @@ export default function UsersCamelCasePage() {
           Example table demonstrating camelCase field support
         </p>
       </div>
-      <UserCamelCaseTable />
+      <Suspense fallback={<div>Loading...</div>}>
+        <UserCamelCaseTable />
+      </Suspense>
     </div>
   );
 }

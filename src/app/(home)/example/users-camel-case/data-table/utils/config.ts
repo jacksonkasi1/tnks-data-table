@@ -1,5 +1,8 @@
 import { useMemo } from "react";
 import { CaseFormatConfig } from "@/components/data-table/utils/case-utils";
+import { DataTransformFunction } from "@/components/data-table/utils/export-utils";
+import { formatTimestampToReadable, formatCurrency } from "@/utils/format";
+import type { UserCamelCase } from "../schema";
 
 /**
  * Export configuration for the camelCase users data table
@@ -53,11 +56,22 @@ export function useExportConfig() {
     apiFormat: 'camelCase', // API parameters also use camelCase
   }), []);
 
+  // Example transformation function showcasing different formatting options
+  const transformFunction: DataTransformFunction<UserCamelCase> = useMemo(() => (row: UserCamelCase) => ({
+    ...row,
+    // Format timestamps to human-readable format
+    createdAt: formatTimestampToReadable(row.createdAt),
+    // Format currency values
+    totalExpenses: formatCurrency(row.totalExpenses),
+    // Add any other custom transformations as needed
+  }), []);
+
   return {
     columnMapping,
     columnWidths,
     headers,
     entityName: "users-camel-case",
-    caseConfig
+    caseConfig,
+    transformFunction
   };
 }

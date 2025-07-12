@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DownloadIcon, Loader2 } from "lucide-react";
 import { Table } from "@tanstack/react-table";
-import { exportData, exportToCSV, exportToExcel, ExportableData } from "./utils/export-utils";
+import { exportData, exportToCSV, exportToExcel, ExportableData, DataTransformFunction } from "./utils/export-utils";
 import { JSX, useState } from "react";
 import { toast } from "sonner";
 
@@ -23,6 +23,7 @@ interface DataTableExportProps<TData extends ExportableData> {
   columnMapping?: Record<string, string>;
   columnWidths?: Array<{ wch: number }>;
   headers?: string[];
+  transformFunction?: DataTransformFunction<TData>;
   size?: 'sm' | 'default' | 'lg';
 }
 
@@ -36,6 +37,7 @@ export function DataTableExport<TData extends ExportableData>({
   columnMapping,
   columnWidths,
   headers,
+  transformFunction,
   size = 'default'
 }: DataTableExportProps<TData>): JSX.Element {
   const [isLoading, setIsLoading] = useState(false);
@@ -190,7 +192,8 @@ export function DataTableExport<TData extends ExportableData>({
           entityName,
           headers: exportHeaders,
           columnMapping: exportColumnMapping,
-          columnWidths: exportColumnWidths
+          columnWidths: exportColumnWidths,
+          transformFunction
         }
       );
     } catch (error) {
@@ -265,14 +268,15 @@ export function DataTableExport<TData extends ExportableData>({
       // Export based on type
       let success = false;
       if (type === "csv") {
-        success = exportToCSV(allData, filename, exportHeaders);
+        success = exportToCSV(allData, filename, exportHeaders, exportColumnMapping, transformFunction);
       } else {
         success = exportToExcel(
           allData, 
           filename, 
           exportColumnMapping, 
           exportColumnWidths,
-          exportHeaders
+          exportHeaders,
+          transformFunction
         );
       }
       
