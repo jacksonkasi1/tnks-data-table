@@ -22,6 +22,8 @@
    - [Row Selection](#row-selection)
    - [Toolbar Customization](#toolbar-customization)
    - [Export Options](#export-options)
+   - [Case Format Support](#case-format-support)
+   - [Export Data Transformation](#export-data-transformation)
 9. [Server Implementation](#server-implementation)
    - [API Endpoints](#api-endpoints)
    - [Request & Response Formats](#request--response-formats)
@@ -87,7 +89,8 @@ The Data Table includes the following features:
 - ✅ Edit existing records
 - ✅ Delete single records
 - ✅ Bulk delete operations
-- ✅ Data export (CSV/Excel)
+- ✅ Data export (CSV/Excel) with custom formatting
+- ✅ Export data transformation and new calculated columns
 
 ### Integration
 
@@ -96,6 +99,8 @@ The Data Table includes the following features:
 - ✅ Form handling with React Hook Form
 - ✅ Toast notifications
 - ✅ URL state persistence
+- ✅ Case format conversion (snake_case ↔ camelCase)
+- ✅ Flexible API parameter mapping
 
 ---
 
@@ -1148,6 +1153,172 @@ export function useExportConfig() {
   };
 }
 ```
+
+### Case Format Support
+
+The data table supports automatic case format conversion between your frontend (camelCase) and backend (snake_case) APIs. This feature allows you to maintain consistent naming conventions without manual conversion.
+
+#### Configuration
+
+Configure case format conversion in your export config:
+
+```typescript
+// src/app/(section)/entity-table/utils/config.ts
+import { CaseFormatConfig } from "@/components/data-table/utils/case-utils";
+
+export function useExportConfig() {
+  // Case formatting configuration
+  const caseConfig: CaseFormatConfig = useMemo(() => ({
+    urlFormat: 'camelCase',    // Frontend uses camelCase (sortBy, pageSize)
+    apiFormat: 'snake_case',   // Backend expects snake_case (sort_by, page_size)
+    // Optional custom mapping for specific fields
+    keyMapper: (key: string) => {
+      const customMappings: Record<string, string> = {
+        'sortBy': 'order_by',        // Custom field mapping
+        'pageSize': 'per_page',      // Custom field mapping
+      };
+      return customMappings[key] || key;
+    }
+  }), []);
+
+  return {
+    // ... other config
+    caseConfig
+  };
+}
+```
+
+#### Supported Formats
+
+- **camelCase**: `sortBy`, `pageSize`, `createdAt`
+- **snake_case**: `sort_by`, `page_size`, `created_at`
+- **Custom mapping**: Define your own field transformations
+
+#### Example Usage
+
+```typescript
+// Frontend sends: { sortBy: "createdAt", pageSize: 20 }
+// Backend receives: { sort_by: "created_at", page_size: 20 }
+
+// Frontend receives: { createdAt: "2023-01-01", totalCount: 100 }
+// Backend sent: { created_at: "2023-01-01", total_count: 100 }
+```
+
+### Export Data Transformation
+
+The data table now supports powerful export customization that allows you to:
+
+- **Format existing data** (timestamps, currency, phone numbers)
+- **Add completely new calculated columns** that don't exist in your original data
+- **Apply business logic** during export without affecting table display
+
+#### Basic Data Formatting
+
+```typescript
+import { DataTransformFunction } from "@/components/data-table/utils/export-utils";
+import { formatTimestampToReadable, formatCurrency } from "@/utils/format";
+
+const transformFunction: DataTransformFunction<User> = (row: User) => ({
+  ...row,
+  // Format existing columns
+  created_at: formatTimestampToReadable(row.created_at), // "01/15/2023 10:30 AM"
+  total_expenses: formatCurrency(row.total_expenses),    // "$1,234.56"
+  phone: formatPhoneNumber(row.phone),                   // "(123) 456-7890"
+});
+```
+
+#### Adding New Calculated Columns
+
+Add completely new columns with business logic:
+
+```typescript
+const enhancedTransform: DataTransformFunction<User> = (row: User) => {
+  const expenseAmount = parseFloat(row.total_expenses) || 0;
+  const currentYear = new Date().getFullYear();
+  const joinYear = new Date(row.created_at).getFullYear();
+  
+  return {
+    ...row,
+    // Format existing data
+    created_at: formatTimestampToReadable(row.created_at),
+    total_expenses: formatCurrency(row.total_expenses),
+    
+    // Add NEW calculated columns
+    account_status: row.expense_count > 10 ? "ACTIVE" : "INACTIVE",
+    customer_tier: expenseAmount > 2000 ? "PREMIUM" : 
+                   expenseAmount > 1000 ? "GOLD" : 
+                   expenseAmount > 500 ? "SILVER" : "BRONZE",
+    years_as_customer: currentYear - joinYear,
+    spending_category: expenseAmount > 1000 ? "HIGH_SPENDER" : 
+                      expenseAmount > 500 ? "MEDIUM_SPENDER" : "LOW_SPENDER",
+    risk_score: row.expense_count < 2 ? "HIGH_RISK" : "LOW_RISK"
+  };
+};
+```
+
+#### Complete Export Configuration
+
+Include new columns in your export configuration:
+
+```typescript
+export function useExportConfig() {
+  return {
+    // Include both original and new columns
+    headers: [
+      // Original columns
+      "id", "name", "email", "phone", "age", "created_at", "expense_count", "total_expenses",
+      // NEW calculated columns
+      "account_status", "customer_tier", "years_as_customer", "spending_category", "risk_score"
+    ],
+    
+    // Map all columns to readable headers
+    columnMapping: {
+      // Original columns
+      id: "Customer ID",
+      name: "Full Name",
+      email: "Email Address",
+      phone: "Phone Number",
+      age: "Age",
+      created_at: "Join Date",
+      expense_count: "Total Transactions",
+      total_expenses: "Total Spending",
+      // NEW column headers
+      account_status: "Account Status",
+      customer_tier: "Customer Tier",
+      years_as_customer: "Years as Customer",
+      spending_category: "Spending Category",
+      risk_score: "Risk Assessment"
+    },
+    
+    // Apply transformation function
+    transformFunction: enhancedTransform,
+    entityName: "users"
+  };
+}
+```
+
+#### Export Result
+
+Your exports will now include additional calculated columns:
+
+```
+Customer ID | Full Name | Email | Phone | Age | Join Date | Total Transactions | Total Spending | Account Status | Customer Tier | Years as Customer | Spending Category | Risk Assessment
+1 | John Doe | john@example.com | (555) 123-4567 | 32 | 15/01/2023 10:30 AM | 15 | $2,450.75 | ACTIVE | PREMIUM | 1 | HIGH_SPENDER | LOW_RISK
+```
+
+#### Available Formatting Functions
+
+The system includes comprehensive formatting utilities:
+
+- `formatTimestampToReadable()` - ISO dates to readable format
+- `formatCurrency()` - Number to currency format
+- `formatPhoneNumber()` - Phone number formatting
+- `formatToTitleCase()` - Text capitalization
+- `formatBoolean()` - Boolean to Yes/No
+- `formatNumber()` - Number with thousand separators
+- `formatTruncatedText()` - Text truncation with ellipsis
+
+For complete documentation and examples, see [Export Customization Guide](./docs/EXPORT_CUSTOMIZATION.md).
 
 ---
 
