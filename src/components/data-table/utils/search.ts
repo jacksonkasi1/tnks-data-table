@@ -18,9 +18,19 @@ export function preprocessSearch(searchTerm: string): string {
   // Check for minimum length after processing (e.g., if it's just spaces)
   if (processed.length < 1) return "";
   
-  // Basic sanitization for API safety
-  // Remove any potentially harmful characters for the backend
-  processed = processed.replace(/[<>]/g, '');
+  // Comprehensive sanitization for XSS protection
+  // Remove script tags and potentially harmful HTML/JS patterns
+  processed = processed.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  processed = processed.replace(/javascript:/gi, '');
+  processed = processed.replace(/on\w+\s*=/gi, '');
+  
+  // HTML entity encoding for common XSS vectors
+  processed = processed.replace(/&/g, '&amp;')
+                     .replace(/</g, '&lt;')
+                     .replace(/>/g, '&gt;')
+                     .replace(/"/g, '&quot;')
+                     .replace(/'/g, '&#x27;')
+                     .replace(/\//g, '&#x2F;');
   
   return processed;
 }

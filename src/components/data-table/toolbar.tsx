@@ -16,6 +16,7 @@ import {
 import { CalendarDatePicker } from "@/components/calendar-date-picker";
 import { DataTableViewOptions } from "./view-options";
 import { DataTableExport } from "./data-export";
+import type { DataTransformFunction, ExportableData } from "./utils/export-utils";
 import { resetUrlState } from "./utils/deep-utils";
 import { parseDateFromUrl } from "./utils/url-state";
 import type { TableConfig } from "./utils/table-config";
@@ -45,7 +46,7 @@ const getButtonSizeClass = (size: 'sm' | 'default' | 'lg', isIcon = false) => {
   }
 };
 
-interface DataTableToolbarProps<TData> {
+interface DataTableToolbarProps<TData extends ExportableData> {
   table: Table<TData>;
   setSearch: (value: string | ((prev: string) => string)) => void;
   setDateRange: (
@@ -67,10 +68,11 @@ interface DataTableToolbarProps<TData> {
   columnMapping?: Record<string, string>;
   columnWidths?: Array<{ wch: number }>;
   headers?: string[];
+  transformFunction?: DataTransformFunction<TData>;
   customToolbarComponent?: React.ReactNode;
 }
 
-export function DataTableToolbar<TData>({
+export function DataTableToolbar<TData extends ExportableData>({
   table,
   setSearch,
   setDateRange,
@@ -85,6 +87,7 @@ export function DataTableToolbar<TData>({
   columnMapping,
   columnWidths,
   headers,
+  transformFunction,
   customToolbarComponent,
 }: DataTableToolbarProps<TData>) {
   // Get router and pathname for URL state reset
@@ -401,6 +404,7 @@ export function DataTableToolbar<TData>({
             columnMapping={columnMapping}
             columnWidths={columnWidths}
             headers={headers}
+            transformFunction={transformFunction}
             size={config.size}
           />
         )}

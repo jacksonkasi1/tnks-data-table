@@ -1,16 +1,16 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
 // ** Import API
-import { fetchUsers } from "@/api/user/fetch-users";
+import { fetchUsersCamelCase } from "@/api/user/fetch-users-camel-case";
 
 // ** Import Utils
 import { preprocessSearch } from "@/components/data-table/utils";
 import { CaseFormatConfig, DEFAULT_CASE_CONFIG } from "@/components/data-table/utils/case-utils";
 
 /**
- * Hook to fetch users with the current filters and pagination
+ * Hook to fetch users with camelCase format
  */
-export function useUsersData(
+export function useUsersCamelCaseData(
   page: number,
   pageSize: number,
   search: string,
@@ -21,7 +21,7 @@ export function useUsersData(
 ) {
   return useQuery({
     queryKey: [
-      "users",
+      "users-camel-case",
       page,
       pageSize,
       preprocessSearch(search),
@@ -31,19 +31,18 @@ export function useUsersData(
       caseConfig,
     ],
     queryFn: () =>
-      fetchUsers({
+      fetchUsersCamelCase({
         page,
         limit: pageSize,
         search: preprocessSearch(search),
-        from_date: dateRange.from_date,
-        to_date: dateRange.to_date,
-        sort_by: sortBy,
-        sort_order: sortOrder,
-        caseConfig,
+        fromDate: dateRange.from_date,
+        toDate: dateRange.to_date,
+        sortBy: sortBy,
+        sortOrder: sortOrder,
       }),
-    placeholderData: keepPreviousData, // Keep previous data when fetching new data. If skeleton animation is needed when fetching data, comment this out.
+    placeholderData: keepPreviousData,
   });
 }
 
 // Add a property to the function so we can use it with the DataTable component
-useUsersData.isQueryHook = true;
+useUsersCamelCaseData.isQueryHook = true;

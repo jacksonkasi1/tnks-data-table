@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DownloadIcon, Loader2 } from "lucide-react";
 import { Table } from "@tanstack/react-table";
-import { exportData, exportToCSV, exportToExcel, ExportableData } from "./utils/export-utils";
+import { exportData, exportToCSV, exportToExcel, ExportableData, DataTransformFunction } from "./utils/export-utils";
 import { JSX, useState } from "react";
 import { toast } from "sonner";
 
@@ -23,6 +23,7 @@ interface DataTableExportProps<TData extends ExportableData> {
   columnMapping?: Record<string, string>;
   columnWidths?: Array<{ wch: number }>;
   headers?: string[];
+  transformFunction?: DataTransformFunction<TData>;
   size?: 'sm' | 'default' | 'lg';
 }
 
@@ -36,6 +37,7 @@ export function DataTableExport<TData extends ExportableData>({
   columnMapping,
   columnWidths,
   headers,
+  transformFunction,
   size = 'default'
 }: DataTableExportProps<TData>): JSX.Element {
   const [isLoading, setIsLoading] = useState(false);
@@ -71,24 +73,37 @@ export function DataTableExport<TData extends ExportableData>({
         if (sorting.length > 0) {
           const { id: sortField, desc: isDescending } = sorting[0];
           
+          // Validate that sortField exists in data before sorting
+          const sampleItem = sortedItems[0];
+          if (sampleItem && !(sortField in sampleItem)) {
+            console.warn(`Sort field "${sortField}" not found in data. Skipping sort.`);
+            return sortedItems;
+          }
+          
           sortedItems.sort((a, b) => {
-            const valueA = a[sortField as keyof TData];
-            const valueB = b[sortField as keyof TData];
-            
-            if (valueA === valueB) return 0;
-            
-            if (valueA === null || valueA === undefined) return isDescending ? 1 : -1;
-            if (valueB === null || valueB === undefined) return isDescending ? -1 : 1;
-            
-            if (typeof valueA === 'string' && typeof valueB === 'string') {
+            try {
+              const valueA = a[sortField as keyof TData];
+              const valueB = b[sortField as keyof TData];
+              
+              if (valueA === valueB) return 0;
+              
+              if (valueA === null || valueA === undefined) return isDescending ? 1 : -1;
+              if (valueB === null || valueB === undefined) return isDescending ? -1 : 1;
+              
+              if (typeof valueA === 'string' && typeof valueB === 'string') {
               return isDescending 
                 ? valueB.localeCompare(valueA) 
                 : valueA.localeCompare(valueB);
             }
             
-            return isDescending 
-              ? (valueB > valueA ? 1 : -1) 
-              : (valueA > valueB ? 1 : -1);
+              // For numeric and other comparable types
+              return isDescending 
+                ? (valueB > valueA ? 1 : -1) 
+                : (valueA > valueB ? 1 : -1);
+            } catch (sortError) {
+              console.error('Error during sorting:', sortError);
+              return 0; // Maintain original order on error
+            }
           });
         }
         
@@ -136,8 +151,10 @@ export function DataTableExport<TData extends ExportableData>({
           })
         : visibleColumns;
 
-      // Generate export headers based on ordered columns
-      const exportHeaders = orderedVisibleColumns.map(column => column.id);
+      // Generate export headers - use provided headers if available, otherwise fall back to visible columns
+      const exportHeaders = headers && headers.length > 0 
+        ? headers 
+        : orderedVisibleColumns.map(column => column.id);
 
       // Auto-generate column mapping from table headers if not provided
       const exportColumnMapping = columnMapping || (() => {
@@ -159,13 +176,10 @@ export function DataTableExport<TData extends ExportableData>({
         return mapping;
       })();
 
-      // Filter column widths to match visible columns and their order
+      // Filter column widths to match export headers
       const exportColumnWidths = columnWidths ? 
-        orderedVisibleColumns.map((column, index) => {
-          const originalIndex = visibleColumns.findIndex(vc => vc.id === column.id);
-          return columnWidths[originalIndex] || { wch: 15 };
-        }) :
-        orderedVisibleColumns.map(() => ({ wch: 15 }));
+        exportHeaders.map((_, index) => columnWidths[index] || { wch: 15 }) :
+        exportHeaders.map(() => ({ wch: 15 }));
 
       // Use the generic export function with proper options
       await exportData(
@@ -177,7 +191,8 @@ export function DataTableExport<TData extends ExportableData>({
           entityName,
           headers: exportHeaders,
           columnMapping: exportColumnMapping,
-          columnWidths: exportColumnWidths
+          columnWidths: exportColumnWidths,
+          transformFunction
         }
       );
     } catch (error) {
@@ -217,27 +232,42 @@ export function DataTableExport<TData extends ExportableData>({
         .filter(column => column.getIsVisible())
         .filter(column => column.id !== 'actions' && column.id !== 'select');
       
-      const exportHeaders = visibleColumns.map(column => column.id);
+      const exportHeaders = headers && headers.length > 0 
+        ? headers 
+        : visibleColumns.map(column => column.id);
       const exportColumnMapping = columnMapping || (() => {
         const mapping: Record<string, string> = {};
-        visibleColumns.forEach(column => {
-          const headerText = column.columnDef.header as string;
-          
-          if (headerText && typeof headerText === 'string') {
-            mapping[column.id] = headerText;
-          } else {
-            mapping[column.id] = column.id
+        
+        // If we have custom headers, generate mapping for them
+        if (headers && headers.length > 0) {
+          headers.forEach(header => {
+            mapping[header] = header
               .split(/(?=[A-Z])|_/)
               .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
               .join(' ');
-          }
-        });
+          });
+        } else {
+          // Otherwise use visible columns
+          visibleColumns.forEach(column => {
+            const headerText = column.columnDef.header as string;
+            
+            if (headerText && typeof headerText === 'string') {
+              mapping[column.id] = headerText;
+            } else {
+              mapping[column.id] = column.id
+                .split(/(?=[A-Z])|_/)
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+            }
+          });
+        }
+        
         return mapping;
       })();
       
       const exportColumnWidths = columnWidths ?
-        visibleColumns.map((_, index) => columnWidths[index] || { wch: 15 }) :
-        visibleColumns.map(() => ({ wch: 15 }));
+        exportHeaders.map((_, index) => columnWidths[index] || { wch: 15 }) :
+        exportHeaders.map(() => ({ wch: 15 }));
       
       // Update toast for processing
       toast.loading("Processing data...", {
@@ -252,14 +282,15 @@ export function DataTableExport<TData extends ExportableData>({
       // Export based on type
       let success = false;
       if (type === "csv") {
-        success = exportToCSV(allData, filename, exportHeaders);
+        success = exportToCSV(allData, filename, exportHeaders, exportColumnMapping, transformFunction);
       } else {
         success = exportToExcel(
           allData, 
           filename, 
           exportColumnMapping, 
           exportColumnWidths,
-          exportHeaders
+          exportHeaders,
+          transformFunction
         );
       }
       

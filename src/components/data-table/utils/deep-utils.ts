@@ -3,6 +3,43 @@ type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint
 // Define a type for comparing values that can handle most common types
 type Comparable = string | number | boolean | object | null | undefined | TypedArray | Date | RegExp | Set<unknown> | Map<unknown, unknown>;
 
+// Simple LRU cache for frequent comparisons
+class ComparisonCache {
+  private cache = new Map<string, boolean>();
+  private readonly maxSize = 100;
+
+  getCacheKey(a: Comparable, b: Comparable): string | null {
+    // Only cache for primitive values to avoid memory leaks
+    if (typeof a !== 'object' && typeof b !== 'object' && a !== null && b !== null) {
+      return `${typeof a}:${String(a)}|${typeof b}:${String(b)}`;
+    }
+    return null;
+  }
+
+  get(key: string): boolean | undefined {
+    const value = this.cache.get(key);
+    if (value !== undefined) {
+      // Move to end to mark as recently used
+      this.cache.delete(key);
+      this.cache.set(key, value);
+    }
+    return value;
+  }
+
+  set(key: string, value: boolean): void {
+    if (this.cache.size >= this.maxSize) {
+      // Remove oldest entry
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      }
+    }
+    this.cache.set(key, value);
+  }
+}
+
+const comparisonCache = new ComparisonCache();
+
 /**
  * Optimized deep equality check for objects and arrays
  * @param a First value to compare
@@ -10,10 +47,26 @@ type Comparable = string | number | boolean | object | null | undefined | TypedA
  * @returns Boolean indicating if values are deeply equal
  */
 export function isDeepEqual(a: Comparable, b: Comparable): boolean {
+  // Check cache for primitive values first
+  const cacheKey = comparisonCache.getCacheKey(a, b);
+  if (cacheKey) {
+    const cached = comparisonCache.get(cacheKey);
+    if (cached !== undefined) {
+      return cached;
+    }
+  }
+
   // Use a WeakMap to track object pairs we've compared to handle circular references
   const visited = new WeakMap<object, object>();
   
-  return compare(a, b);
+  const result = compare(a, b);
+  
+  // Cache the result for primitive values
+  if (cacheKey) {
+    comparisonCache.set(cacheKey, result);
+  }
+  
+  return result;
   
   function compare(a: Comparable, b: Comparable): boolean {
     // Fast path for primitives and identical references

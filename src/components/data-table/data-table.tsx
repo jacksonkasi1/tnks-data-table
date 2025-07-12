@@ -31,6 +31,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useTableConfig, type TableConfig } from "./utils/table-config";
+import type { CaseFormatConfig } from "./utils/case-utils";
+import type { DataTransformFunction, ExportableData } from "./utils/export-utils";
 import { useTableColumnResize } from "./hooks/use-table-column-resize";
 import { DataTableResizer } from "./data-table-resizer";
 
@@ -80,7 +82,7 @@ type SortingUpdater = (prev: { id: string; desc: boolean }[]) => { id: string; d
 type ColumnOrderUpdater = (prev: string[]) => string[];
 type RowSelectionUpdater = (prev: Record<string, boolean>) => Record<string, boolean>;
 
-interface DataTableProps<TData, TValue> {
+interface DataTableProps<TData extends ExportableData, TValue> {
   // Allow overriding the table configuration
   config?: Partial<TableConfig>;
 
@@ -89,7 +91,7 @@ interface DataTableProps<TData, TValue> {
 
   // Data fetching function
   fetchDataFn: ((params: DataFetchParams) => Promise<DataFetchResult<TData>>) | 
-               ((page: number, pageSize: number, search: string, dateRange: { from_date: string; to_date: string }, sortBy: string, sortOrder: string) => unknown);
+               ((page: number, pageSize: number, search: string, dateRange: { from_date: string; to_date: string }, sortBy: string, sortOrder: string, caseConfig?: CaseFormatConfig) => unknown);
 
   // Function to fetch specific items by their IDs
   fetchByIdsFn?: (ids: number[] | string[]) => Promise<TData[]>;
@@ -100,6 +102,8 @@ interface DataTableProps<TData, TValue> {
     columnMapping: Record<string, string>;
     columnWidths: Array<{ wch: number }>;
     headers: string[];
+    caseConfig?: CaseFormatConfig;
+    transformFunction?: DataTransformFunction<TData>;
   };
 
   // ID field in TData for tracking selected items
@@ -117,7 +121,7 @@ interface DataTableProps<TData, TValue> {
   }) => React.ReactNode;
 }
 
-export function DataTable<TData, TValue>({
+export function DataTable<TData extends ExportableData, TValue>({
   config = {},
   getColumns,
   fetchDataFn,
@@ -359,7 +363,7 @@ export function DataTable<TData, TValue>({
 
   // If fetchDataFn is a React Query hook, call it directly with parameters
   const queryResult = (fetchDataFn as { isQueryHook?: boolean }).isQueryHook === true
-    ? (fetchDataFn as (page: number, pageSize: number, search: string, dateRange: { from_date: string; to_date: string }, sortBy: string, sortOrder: string) => { 
+    ? (fetchDataFn as (page: number, pageSize: number, search: string, dateRange: { from_date: string; to_date: string }, sortBy: string, sortOrder: string, caseConfig?: CaseFormatConfig) => { 
         isLoading: boolean; 
         isSuccess: boolean; 
         isError: boolean; 
@@ -371,7 +375,8 @@ export function DataTable<TData, TValue>({
         search, 
         dateRange, 
         sortBy,
-        sortOrder
+        sortOrder,
+        exportConfig.caseConfig
       )
     : null;
 
@@ -516,8 +521,8 @@ export function DataTable<TData, TValue>({
     }
   }, []);
 
-  // Set up the table with memoized state
-  const table = useReactTable<TData>({
+  // Memoize table configuration to prevent unnecessary re-renders
+  const tableOptions = useMemo(() => ({
     data: dataItems,
     columns,
     state: {
@@ -543,13 +548,36 @@ export function DataTable<TData, TValue>({
     onColumnFiltersChange: handleColumnFiltersChange,
     onColumnVisibilityChange: handleColumnVisibilityChange,
     onPaginationChange: handlePaginationChange,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-  });
+    getCoreRowModel: getCoreRowModel<TData>(),
+    getFilteredRowModel: getFilteredRowModel<TData>(),
+    getPaginationRowModel: getPaginationRowModel<TData>(),
+    getSortedRowModel: getSortedRowModel<TData>(),
+    getFacetedRowModel: getFacetedRowModel<TData>(),
+    getFacetedUniqueValues: getFacetedUniqueValues<TData>(),
+  }), [
+    dataItems,
+    columns,
+    sorting,
+    columnVisibility,
+    rowSelection,
+    columnFilters,
+    pagination,
+    columnSizing,
+    columnOrder,
+    handleColumnSizingChange,
+    handleColumnOrderChange,
+    data?.pagination.total_pages,
+    tableConfig.enableRowSelection,
+    tableConfig.enableColumnResizing,
+    handleRowSelectionChange,
+    handleSortingChange,
+    handleColumnFiltersChange,
+    handleColumnVisibilityChange,
+    handlePaginationChange,
+  ]);
+
+  // Set up the table with memoized configuration
+  const table = useReactTable<TData>(tableOptions);
 
   // Create keyboard navigation handler
   const handleKeyDown = useCallback(
@@ -661,6 +689,7 @@ export function DataTable<TData, TValue>({
           columnMapping={exportConfig.columnMapping}
           columnWidths={exportConfig.columnWidths}
           headers={exportConfig.headers}
+          transformFunction={exportConfig.transformFunction}
           customToolbarComponent={renderToolbarContent?.({
             selectedRows: dataItems.filter((item) => selectedItemIds[String(item[idField])]),
             allSelectedIds: Object.keys(selectedItemIds),
