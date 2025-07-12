@@ -151,8 +151,10 @@ export function DataTableExport<TData extends ExportableData>({
           })
         : visibleColumns;
 
-      // Generate export headers based on ordered columns
-      const exportHeaders = orderedVisibleColumns.map(column => column.id);
+      // Generate export headers - use provided headers if available, otherwise fall back to visible columns
+      const exportHeaders = headers && headers.length > 0 
+        ? headers 
+        : orderedVisibleColumns.map(column => column.id);
 
       // Auto-generate column mapping from table headers if not provided
       const exportColumnMapping = columnMapping || (() => {
@@ -174,13 +176,10 @@ export function DataTableExport<TData extends ExportableData>({
         return mapping;
       })();
 
-      // Filter column widths to match visible columns and their order
+      // Filter column widths to match export headers
       const exportColumnWidths = columnWidths ? 
-        orderedVisibleColumns.map((column, index) => {
-          const originalIndex = visibleColumns.findIndex(vc => vc.id === column.id);
-          return columnWidths[originalIndex] || { wch: 15 };
-        }) :
-        orderedVisibleColumns.map(() => ({ wch: 15 }));
+        exportHeaders.map((_, index) => columnWidths[index] || { wch: 15 }) :
+        exportHeaders.map(() => ({ wch: 15 }));
 
       // Use the generic export function with proper options
       await exportData(
@@ -233,27 +232,42 @@ export function DataTableExport<TData extends ExportableData>({
         .filter(column => column.getIsVisible())
         .filter(column => column.id !== 'actions' && column.id !== 'select');
       
-      const exportHeaders = visibleColumns.map(column => column.id);
+      const exportHeaders = headers && headers.length > 0 
+        ? headers 
+        : visibleColumns.map(column => column.id);
       const exportColumnMapping = columnMapping || (() => {
         const mapping: Record<string, string> = {};
-        visibleColumns.forEach(column => {
-          const headerText = column.columnDef.header as string;
-          
-          if (headerText && typeof headerText === 'string') {
-            mapping[column.id] = headerText;
-          } else {
-            mapping[column.id] = column.id
+        
+        // If we have custom headers, generate mapping for them
+        if (headers && headers.length > 0) {
+          headers.forEach(header => {
+            mapping[header] = header
               .split(/(?=[A-Z])|_/)
               .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
               .join(' ');
-          }
-        });
+          });
+        } else {
+          // Otherwise use visible columns
+          visibleColumns.forEach(column => {
+            const headerText = column.columnDef.header as string;
+            
+            if (headerText && typeof headerText === 'string') {
+              mapping[column.id] = headerText;
+            } else {
+              mapping[column.id] = column.id
+                .split(/(?=[A-Z])|_/)
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+            }
+          });
+        }
+        
         return mapping;
       })();
       
       const exportColumnWidths = columnWidths ?
-        visibleColumns.map((_, index) => columnWidths[index] || { wch: 15 }) :
-        visibleColumns.map(() => ({ wch: 15 }));
+        exportHeaders.map((_, index) => columnWidths[index] || { wch: 15 }) :
+        exportHeaders.map(() => ({ wch: 15 }));
       
       // Update toast for processing
       toast.loading("Processing data...", {
