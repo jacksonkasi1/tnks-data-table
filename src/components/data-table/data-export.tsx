@@ -71,24 +71,37 @@ export function DataTableExport<TData extends ExportableData>({
         if (sorting.length > 0) {
           const { id: sortField, desc: isDescending } = sorting[0];
           
+          // Validate that sortField exists in data before sorting
+          const sampleItem = sortedItems[0];
+          if (sampleItem && !(sortField in sampleItem)) {
+            console.warn(`Sort field "${sortField}" not found in data. Skipping sort.`);
+            return sortedItems;
+          }
+          
           sortedItems.sort((a, b) => {
-            const valueA = a[sortField as keyof TData];
-            const valueB = b[sortField as keyof TData];
-            
-            if (valueA === valueB) return 0;
-            
-            if (valueA === null || valueA === undefined) return isDescending ? 1 : -1;
-            if (valueB === null || valueB === undefined) return isDescending ? -1 : 1;
-            
-            if (typeof valueA === 'string' && typeof valueB === 'string') {
+            try {
+              const valueA = a[sortField as keyof TData];
+              const valueB = b[sortField as keyof TData];
+              
+              if (valueA === valueB) return 0;
+              
+              if (valueA === null || valueA === undefined) return isDescending ? 1 : -1;
+              if (valueB === null || valueB === undefined) return isDescending ? -1 : 1;
+              
+              if (typeof valueA === 'string' && typeof valueB === 'string') {
               return isDescending 
                 ? valueB.localeCompare(valueA) 
                 : valueA.localeCompare(valueB);
             }
             
-            return isDescending 
-              ? (valueB > valueA ? 1 : -1) 
-              : (valueA > valueB ? 1 : -1);
+              // For numeric and other comparable types
+              return isDescending 
+                ? (valueB > valueA ? 1 : -1) 
+                : (valueA > valueB ? 1 : -1);
+            } catch (sortError) {
+              console.error('Error during sorting:', sortError);
+              return 0; // Maintain original order on error
+            }
           });
         }
         

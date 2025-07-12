@@ -5,6 +5,7 @@ import { fetchUsers } from "@/api/user/fetch-users";
 
 // ** Import Utils
 import { preprocessSearch } from "@/components/data-table/utils";
+import { CaseFormatConfig, DEFAULT_CASE_CONFIG } from "@/components/data-table/utils/case-utils";
 
 /**
  * Hook to fetch users with the current filters and pagination
@@ -15,7 +16,8 @@ export function useUsersData(
   search: string,
   dateRange: { from_date: string; to_date: string },
   sortBy: string,
-  sortOrder: string
+  sortOrder: string,
+  caseConfig: CaseFormatConfig = DEFAULT_CASE_CONFIG
 ) {
   return useQuery({
     queryKey: [
@@ -26,6 +28,7 @@ export function useUsersData(
       dateRange,
       sortBy,
       sortOrder,
+      caseConfig,
     ],
     queryFn: () =>
       fetchUsers({
@@ -36,6 +39,7 @@ export function useUsersData(
         to_date: dateRange.to_date,
         sort_by: sortBy,
         sort_order: sortOrder,
+        caseConfig,
       }),
     placeholderData: keepPreviousData, // Keep previous data when fetching new data. If skeleton animation is needed when fetching data, comment this out.
   });

@@ -2,17 +2,30 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState, useEffect, useRef, useMemo } from "react";
 import { isDeepEqual } from "./deep-utils";
 
-// Flag to track if we're currently in a batch update
-let isInBatchUpdate = false;
+// Batch update state management with instance tracking to prevent race conditions
+interface BatchUpdateState {
+  isInBatchUpdate: boolean;
+  batchId: number;
+  pendingUpdates: Map<string, PendingUpdateEntry>;
+}
 
-// Used to prevent multiple URL state hooks from trampling over each other
 interface PendingUpdateEntry<T = unknown> {
   value: T;
   defaultValue: T;
   serialize: (value: T) => string;
   areEqual: (a: T, b: T) => boolean;
 }
-const pendingUpdates = new Map<string, PendingUpdateEntry>();
+
+// Global state with proper isolation
+const batchUpdateState: BatchUpdateState = {
+  isInBatchUpdate: false,
+  batchId: 0,
+  pendingUpdates: new Map<string, PendingUpdateEntry>(),
+};
+
+// Timeout to prevent stuck batch updates
+let batchTimeoutId: NodeJS.Timeout | null = null;
+const BATCH_TIMEOUT = 100; // 100ms timeout for batch updates
 
 // Track the last URL update to ensure it's properly applied
 const lastUrlUpdate = {
@@ -99,9 +112,9 @@ export function useUrlState<T>(
   // Get the initial value from URL or use default
   const getValueFromUrl = useCallback(() => {
     // Check if we have a pending update for this key that hasn't been applied yet
-    if (pendingUpdates.has(key)) {
+    if (batchUpdateState.pendingUpdates.has(key)) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return pendingUpdates.get(key)?.value as T;
+      return batchUpdateState.pendingUpdates.get(key)?.value as T;
     }
 
     const paramValue = searchParams.get(key);
@@ -175,11 +188,11 @@ export function useUrlState<T>(
       lastSetValue.current = newValue;
       setValue(newValue);
     } else if (
-      pendingUpdates.has(key) &&
-      areEqual(pendingUpdates.get(key)?.value as unknown as T, newValue)
+      batchUpdateState.pendingUpdates.has(key) &&
+      areEqual(batchUpdateState.pendingUpdates.get(key)?.value as unknown as T, newValue)
     ) {
       // If our pending update has been applied, we can remove it from the map
-      pendingUpdates.delete(key);
+      batchUpdateState.pendingUpdates.delete(key);
     }
   }, [searchParams, getValueFromUrl, key, areEqual]); // No dependency on value
 
@@ -222,7 +235,7 @@ export function useUrlState<T>(
       lastSetValue.current = resolvedValue;
 
       // Store the value, defaultValue, serialize, and areEqual in the pending updates map
-      pendingUpdates.set(key, {
+      batchUpdateState.pendingUpdates.set(key, {
         value: resolvedValue,
         defaultValue,
         serialize: serialize as (value: unknown) => string,
@@ -241,26 +254,37 @@ export function useUrlState<T>(
         // We need to ensure this "page" entry has appropriate functions.
         // For now, assume standard defaults for "page" if it's not already managed by its own useUrlState.
         // A more robust solution might involve a shared registry or context for URL state configurations.
-        const pageEntry: PendingUpdateEntry<number> = pendingUpdates.get("page") as PendingUpdateEntry<number> || {
+        const pageEntry: PendingUpdateEntry<number> = batchUpdateState.pendingUpdates.get("page") as PendingUpdateEntry<number> || {
           value: 1,
           defaultValue: 1, // Assuming default page is 1
           serialize: (v: number) => String(v),
           areEqual: (a: number, b: number) => a === b,
         };
-        pendingUpdates.set("page", { ...pageEntry, value: 1 } as PendingUpdateEntry<unknown>);
+        batchUpdateState.pendingUpdates.set("page", { ...pageEntry, value: 1 } as PendingUpdateEntry<unknown>);
       }
 
       // If we're in a batch update, delay URL change
-      if (isInBatchUpdate) {
+      if (batchUpdateState.isInBatchUpdate) {
         return Promise.resolve(new URLSearchParams(searchParams.toString()));
       }
 
       // Start a batch update to collect multiple URL changes in the current event loop
-      isInBatchUpdate = true;
+      batchUpdateState.isInBatchUpdate = true;
+      batchUpdateState.batchId++;
+      const currentBatchId = batchUpdateState.batchId;
+
+      // Clear any existing timeout
+      if (batchTimeoutId) {
+        clearTimeout(batchTimeoutId);
+      }
 
       // Use microtask to batch all URL changes in the current event loop
       return new Promise<URLSearchParams>((resolve) => {
-        queueMicrotask(() => {
+        const processBatch = () => {
+          // Check if this batch is still valid (not superseded by a newer batch)
+          if (currentBatchId !== batchUpdateState.batchId) {
+            return;
+          }
           // Start with the current search params as a base
           const params = new URLSearchParams(searchParams.toString());
           let pageSizeChangedInBatch = false;
@@ -274,13 +298,13 @@ export function useUrlState<T>(
           const defaultSortOrder = "desc"; // Match the default from the component
           
           // First pass: identify which sort parameters are being updated
-          for (const [updateKey, _] of pendingUpdates.entries()) {
+          for (const [updateKey, _] of batchUpdateState.pendingUpdates.entries()) {
             if (updateKey === "sortBy") sortByInBatch = true;
             if (updateKey === "sortOrder") sortOrderInBatch = true;
           }
           
           // Iterate over all pending updates and apply them to the params
-          for (const [updateKey, entry] of pendingUpdates.entries()) {
+          for (const [updateKey, entry] of batchUpdateState.pendingUpdates.entries()) {
             const {
               value: updateValue,
               defaultValue: entryDefaultValue,
@@ -337,14 +361,26 @@ export function useUrlState<T>(
           }
           
           // Clear all pending updates as they've been processed
-          pendingUpdates.clear();
+          batchUpdateState.pendingUpdates.clear();
 
           // End the batch update
-          isInBatchUpdate = false;
+          batchUpdateState.isInBatchUpdate = false;
+
+          // Clear the timeout since we're processing now
+          if (batchTimeoutId) {
+            clearTimeout(batchTimeoutId);
+            batchTimeoutId = null;
+          }
 
           // Update the URL immediately and resolve
           updateUrlNow(params).then(resolve);
-        });
+        };
+
+        // Process batch in microtask
+        queueMicrotask(processBatch);
+
+        // Also set a timeout as fallback to prevent stuck batches
+        batchTimeoutId = setTimeout(processBatch, BATCH_TIMEOUT);
       });
     },
     [

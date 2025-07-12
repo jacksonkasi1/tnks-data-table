@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { CaseFormatConfig, DEFAULT_CASE_CONFIG } from "@/components/data-table/utils/case-utils";
 
 /**
  * Default export configuration for the users data table
@@ -46,10 +47,26 @@ export function useExportConfig() {
     ];
   }, []);
 
+  // Case formatting configuration for the table
+  const caseConfig: CaseFormatConfig = useMemo(() => ({
+    urlFormat: 'camelCase', // URL parameters use camelCase (sortBy, pageSize)
+    apiFormat: 'snake_case', // API parameters use snake_case (sort_by, page_size)
+    // Custom mapper example (commented out):
+    // keyMapper: (key: string) => {
+    //   const customMappings: Record<string, string> = {
+    //     'sortBy': 'orderBy',
+    //     'sortOrder': 'direction',
+    //     'pageSize': 'perPage',
+    //   };
+    //   return customMappings[key] || key;
+    // }
+  }), []);
+
   return {
     columnMapping,
     columnWidths,
     headers,
-    entityName: "users"
+    entityName: "users",
+    caseConfig
   };
 } 
