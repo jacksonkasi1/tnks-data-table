@@ -1374,6 +1374,41 @@ The system includes comprehensive formatting utilities:
 
 For complete documentation and examples, see [Export Customization Guide](./docs/EXPORT_CUSTOMIZATION.md).
 
+#### Controlling Export Column Behavior
+
+The `allowExportNewColumns` configuration option gives you fine-grained control over which columns are included in exports:
+
+**When `allowExportNewColumns: true` (default):**
+- ✅ Exports visible table columns
+- ❌ Excludes hidden table columns (always)
+- ✅ Includes new columns created by transform function
+
+**When `allowExportNewColumns: false`:**
+- ✅ Exports visible table columns only
+- ❌ Excludes hidden table columns (always)
+- ❌ Excludes new columns from transform function
+
+```typescript
+// Example: Only export what user can see in the table
+config={{
+  allowExportNewColumns: false, // Strict mode - visible columns only
+  enableColumnVisibility: true, // Allow users to hide/show columns
+}}
+
+// Example: Include calculated columns in export (default)
+config={{
+  allowExportNewColumns: true, // Include transform function columns
+  enableColumnVisibility: true,
+}}
+```
+
+**Use Cases:**
+
+- **Strict Mode (`false`)**: When you want exports to match exactly what users see in the table
+- **Enhanced Mode (`true`)**: When you want to provide additional calculated data in exports that doesn't need to be displayed in the table UI
+
+**Note:** Hidden columns are always excluded from exports regardless of this setting. This option only controls whether new columns from the transform function are included.
+
 ---
 
 ## Server Implementation
@@ -2339,6 +2374,7 @@ const firstItem = data?.items?.[0]?.title ?? "No items";
 | `enableUrlState`           | `boolean`                   | `true`      | Save table state in URL                  |
 | `columnResizingTableId`    | `string`                    | -           | ID for column resizing persistence       |
 | `searchPlaceholder`        | `string`                    | -           | Custom placeholder text for search input |
+| `allowExportNewColumns`    | `boolean`                   | `true`      | Allow exporting new columns from transform function |
 | `size`                     | `'sm' \| 'default' \| 'lg'` | `'default'` | Size for buttons and inputs in the table |
 
 The `size` prop affects the following components:

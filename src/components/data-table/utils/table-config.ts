@@ -50,6 +50,12 @@ export interface TableConfig {
   // Custom placeholder text for search input
   // If not provided, defaults to "Search {entityName}..."
   searchPlaceholder?: string;
+  
+  // Allow exporting new columns created by transform function
+  // When true (default): Export includes visible columns + new columns from transform function
+  // When false: Export only includes visible columns (hidden columns always excluded)
+  // Note: Hidden columns are ALWAYS excluded regardless of this setting
+  allowExportNewColumns: boolean;
 }
 
 // Default configuration
@@ -69,6 +75,7 @@ const defaultConfig: TableConfig = {
   size: 'default',                // Default size for buttons and inputs
   columnResizingTableId: undefined, // No table ID by default
   searchPlaceholder: undefined,   // No custom search placeholder by default
+  allowExportNewColumns: true,    // Allow new columns from transform function by default
 };
 
 /**

@@ -53,7 +53,6 @@ export function DataTableViewOptions<TData>({
   // Order columns based on the current table column order
   const columnOrder = table.getState().columnOrder;
   const orderedColumns = useMemo(() => {
-
     if (!columnOrder.length) {
       return columns;
     }
@@ -93,6 +92,17 @@ export function DataTableViewOptions<TData>({
       console.error("Error saving column order:", error);
     }
   }, []);
+
+  // Handle column visibility toggle
+  const handleColumnVisibilityToggle = useCallback((columnId: string) => {
+    const currentVisibility = table.getState().columnVisibility;
+    const isCurrentlyVisible = currentVisibility[columnId] !== false;
+    
+    table.setColumnVisibility({
+      ...currentVisibility,
+      [columnId]: !isCurrentlyVisible,
+    });
+  }, [table]);
 
   // Handle drag start
   const handleDragStart = useCallback((e: React.DragEvent, columnId: string) => {
@@ -183,7 +193,7 @@ export function DataTableViewOptions<TData>({
               {orderedColumns.map((column) => (
                 <CommandItem
                   key={column.id}
-                  onSelect={() => column.toggleVisibility(!column.getIsVisible())}
+                  onSelect={() => handleColumnVisibilityToggle(column.id)}
                   draggable
                   onDragStart={(e) => handleDragStart(e, column.id)}
                   onDragOver={handleDragOver}

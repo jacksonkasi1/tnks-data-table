@@ -10,6 +10,7 @@ import {
 import { DownloadIcon, Loader2 } from "lucide-react";
 import { Table } from "@tanstack/react-table";
 import { exportData, exportToCSV, exportToExcel, ExportableData, DataTransformFunction } from "./utils/export-utils";
+import { TableConfig } from "./utils/table-config";
 import { JSX, useState } from "react";
 import { toast } from "sonner";
 
@@ -25,6 +26,7 @@ interface DataTableExportProps<TData extends ExportableData> {
   headers?: string[];
   transformFunction?: DataTransformFunction<TData>;
   size?: 'sm' | 'default' | 'lg';
+  config?: TableConfig;
 }
 
 export function DataTableExport<TData extends ExportableData>({
@@ -38,7 +40,8 @@ export function DataTableExport<TData extends ExportableData>({
   columnWidths,
   headers,
   transformFunction,
-  size = 'default'
+  size = 'default',
+  config
 }: DataTableExportProps<TData>): JSX.Element {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -151,10 +154,31 @@ export function DataTableExport<TData extends ExportableData>({
           })
         : visibleColumns;
 
-      // Generate export headers - use provided headers if available, otherwise fall back to visible columns
-      const exportHeaders = headers && headers.length > 0 
-        ? headers 
-        : orderedVisibleColumns.map(column => column.id);
+      // Generate export headers - always start with visible columns only
+      const visibleColumnIds = orderedVisibleColumns.map(column => column.id);
+      // Get all table column IDs (visible + hidden) to identify what's a table column vs transform column
+      const allTableColumnIds = table.getAllColumns()
+        .filter(column => column.id !== 'actions' && column.id !== 'select')
+        .map(column => column.id);
+      
+      let exportHeaders: string[];
+      
+      if (config?.allowExportNewColumns === false) {
+        // Only export visible columns - no new columns from transform
+        exportHeaders = headers && headers.length > 0 
+          ? headers.filter(header => visibleColumnIds.includes(header))
+          : visibleColumnIds;
+      } else {
+        // Allow new columns from transform function, but still filter existing columns by visibility
+        if (headers && headers.length > 0) {
+          // Split headers into existing table columns (must be visible) and new transform columns (allowed)
+          const existingHeaders = headers.filter(header => allTableColumnIds.includes(header) && visibleColumnIds.includes(header));
+          const newHeaders = headers.filter(header => !allTableColumnIds.includes(header));
+          exportHeaders = [...existingHeaders, ...newHeaders];
+        } else {
+          exportHeaders = visibleColumnIds;
+        }
+      }
 
       // Auto-generate column mapping from table headers if not provided
       const exportColumnMapping = columnMapping || (() => {
@@ -232,9 +256,31 @@ export function DataTableExport<TData extends ExportableData>({
         .filter(column => column.getIsVisible())
         .filter(column => column.id !== 'actions' && column.id !== 'select');
       
-      const exportHeaders = headers && headers.length > 0 
-        ? headers 
-        : visibleColumns.map(column => column.id);
+      // Generate export headers - always start with visible columns only
+      const visibleColumnIds = visibleColumns.map(column => column.id);
+      // Get all table column IDs (visible + hidden) to identify what's a table column vs transform column
+      const allTableColumnIds = table.getAllColumns()
+        .filter(column => column.id !== 'actions' && column.id !== 'select')
+        .map(column => column.id);
+      
+      let exportHeaders: string[];
+      
+      if (config?.allowExportNewColumns === false) {
+        // Only export visible columns - no new columns from transform
+        exportHeaders = headers && headers.length > 0 
+          ? headers.filter(header => visibleColumnIds.includes(header))
+          : visibleColumnIds;
+      } else {
+        // Allow new columns from transform function, but still filter existing columns by visibility
+        if (headers && headers.length > 0) {
+          // Split headers into existing table columns (must be visible) and new transform columns (allowed)
+          const existingHeaders = headers.filter(header => allTableColumnIds.includes(header) && visibleColumnIds.includes(header));
+          const newHeaders = headers.filter(header => !allTableColumnIds.includes(header));
+          exportHeaders = [...existingHeaders, ...newHeaders];
+        } else {
+          exportHeaders = visibleColumnIds;
+        }
+      }
       const exportColumnMapping = columnMapping || (() => {
         const mapping: Record<string, string> = {};
         
