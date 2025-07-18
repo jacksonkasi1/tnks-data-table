@@ -406,6 +406,7 @@ export function DataTableToolbar<TData extends ExportableData>({
             headers={headers}
             transformFunction={transformFunction}
             size={config.size}
+            config={config}
           />
         )}
 
