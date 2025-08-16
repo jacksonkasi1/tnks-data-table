@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "push": "drizzle-kit push",
     "generate": "drizzle-kit generate",
     "studio": "drizzle-kit studio",

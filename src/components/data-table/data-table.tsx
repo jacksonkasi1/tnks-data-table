@@ -119,6 +119,9 @@ interface DataTableProps<TData extends ExportableData, TValue> {
     totalSelectedCount: number;
     resetSelection: () => void;
   }) => React.ReactNode;
+
+  // Row click callback
+  onRowClick?: (rowData: TData, rowIndex: number) => void;
 }
 
 export function DataTable<TData extends ExportableData, TValue>({
@@ -129,7 +132,8 @@ export function DataTable<TData extends ExportableData, TValue>({
   exportConfig,
   idField = 'id' as keyof TData,
   pageSizeOptions,
-  renderToolbarContent
+  renderToolbarContent,
+  onRowClick
 }: DataTableProps<TData, TValue>) {
   // Load table configuration with any overrides
   const tableConfig = useTableConfig(config);
@@ -579,12 +583,27 @@ export function DataTable<TData extends ExportableData, TValue>({
   // Set up the table with memoized configuration
   const table = useReactTable<TData>(tableOptions);
 
+  // Row click handler with conflict prevention
+  const handleRowClick = useCallback((event: React.MouseEvent, rowData: TData, rowIndex: number) => {
+    // Prevent row click if clicking on interactive elements (buttons, links, etc.)
+    const target = event.target as HTMLElement;
+    const isInteractiveElement = target.closest('button, a, input, select, textarea, [role="button"], [role="link"]');
+    
+    if (isInteractiveElement) {
+      return;
+    }
+
+    // Call the onRowClick callback if provided
+    onRowClick?.(rowData, rowIndex);
+  }, [onRowClick]);
+
   // Create keyboard navigation handler
   const handleKeyDown = useCallback(
-    createKeyboardNavigationHandler(table, (row, rowIndex) => {
-      // Example action on keyboard activation
-    }),
-    []
+    createKeyboardNavigationHandler(table, onRowClick ? (rowData: TData, rowIndex: number) => {
+      // Handle keyboard activation (Enter/Space) for row clicks
+      onRowClick(rowData, rowIndex);
+    } : undefined),
+    [onRowClick]
   );
 
   // Add an effect to validate page number when page size changes
@@ -767,13 +786,25 @@ export function DataTable<TData extends ExportableData, TValue>({
                   data-state={row.getIsSelected() ? "selected" : undefined}
                   tabIndex={0}
                   aria-selected={row.getIsSelected()}
-                  onClick={tableConfig.enableClickRowSelect ? () => row.toggleSelected() : undefined}
+                  onClick={(event) => {
+                    // Handle click row select if enabled
+                    if (tableConfig.enableClickRowSelect) {
+                      row.toggleSelected();
+                    }
+                    // Handle custom row click callback
+                    if (onRowClick) {
+                      handleRowClick(event, row.original, rowIndex);
+                    }
+                  }}
                   onFocus={(e) => {
                     // Add a data attribute to the currently focused row
                     for (const el of document.querySelectorAll('[data-focused="true"]')) {
                       el.removeAttribute('data-focused');
                     }
                     e.currentTarget.setAttribute('data-focused', 'true');
+                  }}
+                  style={{
+                    cursor: onRowClick ? 'pointer' : undefined
                   }}
                 >
                   {row.getVisibleCells().map((cell, cellIndex) => (
