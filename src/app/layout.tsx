@@ -16,7 +16,7 @@ import "@/styles/globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "DataTable Pro",
+  title: "DataTable",
   description: "Advanced data table with powerful features",
 };
 
