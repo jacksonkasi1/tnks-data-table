@@ -59,11 +59,25 @@ jobs:
 
       - name: Update changelog
         run: |
+          # Check if CHANGELOG.md exists
+          if [ ! -f "CHANGELOG.md" ]; then
+            echo "ERROR: CHANGELOG.md file not found"
+            echo "Please ensure CHANGELOG.md exists in the repository root"
+            exit 1
+          fi
+          
           # Create backup of current changelog
           cp CHANGELOG.md CHANGELOG.md.bak
           
           # Extract changelog sections
           UNRELEASED_START=$(grep -n "## \[Unreleased\]" CHANGELOG.md | cut -d: -f1)
+          
+          # Check if Unreleased section exists
+          if [ -z "$UNRELEASED_START" ]; then
+            echo "ERROR: '## [Unreleased]' section not found in CHANGELOG.md"
+            echo "Please ensure CHANGELOG.md follows the Keep a Changelog format with an Unreleased section"
+            exit 1
+          fi
           NEXT_VERSION_START=$(tail -n +$((UNRELEASED_START + 1)) CHANGELOG.md | grep -n "## \[" | head -1 | cut -d: -f1)
           
           if [ ! -z "$NEXT_VERSION_START" ]; then
