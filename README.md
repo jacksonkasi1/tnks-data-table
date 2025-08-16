@@ -20,6 +20,7 @@
    - [Pagination](#pagination)
    - [Date Range Filtering](#date-range-filtering)
    - [Row Selection](#row-selection)
+   - [Row Click Handling](#row-click-handling)
    - [Toolbar Customization](#toolbar-customization)
    - [Export Options](#export-options)
    - [Case Format Support](#case-format-support)
@@ -70,6 +71,7 @@ The Data Table includes the following features:
 - ✅ Server-side sorting
 - ✅ Server-side filtering
 - ✅ Single & multi-row selection
+- ✅ Row click callbacks for navigation
 - ✅ Optimistic UI updates
 
 ### UI Features
@@ -657,6 +659,7 @@ export const getColumns = (
 // src/app/(section)/entity-table/index.tsx
 "use client";
 
+import { useRouter } from "next/navigation";
 import { DataTable } from "@/components/data-table/data-table";
 import { getColumns } from "./components/columns";
 import { useExportConfig } from "./utils/config";
@@ -666,6 +669,13 @@ import { ToolbarOptions } from "./components/toolbar-options";
 import { Entity } from "./schema";
 
 export default function EntityTable() {
+  const router = useRouter();
+
+  // Handle row clicks for navigation
+  const handleRowClick = (entity: Entity, rowIndex: number) => {
+    router.push(`/entities/${entity.id}`);
+  };
+
   return (
     <DataTable<Entity, any>
       getColumns={getColumns}
@@ -674,6 +684,7 @@ export default function EntityTable() {
       fetchByIdsFn={fetchEntitiesByIds}
       idField="id"
       pageSizeOptions={[10, 20, 50, 100]}
+      onRowClick={handleRowClick}
       renderToolbarContent={({
         selectedRows,
         allSelectedIds,
@@ -1051,6 +1062,227 @@ renderToolbarContent={({
     resetSelection={resetSelection}
   />
 )}
+```
+
+### Row Click Handling
+
+The data table supports custom row click callbacks that allow you to handle user interactions when they click on table rows. This feature is perfect for navigation, opening detail modals, or triggering custom actions.
+
+#### Basic Usage
+
+Add the `onRowClick` prop to your DataTable component:
+
+```typescript
+<DataTable<Entity, any>
+  getColumns={getColumns}
+  exportConfig={useExportConfig()}
+  fetchDataFn={useEntitiesData}
+  fetchByIdsFn={fetchEntitiesByIds}
+  idField="id"
+  onRowClick={(rowData, rowIndex) => {
+    console.log('Clicked row:', rowData);
+    console.log('Row index:', rowIndex);
+  }}
+  config={{
+    enableRowSelection: true,
+    enableSearch: true,
+    enableDateFilter: true,
+  }}
+/>
+```
+
+#### TypeScript Support
+
+The `onRowClick` callback is fully typed with your data type:
+
+```typescript
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+}
+
+// The callback receives typed data
+onRowClick={(user: User, rowIndex: number) => {
+  // `user` is fully typed as User interface
+  console.log(`Clicked on ${user.name} at row ${rowIndex}`);
+}}
+```
+
+#### Navigation Example
+
+Use row clicks for navigation to detail pages:
+
+```typescript
+import { useRouter } from 'next/navigation';
+
+function UsersTable() {
+  const router = useRouter();
+
+  const handleRowClick = (user: User, rowIndex: number) => {
+    // Navigate to user detail page
+    router.push(`/users/${user.id}`);
+  };
+
+  return (
+    <DataTable<User, any>
+      // ... other props
+      onRowClick={handleRowClick}
+    />
+  );
+}
+```
+
+#### Modal/Dialog Example
+
+Open modals or dialogs when rows are clicked:
+
+```typescript
+function UsersTable() {
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleRowClick = (user: User, rowIndex: number) => {
+    setSelectedUser(user);
+    setIsModalOpen(true);
+  };
+
+  return (
+    <>
+      <DataTable<User, any>
+        // ... other props
+        onRowClick={handleRowClick}
+      />
+      
+      <UserDetailModal
+        user={selectedUser}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+      />
+    </>
+  );
+}
+```
+
+#### Conflict Prevention
+
+The row click handler automatically prevents conflicts with interactive elements:
+
+- **Action buttons**: Clicks on row action buttons won't trigger row clicks
+- **Links**: Clicks on links within cells won't trigger row clicks  
+- **Form inputs**: Clicks on checkboxes, inputs, selects won't trigger row clicks
+- **Custom interactive elements**: Elements with `[role="button"]` or `[role="link"]` are automatically excluded
+
+```typescript
+// This row click will NOT trigger when clicking on:
+// - The actions dropdown button
+// - Selection checkboxes
+// - Any links in the row
+// - Any buttons in the row
+onRowClick={(rowData, rowIndex) => {
+  console.log('Safe row click - no conflicts!');
+}}
+```
+
+#### Accessibility Support
+
+Row clicks work seamlessly with keyboard navigation:
+
+- **Enter key**: Pressing Enter on a focused row triggers the `onRowClick` callback
+- **Space key**: Reserved for row selection (if enabled)
+- **Focus management**: Proper focus indicators and screen reader support
+
+```typescript
+// This callback will be triggered by both:
+// 1. Mouse clicks on the row
+// 2. Pressing Enter when the row is focused
+onRowClick={(rowData, rowIndex) => {
+  // Handle both mouse and keyboard interactions
+  handleUserAction(rowData);
+}}
+```
+
+#### Visual Feedback
+
+When `onRowClick` is provided, rows automatically receive visual feedback:
+
+- **Cursor pointer**: Rows show a pointer cursor on hover
+- **Hover effects**: Built-in hover states indicate clickable rows
+- **Focus states**: Keyboard focus is clearly visible
+
+#### Best Practices
+
+1. **Keep callbacks fast**: Row click handlers should be lightweight to maintain responsiveness
+2. **Use with row selection**: Row clicks work alongside row selection without conflicts
+3. **Provide visual cues**: The automatic pointer cursor helps users understand rows are clickable
+4. **Consider mobile**: Row clicks work well on touch devices
+5. **Accessibility first**: Always test with keyboard navigation
+
+#### Complete Example
+
+```typescript
+// src/app/(section)/users/users-table/index.tsx
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { DataTable } from "@/components/data-table/data-table";
+import { User } from "./schema";
+import { UserDetailModal } from "./components/user-detail-modal";
+
+export default function UsersTable() {
+  const router = useRouter();
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Handle row clicks with conditional logic
+  const handleRowClick = (user: User, rowIndex: number) => {
+    // Option 1: Navigate to detail page
+    if (user.role === 'admin') {
+      router.push(`/admin/users/${user.id}`);
+      return;
+    }
+
+    // Option 2: Open modal for regular users
+    setSelectedUser(user);
+    setIsModalOpen(true);
+  };
+
+  return (
+    <>
+      <DataTable<User, any>
+        getColumns={getColumns}
+        exportConfig={useExportConfig()}
+        fetchDataFn={useUsersData}
+        fetchByIdsFn={fetchUsersByIds}
+        idField="id"
+        onRowClick={handleRowClick}
+        renderToolbarContent={({ selectedRows, allSelectedIds, totalSelectedCount, resetSelection }) => (
+          <ToolbarOptions
+            selectedUsers={selectedRows}
+            allSelectedIds={allSelectedIds}
+            totalSelectedCount={totalSelectedCount}
+            resetSelection={resetSelection}
+          />
+        )}
+        config={{
+          enableRowSelection: true,
+          enableSearch: true,
+          enableDateFilter: true,
+          enableColumnVisibility: true,
+          enableUrlState: true,
+        }}
+      />
+
+      <UserDetailModal
+        user={selectedUser}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+      />
+    </>
+  );
+}
 ```
 
 ### Toolbar Customization
@@ -2357,6 +2589,7 @@ const firstItem = data?.items?.[0]?.title ?? "No items";
 | `pageSizeOptions`      | `number[]`                                                                                                                         | No       | `[10, 20, 30, 50, 100]` | Available page size options                  |
 | `renderToolbarContent` | `(options: ToolbarOptions<T>) => React.ReactNode`                                                                                  | No       | -                       | Function to render custom toolbar content    |
 | `exportConfig`         | `ExportConfig`                                                                                                                     | No       | -                       | Configuration for export functionality       |
+| `onRowClick`           | `(rowData: T, rowIndex: number) => void`                                                                                          | No       | -                       | Callback function when a row is clicked      |
 | `config`               | `DataTableConfig`                                                                                                                  | No       | -                       | Table configuration options                  |
 | `className`            | `string`                                                                                                                           | No       | -                       | Additional CSS class for the table container |
 | `tableClassName`       | `string`                                                                                                                           | No       | -                       | Additional CSS class for the table element   |
@@ -2435,6 +2668,7 @@ export default function UsersPage() {
 // src/app/(dashboard)/users/users-table/index.tsx
 "use client";
 
+import { useRouter } from "next/navigation";
 import { DataTable } from "@/components/data-table/data-table";
 import { getColumns } from "./components/columns";
 import { useExportConfig } from "./utils/config";
@@ -2444,6 +2678,13 @@ import { ToolbarOptions } from "./components/toolbar-options";
 import { User } from "./schema";
 
 export default function UsersTable() {
+  const router = useRouter();
+
+  // Handle row clicks to navigate to user detail page
+  const handleRowClick = (user: User, rowIndex: number) => {
+    router.push(`/users/${user.id}`);
+  };
+
   return (
     <DataTable<User, any>
       getColumns={getColumns}
@@ -2452,6 +2693,7 @@ export default function UsersTable() {
       fetchByIdsFn={fetchUsersByIds}
       idField="id"
       pageSizeOptions={[10, 20, 50, 100]}
+      onRowClick={handleRowClick}
       renderToolbarContent={({
         selectedRows,
         allSelectedIds,
