@@ -8,13 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Comprehensive onRowClick callback documentation
-- TypeScript validation npm script
-- onRowClick callback support for data table rows
-- Popover information for API response formats in user tables
 
 ### Changed
-- Updated titles and improved header consistency
 
 ### Deprecated
 
