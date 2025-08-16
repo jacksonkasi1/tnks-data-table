@@ -33,6 +33,13 @@ jobs:
       - name: Extract PR number and details
         id: pr-info
         run: |
+          # Check if GitHub CLI is installed
+          if ! command -v gh &> /dev/null; then
+            echo "ERROR: GitHub CLI (gh) is not installed or not available in PATH"
+            echo "Please ensure GitHub CLI is installed in the runner environment"
+            exit 1
+          fi
+          
           # Extract PR number from merge commit message
           PR_NUM=$(echo "${{ steps.merge-info.outputs.merge_msg }}" | grep -oP '#\K\d+' || echo "")
           
