@@ -14,7 +14,7 @@ export function Header() {
         <div className="flex items-center gap-2 md:gap-4">
           <Link href="/" className="flex items-center space-x-2">
             <span className="hidden font-bold sm:inline-block">
-              DataTable Pro
+              DataTable
             </span>
           </Link>
           <nav className="flex items-center gap-4 sm:gap-6">
@@ -35,22 +35,6 @@ export function Header() {
             >
               User CamelCase 
               <span className="ml-1 text-xs opacity-60">API</span>
-            </Link>
-            <Link
-              href="/dashboard"
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                pathname === "/dashboard" ? "text-primary font-semibold" : ""
-              }`}
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/settings"
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                pathname === "/settings" ? "text-primary font-semibold" : ""
-              }`}
-            >
-              Settings
             </Link>
           </nav>
         </div>
