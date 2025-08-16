@@ -1,12 +1,14 @@
 name: Update Changelog on Merge
 
 on:
-  push:
+  pull_request:
+    types: [closed]
     branches:
       - main
 
 jobs:
   update-changelog:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     
     steps:
