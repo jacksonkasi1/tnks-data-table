@@ -1,7 +1,7 @@
 # Advanced Data Table Component Documentation
 
-**Version:** 1.0.0  
-**Updated:** 2025-04-14  
+**Version:** 0.2.0  
+**Updated:** 2025-08-16  
 **Author:** Jackson Kasi
 
 ## Table of Contents

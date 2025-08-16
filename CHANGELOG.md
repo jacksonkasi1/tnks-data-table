@@ -19,6 +19,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.2.0] - 2025-08-16
+
+### Added
+- Comprehensive onRowClick callback documentation (3f03cf8)
+- TypeScript validation npm script (8019457)
+- onRowClick callback support for data table rows (90f6c8d)
+- Popover information for API response formats in user tables (f1174ea)
+
+### Changed
+- Updated titles and improved header consistency (a7b6604)
+
 ## [0.1.0] - 2025-08-16
 
 ### Added
