@@ -1,0 +1,159 @@
+name: Update Changelog on Merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  update-changelog:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get latest merge commit
+        id: merge-info
+        run: |
+          # Get the latest merge commit message
+          MERGE_MSG=$(git log --merges -1 --pretty=format:'%s')
+          MERGE_HASH=$(git log --merges -1 --pretty=format:'%h')
+          MERGE_DATE=$(git log --merges -1 --pretty=format:'%ad' --date=short)
+          
+          echo "merge_msg=$MERGE_MSG" >> $GITHUB_OUTPUT
+          echo "merge_hash=$MERGE_HASH" >> $GITHUB_OUTPUT
+          echo "merge_date=$MERGE_DATE" >> $GITHUB_OUTPUT
+
+      - name: Extract PR number and details
+        id: pr-info
+        run: |
+          # Check if GitHub CLI is installed
+          if ! command -v gh &> /dev/null; then
+            echo "ERROR: GitHub CLI (gh) is not installed or not available in PATH"
+            echo "Please ensure GitHub CLI is installed in the runner environment"
+            exit 1
+          fi
+          
+          # Extract PR number from merge commit message
+          PR_NUM=$(echo "${{ steps.merge-info.outputs.merge_msg }}" | grep -oP '#\K\d+' || echo "")
+          
+          if [ ! -z "$PR_NUM" ]; then
+            # Get PR details using GitHub CLI
+            PR_TITLE=$(gh pr view $PR_NUM --json title --jq .title || echo "")
+            PR_BODY=$(gh pr view $PR_NUM --json body --jq .body || echo "")
+            
+            echo "pr_number=$PR_NUM" >> $GITHUB_OUTPUT
+            echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
+            echo "pr_body<<EOF" >> $GITHUB_OUTPUT
+            echo "$PR_BODY" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update changelog
+        run: |
+          # Check if CHANGELOG.md exists
+          if [ ! -f "CHANGELOG.md" ]; then
+            echo "ERROR: CHANGELOG.md file not found"
+            echo "Please ensure CHANGELOG.md exists in the repository root"
+            exit 1
+          fi
+          
+          # Create backup of current changelog
+          cp CHANGELOG.md CHANGELOG.md.bak
+          
+          # Extract changelog sections
+          UNRELEASED_START=$(grep -n "## \[Unreleased\]" CHANGELOG.md | cut -d: -f1)
+          
+          # Check if Unreleased section exists
+          if [ -z "$UNRELEASED_START" ]; then
+            echo "ERROR: '## [Unreleased]' section not found in CHANGELOG.md"
+            echo "Please ensure CHANGELOG.md follows the Keep a Changelog format with an Unreleased section"
+            exit 1
+          fi
+          NEXT_VERSION_START=$(tail -n +$((UNRELEASED_START + 1)) CHANGELOG.md | grep -n "## \[" | head -1 | cut -d: -f1)
+          
+          if [ ! -z "$NEXT_VERSION_START" ]; then
+            NEXT_VERSION_LINE=$((UNRELEASED_START + NEXT_VERSION_START))
+          else
+            NEXT_VERSION_LINE=$(wc -l < CHANGELOG.md)
+            NEXT_VERSION_LINE=$((NEXT_VERSION_LINE + 1))
+          fi
+          
+          # Generate changelog entry based on commit messages
+          TEMP_FILE=$(mktemp)
+          
+          # Get commits from the merge
+          COMMITS=$(git log --oneline ${{ steps.merge-info.outputs.merge_hash }}^..${{ steps.merge-info.outputs.merge_hash }} --no-merges)
+          
+          # Categorize changes
+          ADDED=""
+          CHANGED=""
+          FIXED=""
+          
+          while IFS= read -r commit; do
+            if [[ $commit == *"feat:"* ]] || [[ $commit == *"add:"* ]]; then
+              CHANGE=$(echo "$commit" | sed 's/^[a-f0-9]* //' | sed 's/^feat: //' | sed 's/^add: //')
+              ADDED="$ADDED\n- $CHANGE"
+            elif [[ $commit == *"fix:"* ]]; then
+              CHANGE=$(echo "$commit" | sed 's/^[a-f0-9]* //' | sed 's/^fix: //')
+              FIXED="$FIXED\n- $CHANGE"
+            elif [[ $commit == *"refactor:"* ]] || [[ $commit == *"update:"* ]]; then
+              CHANGE=$(echo "$commit" | sed 's/^[a-f0-9]* //' | sed 's/^refactor: //' | sed 's/^update: //')
+              CHANGED="$CHANGED\n- $CHANGE"
+            else
+              # Default to changed for other commits
+              CHANGE=$(echo "$commit" | sed 's/^[a-f0-9]* //')
+              CHANGED="$CHANGED\n- $CHANGE"
+            fi
+          done <<< "$COMMITS"
+          
+          # Build the new unreleased section
+          {
+            head -n $UNRELEASED_START CHANGELOG.md
+            echo ""
+            if [ ! -z "$ADDED" ]; then
+              echo "### Added"
+              echo -e "$ADDED"
+              echo ""
+            fi
+            if [ ! -z "$CHANGED" ]; then
+              echo "### Changed"
+              echo -e "$CHANGED"
+              echo ""
+            fi
+            if [ ! -z "$FIXED" ]; then
+              echo "### Fixed"
+              echo -e "$FIXED"
+              echo ""
+            fi
+            echo "### Deprecated"
+            echo ""
+            echo "### Removed"
+            echo ""
+            echo "### Security"
+            echo ""
+            tail -n +$NEXT_VERSION_LINE CHANGELOG.md
+          } > $TEMP_FILE
+          
+          mv $TEMP_FILE CHANGELOG.md
+
+      - name: Commit changelog updates
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          if git diff --quiet CHANGELOG.md; then
+            echo "No changes to commit"
+          else
+            git add CHANGELOG.md
+            git commit -m "chore: update changelog for merge ${{ steps.merge-info.outputs.merge_hash }}"
+            git push
+          fi
