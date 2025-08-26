@@ -1,7 +1,9 @@
 # Advanced Data Table Component Documentation
 
-**Version:** 1.0.0  
-**Updated:** 2025-04-14  
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jacksonkasi1/tnks-data-table)
+
+**Version:** 0.2.0  
+**Updated:** 2025-08-16  
 **Author:** Jackson Kasi
 
 ## Table of Contents
