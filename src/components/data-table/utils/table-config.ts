@@ -56,6 +56,24 @@ export interface TableConfig {
   // When false: Export only includes visible columns (hidden columns always excluded)
   // Note: Hidden columns are ALWAYS excluded regardless of this setting
   allowExportNewColumns: boolean;
+  
+  // Enable/disable row expanding (sub-rows)
+  enableExpanding: boolean;
+  
+  // Include expanded rows in pagination count
+  // When true: Expanded rows count toward page size
+  // When false: Expanded rows always show with their parent
+  paginateExpandedRows: boolean;
+  
+  // Filter from leaf rows up (includes parent if any child matches)
+  // When true: If any sub-row matches filter, show parent + all children
+  // When false: Filter each row independently
+  filterFromLeafRows: boolean;
+  
+  // Sub-row indentation in pixels
+  // Controls how much sub-rows are indented from their parent
+  // Default: 0 (no indentation)
+  subRowIndentPx: number;
 }
 
 // Default configuration
@@ -76,6 +94,10 @@ const defaultConfig: TableConfig = {
   columnResizingTableId: undefined, // No table ID by default
   searchPlaceholder: undefined,   // No custom search placeholder by default
   allowExportNewColumns: true,    // Allow new columns from transform function by default
+  enableExpanding: false,         // Row expanding disabled by default
+  paginateExpandedRows: false,    // Don't paginate expanded rows by default
+  filterFromLeafRows: false,      // Filter each row independently by default
+  subRowIndentPx: 0,              // No sub-row indentation by default
 };
 
 /**

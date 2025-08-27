@@ -27,6 +27,7 @@ interface DataTableExportProps<TData extends ExportableData> {
   transformFunction?: DataTransformFunction<TData>;
   size?: 'sm' | 'default' | 'lg';
   config?: TableConfig;
+  subRowsConfig?: import('./utils/export-utils').SubRowsExportConfig;
 }
 
 export function DataTableExport<TData extends ExportableData>({
@@ -41,7 +42,8 @@ export function DataTableExport<TData extends ExportableData>({
   headers,
   transformFunction,
   size = 'default',
-  config
+  config,
+  subRowsConfig
 }: DataTableExportProps<TData>): JSX.Element {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -216,7 +218,8 @@ export function DataTableExport<TData extends ExportableData>({
           headers: exportHeaders,
           columnMapping: exportColumnMapping,
           columnWidths: exportColumnWidths,
-          transformFunction
+          transformFunction,
+          subRowsConfig
         }
       );
     } catch (error) {
@@ -328,7 +331,7 @@ export function DataTableExport<TData extends ExportableData>({
       // Export based on type
       let success = false;
       if (type === "csv") {
-        success = exportToCSV(allData, filename, exportHeaders, exportColumnMapping, transformFunction);
+        success = exportToCSV(allData, filename, exportHeaders, exportColumnMapping, transformFunction, subRowsConfig);
       } else {
         success = exportToExcel(
           allData, 
@@ -336,7 +339,8 @@ export function DataTableExport<TData extends ExportableData>({
           exportColumnMapping, 
           exportColumnWidths,
           exportHeaders,
-          transformFunction
+          transformFunction,
+          subRowsConfig
         );
       }
       

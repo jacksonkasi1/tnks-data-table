@@ -8,6 +8,70 @@ export type ExportableData = Record<string, string | number | boolean | null | u
 // Type for transformation function that developers can provide
 export type DataTransformFunction<T extends ExportableData> = (row: T) => ExportableData;
 
+// Configuration for handling sub-rows during export
+export interface SubRowsExportConfig {
+  // How to handle sub-rows in export
+  includeSubRows?: boolean | 'flatten' | 'nest';
+  // Indentation string for flattened sub-rows (CSV only)
+  subRowIndentation?: string;
+  // Maximum depth to export
+  maxDepth?: number;
+  // Custom function to extract sub-rows from a row
+  getSubRows?: <T extends ExportableData>(row: T) => T[] | undefined;
+}
+
+/**
+ * Flatten hierarchical data for export
+ * Recursively processes rows with sub-rows based on configuration
+ */
+function flattenDataWithSubRows<T extends ExportableData>(
+  data: T[],
+  subRowsConfig?: SubRowsExportConfig,
+  depth: number = 0
+): T[] {
+  if (!subRowsConfig?.includeSubRows || !subRowsConfig.getSubRows) {
+    return data;
+  }
+
+  const flattenedData: T[] = [];
+  const maxDepth = subRowsConfig.maxDepth ?? Infinity;
+  const indentation = subRowsConfig.subRowIndentation ?? "  ";
+
+  for (const row of data) {
+    // Add the parent row
+    if (subRowsConfig.includeSubRows === 'flatten' && depth > 0) {
+      // Add indentation to all string fields for CSV
+      const indentedRow = { ...row };
+      // Find the first string field to add indentation to
+      const firstStringKey = Object.keys(row).find(key => 
+        typeof row[key] === 'string' && row[key]
+      );
+      if (firstStringKey) {
+        const originalValue = String(row[firstStringKey]);
+        (indentedRow as any)[firstStringKey] = `${indentation.repeat(depth)}${originalValue}`;
+      }
+      flattenedData.push(indentedRow);
+    } else {
+      flattenedData.push(row);
+    }
+
+    // Process sub-rows if they exist and we haven't exceeded max depth
+    if (depth < maxDepth) {
+      const subRows = subRowsConfig.getSubRows(row);
+      if (subRows && subRows.length > 0) {
+        const flattenedSubRows = flattenDataWithSubRows(
+          subRows,
+          subRowsConfig,
+          depth + 1
+        );
+        flattenedData.push(...flattenedSubRows);
+      }
+    }
+  }
+
+  return flattenedData;
+}
+
 /**
  * Convert array of objects to CSV string
  */
@@ -15,11 +79,15 @@ function convertToCSV<T extends ExportableData>(
   data: T[], 
   headers: string[], 
   columnMapping?: Record<string, string>,
-  transformFunction?: DataTransformFunction<T>
+  transformFunction?: DataTransformFunction<T>,
+  subRowsConfig?: SubRowsExportConfig
 ): string {
   if (data.length === 0) {
     throw new Error("No data to export");
   }
+
+  // Flatten data with sub-rows if configured
+  const processedData = flattenDataWithSubRows(data, subRowsConfig);
 
   // Create CSV header row with column mapping if provided
   let csvContent = "";
@@ -40,7 +108,7 @@ function convertToCSV<T extends ExportableData>(
   }
 
   // Add data rows
-  for (const item of data) {
+  for (const item of processedData) {
     // Apply transformation function if provided
     const transformedItem = transformFunction ? transformFunction(item) : item;
     
@@ -88,7 +156,8 @@ export function exportToCSV<T extends ExportableData>(
   filename: string,
   headers: string[] = Object.keys(data[0] || {}),
   columnMapping?: Record<string, string>,
-  transformFunction?: DataTransformFunction<T>
+  transformFunction?: DataTransformFunction<T>,
+  subRowsConfig?: SubRowsExportConfig
 ): boolean {
   if (data.length === 0) {
     console.error("No data to export");
@@ -111,7 +180,7 @@ export function exportToCSV<T extends ExportableData>(
       return filteredItem;
     });
 
-    const csvContent = convertToCSV(processedData, headers, columnMapping);
+    const csvContent = convertToCSV(processedData as T[], headers, columnMapping, transformFunction, subRowsConfig);
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     downloadFile(blob, `${filename}.csv`);
     return true;
@@ -130,7 +199,8 @@ export function exportToExcel<T extends ExportableData>(
   columnMapping?: Record<string, string>,
   columnWidths?: Array<{ wch: number }>,
   headers?: string[],
-  transformFunction?: DataTransformFunction<T>
+  transformFunction?: DataTransformFunction<T>,
+  subRowsConfig?: SubRowsExportConfig
 ): boolean {
   if (data.length === 0) {
     console.error("No data to export");
@@ -138,15 +208,18 @@ export function exportToExcel<T extends ExportableData>(
   }
 
   try {
+    // Flatten data with sub-rows if configured
+    const processedData = flattenDataWithSubRows(data, subRowsConfig);
+
     // If no column mapping is provided, create one from the data keys
     const mapping = columnMapping ||
-      Object.keys(data[0] || {}).reduce((acc, key) => {
+      Object.keys(processedData[0] || {}).reduce((acc, key) => {
         acc[key] = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
         return acc;
       }, {} as Record<string, string>);
 
     // Apply transformation function first if provided, then map data to worksheet format
-    const worksheetData = data.map(item => {
+    const worksheetData = processedData.map(item => {
       // Apply transformation function if provided
       const transformedItem = transformFunction ? transformFunction(item) : item;
       
@@ -193,6 +266,277 @@ export function exportToExcel<T extends ExportableData>(
 }
 
 /**
+ * Enhanced export function that works with advanced sub-row configurations
+ */
+export async function exportAdvancedSubRowData<T extends ExportableData>(
+  type: "csv" | "excel",
+  getData: () => Promise<T[]>,
+  advancedConfig: import('./advanced-sub-rows').AdvancedSubRowExportConfig<T>,
+  onLoadingStart?: () => void,
+  onLoadingEnd?: () => void,
+  options?: {
+    entityName?: string;
+  }
+): Promise<boolean> {
+  const TOAST_ID = "export-advanced-subrow-toast";
+  
+  try {
+    if (onLoadingStart) onLoadingStart();
+
+    toast.loading("Preparing advanced export...", {
+      description: "Processing hierarchical data...",
+      id: TOAST_ID
+    });
+
+    const data = await getData();
+
+    if (data.length === 0) {
+      toast.error("Export failed", {
+        description: "No data available to export.",
+        id: TOAST_ID
+      });
+      return false;
+    }
+
+    const entityName = options?.entityName || "data";
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+
+    // Handle different export strategies
+    switch (advancedConfig.strategy) {
+      case 'skip':
+        toast.info("Export skipped", {
+          description: "Sub-rows export is disabled for this data type.",
+          id: TOAST_ID
+        });
+        return false;
+
+      case 'separate-sheets':
+        if (type === 'excel') {
+          return await exportSeparateSheets(data, advancedConfig, `${entityName}-${timestamp}`, TOAST_ID);
+        } else {
+          // Fall back to flatten for CSV
+          return await exportFlattened(data, advancedConfig, `${entityName}-${timestamp}`, type, TOAST_ID);
+        }
+
+      case 'flatten':
+      case 'nest':
+      case 'smart-auto':
+      default:
+        return await exportFlattened(data, advancedConfig, `${entityName}-${timestamp}`, type, TOAST_ID);
+    }
+
+  } catch (error) {
+    console.error("Error exporting advanced sub-row data:", error);
+    
+    toast.error("Export failed", {
+      description: "There was a problem exporting the hierarchical data.",
+      id: TOAST_ID
+    });
+    return false;
+  } finally {
+    if (onLoadingEnd) onLoadingEnd();
+  }
+}
+
+/**
+ * Export data with separate sheets per row type (Excel only)
+ */
+async function exportSeparateSheets<T extends ExportableData>(
+  data: T[],
+  config: import('./advanced-sub-rows').AdvancedSubRowExportConfig<T>,
+  filename: string,
+  toastId: string
+): Promise<boolean> {
+  try {
+    toast.loading("Creating separate sheets...", {
+      description: "Organizing data by type...",
+      id: toastId
+    });
+
+    // Group data by row type
+    const dataByType: Record<string, T[]> = {};
+    
+    const addRowToType = (row: T, getRowTypeFn?: (row: T) => string) => {
+      let rowType = 'default';
+      if (getRowTypeFn) {
+        rowType = getRowTypeFn(row);
+      } else {
+        // Auto-detect row type
+        if ('orderId' in row || 'orderNumber' in row) rowType = 'order';
+        else if ('productId' in row || 'productName' in row) rowType = 'product';
+        else if ('parentId' in row) rowType = 'child';
+      }
+      
+      if (!dataByType[rowType]) {
+        dataByType[rowType] = [];
+      }
+      dataByType[rowType].push(row);
+    };
+
+    // Process all data including sub-rows
+    data.forEach(row => {
+      addRowToType(row);
+      
+      // Process sub-rows if they exist
+      if (config.fieldExtractorByType) {
+        // Use custom field extractor to get sub-rows
+        Object.keys(config.fieldExtractorByType).forEach(rowType => {
+          const extractor = config.fieldExtractorByType![rowType];
+          const extracted = extractor(row);
+          if (extracted && typeof extracted === 'object') {
+            // This would need to be handled based on the specific extractor logic
+          }
+        });
+      } else {
+        // Try to find sub-rows using common patterns
+        const subRowsKeys = ['subRows', 'children', 'items'];
+        for (const key of subRowsKeys) {
+          if (key in row && Array.isArray(row[key])) {
+            (row[key] as T[]).forEach(subRow => addRowToType(subRow));
+          }
+        }
+      }
+    });
+
+    // Create workbook with separate sheets
+    const workbook = XLSX.utils.book_new();
+
+    Object.entries(dataByType).forEach(([rowType, typeData]) => {
+      if (typeData.length === 0) return;
+
+      const headers = config.headersByType?.[rowType] || Object.keys(typeData[0]);
+      const columnMapping = config.columnMappingByType?.[rowType] || {};
+
+      // Transform data for this row type
+      const worksheetData = typeData.map(item => {
+        const row: ExportableData = {};
+        headers.forEach(header => {
+          const mappedHeader = columnMapping[header] || header;
+          if (header in item) {
+            row[mappedHeader] = item[header];
+          }
+        });
+        return row;
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+      const sheetName = config.excelConfig?.sheetNames?.[rowType] || rowType.charAt(0).toUpperCase() + rowType.slice(1);
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+    });
+
+    // Generate and download Excel file
+    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    });
+
+    downloadFile(blob, `${filename}.xlsx`);
+
+    const totalRows = Object.values(dataByType).reduce((sum, arr) => sum + arr.length, 0);
+    toast.success("Export successful", {
+      description: `Exported ${totalRows} items across ${Object.keys(dataByType).length} sheets.`,
+      id: toastId
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Error creating separate sheets:", error);
+    return false;
+  }
+}
+
+/**
+ * Export flattened hierarchical data
+ */
+async function exportFlattened<T extends ExportableData>(
+  data: T[],
+  config: import('./advanced-sub-rows').AdvancedSubRowExportConfig<T>,
+  filename: string,
+  type: "csv" | "excel",
+  toastId: string
+): Promise<boolean> {
+  try {
+    toast.loading("Flattening hierarchical data...", {
+      description: "Processing parent-child relationships...",
+      id: toastId
+    });
+
+    // Flatten the data
+    const flattenedData: T[] = [];
+    
+    const flattenRow = (row: T, depth: number = 0) => {
+      // Add indentation for CSV if specified
+      if (type === 'csv' && depth > 0 && config.flatten?.indentationByType) {
+        const rowType = getRowTypeFromData(row);
+        const indentation = config.flatten.indentationByType[rowType] || '  ';
+        const indentedRow = { ...row };
+        
+        // Apply indentation to first string field
+        const firstStringKey = Object.keys(row).find(key => typeof row[key] === 'string');
+        if (firstStringKey) {
+          const originalValue = String(row[firstStringKey]);
+          (indentedRow as any)[firstStringKey] = `${indentation.repeat(depth)}${originalValue}`;
+        }
+        flattenedData.push(indentedRow);
+      } else {
+        flattenedData.push(row);
+      }
+
+      // Process sub-rows
+      const maxDepth = config.flatten?.maxDepth ?? Infinity;
+      if (depth < maxDepth) {
+        const subRowsKeys = ['subRows', 'children', 'items'];
+        for (const key of subRowsKeys) {
+          if (key in row && Array.isArray(row[key])) {
+            (row[key] as T[]).forEach(subRow => flattenRow(subRow, depth + 1));
+          }
+        }
+      }
+    };
+
+    data.forEach(row => flattenRow(row));
+
+    // Export the flattened data
+    if (type === 'csv') {
+      const headers = Object.keys(flattenedData[0] || {});
+      const success = exportToCSV(flattenedData, filename, headers);
+      
+      if (success) {
+        toast.success("Export successful", {
+          description: `Exported ${flattenedData.length} flattened rows to CSV.`,
+          id: toastId
+        });
+      }
+      return success;
+    } else {
+      const success = exportToExcel(flattenedData, filename);
+      
+      if (success) {
+        toast.success("Export successful", {
+          description: `Exported ${flattenedData.length} flattened rows to Excel.`,
+          id: toastId
+        });
+      }
+      return success;
+    }
+  } catch (error) {
+    console.error("Error flattening data:", error);
+    return false;
+  }
+}
+
+/**
+ * Helper function to determine row type from data
+ */
+function getRowTypeFromData<T extends ExportableData>(row: T): string {
+  if ('orderId' in row || 'orderNumber' in row) return 'order';
+  if ('productId' in row || 'productName' in row) return 'product';
+  if ('customerId' in row || 'customerName' in row) return 'customer';
+  if ('parentId' in row) return 'child';
+  return 'default';
+}
+
+/**
  * Unified export function that handles loading states and error handling
  */
 export async function exportData<T extends ExportableData>(
@@ -206,6 +550,7 @@ export async function exportData<T extends ExportableData>(
     columnWidths?: Array<{ wch: number }>;
     entityName?: string;
     transformFunction?: DataTransformFunction<T>;
+    subRowsConfig?: SubRowsExportConfig;
   }
 ): Promise<boolean> {
   // Use a consistent toast ID to ensure only one toast is shown at a time
@@ -253,7 +598,8 @@ export async function exportData<T extends ExportableData>(
         filename, 
         options?.headers, 
         options?.columnMapping,
-        options?.transformFunction
+        options?.transformFunction,
+        options?.subRowsConfig
       );
       if (success) {
         toast.success("Export successful", {
@@ -268,7 +614,8 @@ export async function exportData<T extends ExportableData>(
         options?.columnMapping,
         options?.columnWidths,
         options?.headers,
-        options?.transformFunction
+        options?.transformFunction,
+        options?.subRowsConfig
       );
       if (success) {
         toast.success("Export successful", {

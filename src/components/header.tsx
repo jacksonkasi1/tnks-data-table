@@ -36,6 +36,24 @@ export function Header() {
               User CamelCase 
               <span className="ml-1 text-xs opacity-60">API</span>
             </Link>
+            <Link
+              href="/example/users-with-sub-rows"
+              className={`text-sm font-medium transition-colors hover:text-primary ${
+                pathname === "/example/users-with-sub-rows" ? "text-primary font-semibold" : ""
+              }`}
+            >
+              Users & Expenses
+              <span className="ml-1 text-xs opacity-60">Sub-rows</span>
+            </Link>
+            <Link
+              href="/example/ecommerce-orders"
+              className={`text-sm font-medium transition-colors hover:text-primary ${
+                pathname === "/example/ecommerce-orders" ? "text-primary font-semibold" : ""
+              }`}
+            >
+              E-commerce Orders
+              <span className="ml-1 text-xs opacity-60">Advanced</span>
+            </Link>
           </nav>
         </div>
         <div className="flex items-center gap-2">

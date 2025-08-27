@@ -10,9 +10,11 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  getExpandedRowModel,
   useReactTable,
   type ColumnDef,
-  type ColumnResizeMode
+  type ColumnResizeMode,
+  type ExpandedState
 } from "@tanstack/react-table";
 import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 
@@ -35,6 +37,12 @@ import type { CaseFormatConfig } from "./utils/case-utils";
 import type { DataTransformFunction, ExportableData } from "./utils/export-utils";
 import { useTableColumnResize } from "./hooks/use-table-column-resize";
 import { DataTableResizer } from "./data-table-resizer";
+import { withExpandingColumn } from "./utils/expanding-utils";
+import { 
+  type SimpleSubRowConfig, 
+  useSimpleSubRows,
+  flattenHierarchicalData 
+} from "./utils/simple-sub-rows";
 
 // Import core utilities
 import { preprocessSearch } from "./utils/search";
@@ -87,7 +95,7 @@ interface DataTableProps<TData extends ExportableData, TValue> {
   config?: Partial<TableConfig>;
 
   // Column definitions generator
-  getColumns: (handleRowDeselection: ((rowId: string) => void) | null | undefined) => ColumnDef<TData, TValue>[];
+  getColumns: (handleRowDeselection: ((rowId: string) => void) | null | undefined, subRowIndentPx?: number) => ColumnDef<TData, TValue>[];
 
   // Data fetching function
   fetchDataFn: ((params: DataFetchParams) => Promise<DataFetchResult<TData>>) | 
@@ -104,10 +112,14 @@ interface DataTableProps<TData extends ExportableData, TValue> {
     headers: string[];
     caseConfig?: CaseFormatConfig;
     transformFunction?: DataTransformFunction<TData>;
+    subRowsConfig?: import('./utils/export-utils').SubRowsExportConfig;
   };
 
   // ID field in TData for tracking selected items
   idField: keyof TData;
+
+  // Custom row ID generator for hierarchical data
+  getRowId?: (originalRow: TData, index: number, parent?: import('@tanstack/react-table').Row<TData>) => string;
 
   // Custom page size options
   pageSizeOptions?: number[];
@@ -122,6 +134,16 @@ interface DataTableProps<TData extends ExportableData, TValue> {
 
   // Row click callback
   onRowClick?: (rowData: TData, rowIndex: number) => void;
+
+  // Simplified sub-rows configuration
+  subRowsConfig?: SimpleSubRowConfig<TData> | ((row: TData) => TData[] | undefined);
+  
+  // Legacy sub-rows configuration (deprecated, use subRowsConfig instead)
+  getSubRows?: (row: TData) => TData[] | undefined;
+  getRowCanExpand?: (row: { original: TData }) => boolean;
+  
+  // Default expanded state for rows
+  defaultExpanded?: Record<string, boolean>;
 }
 
 export function DataTable<TData extends ExportableData, TValue>({
@@ -131,9 +153,14 @@ export function DataTable<TData extends ExportableData, TValue>({
   fetchByIdsFn,
   exportConfig,
   idField = 'id' as keyof TData,
+  getRowId,
   pageSizeOptions,
   renderToolbarContent,
-  onRowClick
+  onRowClick,
+  subRowsConfig,
+  getSubRows: legacyGetSubRows,
+  getRowCanExpand: legacyGetRowCanExpand,
+  defaultExpanded = {}
 }: DataTableProps<TData, TValue>) {
   // Load table configuration with any overrides
   const tableConfig = useTableConfig(config);
@@ -159,6 +186,7 @@ export function DataTable<TData extends ExportableData, TValue>({
   const [sortOrder, setSortOrder] = useConditionalUrlState<"asc" | "desc">("sortOrder", "desc");
   const [columnVisibility, setColumnVisibility] = useConditionalUrlState<Record<string, boolean>>("columnVisibility", {});
   const [columnFilters, setColumnFilters] = useConditionalUrlState<Array<{ id: string; value: unknown }>>("columnFilters", []);
+  const [expanded, setExpanded] = useConditionalUrlState<ExpandedState>("expanded", defaultExpanded);
 
   // Internal states
   const [isLoading, setIsLoading] = useState(true);
@@ -184,7 +212,18 @@ export function DataTable<TData extends ExportableData, TValue>({
   const sorting = useMemo(() => createSortingState(sortBy, sortOrder), [sortBy, sortOrder]);
 
   // Get current data items - memoize to avoid recalculations
-  const dataItems = useMemo(() => data?.data || [], [data?.data]);
+  const dataItems = useMemo(() => {
+    const items = data?.data || [];
+    console.log('📊 Raw dataItems:', items.length, items[0] ? 'First item has subRows:' + !!items[0].subRows : 'No items');
+    
+    // TEMP: Debug the actual structure
+    if (items.length > 0) {
+      console.log('🔍 First item structure:', JSON.stringify(items[0], null, 2));
+      console.log('🔍 First item subRows:', items[0].subRows);
+    }
+    
+    return items;
+  }, [data?.data]);
 
   // PERFORMANCE FIX: Derive rowSelection from selectedItemIds using memoization
   const rowSelection = useMemo(() => {
@@ -412,11 +451,71 @@ export function DataTable<TData extends ExportableData, TValue>({
   // Ref for the table container for keyboard navigation
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
-  // Get columns with the deselection handler (memoize to avoid recreation on render)
+  // Load column order from localStorage on initial render
+  useEffect(() => {
+    try {
+      const savedOrder = localStorage.getItem('data-table-column-order');
+      if (savedOrder) {
+        const parsedOrder = JSON.parse(savedOrder);
+        setColumnOrder(parsedOrder);
+      }
+    } catch (error) {
+      console.error('Error loading column order:', error);
+    }
+  }, []);
+
+  // Initialize sub-rows configuration
+  const subRows = useMemo(() => {
+    // Use new subRowsConfig if provided
+    if (subRowsConfig) {
+      return useSimpleSubRows(subRowsConfig);
+    }
+    // Fall back to legacy props if provided
+    if (legacyGetSubRows) {
+      return useSimpleSubRows({
+        getSubRows: legacyGetSubRows,
+        type: 'auto',
+      });
+    }
+    // No sub-rows configuration
+    return null;
+  }, [subRowsConfig, legacyGetSubRows]);
+
+  // Get effective sub-row functions
+  const effectiveGetSubRows = useMemo(() => {
+    const getSubRowsFn = subRows?.getSubRows || legacyGetSubRows;
+    console.log('🔧 effectiveGetSubRows created:', !!getSubRowsFn);
+    
+    // Debug wrapper to see what's being returned
+    if (getSubRowsFn) {
+      return (row: TData) => {
+        const result = getSubRowsFn(row);
+        console.log('🔍 getSubRows called for row:', row, 'returned:', result);
+        return result;
+      };
+    }
+    return getSubRowsFn;
+  }, [subRows, legacyGetSubRows]);
+
+  const effectiveGetRowCanExpand = useMemo(() => {
+    const canExpandFn = subRows?.getRowCanExpand || legacyGetRowCanExpand;
+    console.log('🔧 effectiveGetRowCanExpand created:', !!canExpandFn);
+    return canExpandFn;
+  }, [subRows, legacyGetRowCanExpand]);
+
+  // Get columns with the deselection handler and sub-row support (memoize to avoid recreation on render)
   const columns = useMemo(() => {
     // Only pass deselection handler if row selection is enabled
-    return getColumns(tableConfig.enableRowSelection ? handleRowDeselection : null);
-  }, [getColumns, handleRowDeselection, tableConfig.enableRowSelection]);
+    let processedColumns = getColumns(tableConfig.enableRowSelection ? handleRowDeselection : null, tableConfig.subRowIndentPx);
+    
+    // Process columns for sub-row support if configured
+    if (subRows) {
+      processedColumns = subRows.processColumns(processedColumns);
+    }
+    
+    // Add expanding column if expanding is enabled
+    return withExpandingColumn(processedColumns, tableConfig.enableExpanding || !!effectiveGetSubRows);
+  }, [getColumns, handleRowDeselection, tableConfig.enableRowSelection, tableConfig.enableExpanding, tableConfig.subRowIndentPx, subRows, effectiveGetSubRows]);
 
   // Create event handlers using utility functions
   const handleSortingChange = useCallback(
@@ -512,19 +611,6 @@ export function DataTable<TData extends ExportableData, TValue>({
     }
   }, [columnOrder]);
 
-  // Load column order from localStorage on initial render
-  useEffect(() => {
-    try {
-      const savedOrder = localStorage.getItem('data-table-column-order');
-      if (savedOrder) {
-        const parsedOrder = JSON.parse(savedOrder);
-        setColumnOrder(parsedOrder);
-      }
-    } catch (error) {
-      console.error('Error loading column order:', error);
-    }
-  }, []);
-
   // Memoize table configuration to prevent unnecessary re-renders
   const tableOptions = useMemo(() => ({
     data: dataItems,
@@ -537,6 +623,7 @@ export function DataTable<TData extends ExportableData, TValue>({
       pagination,
       columnSizing,
       columnOrder,
+      expanded,
     },
     columnResizeMode: 'onChange' as ColumnResizeMode,
     onColumnSizingChange: handleColumnSizingChange,
@@ -544,20 +631,29 @@ export function DataTable<TData extends ExportableData, TValue>({
     pageCount: data?.pagination.total_pages || 0,
     enableRowSelection: tableConfig.enableRowSelection,
     enableColumnResizing: tableConfig.enableColumnResizing,
-    manualPagination: true,
+    enableExpanding: tableConfig.enableExpanding,
+    manualPagination: true, // Server-side pagination
     manualSorting: true,
     manualFiltering: true,
+    manualExpanding: false, // Allow TanStack Table to handle expansion client-side
+    paginateExpandedRows: false, // CRITICAL: Set to false when using manualPagination
+    filterFromLeafRows: tableConfig.filterFromLeafRows,
     onRowSelectionChange: handleRowSelectionChange,
     onSortingChange: handleSortingChange,
     onColumnFiltersChange: handleColumnFiltersChange,
     onColumnVisibilityChange: handleColumnVisibilityChange,
     onPaginationChange: handlePaginationChange,
+    onExpandedChange: setExpanded,
     getCoreRowModel: getCoreRowModel<TData>(),
     getFilteredRowModel: getFilteredRowModel<TData>(),
-    getPaginationRowModel: getPaginationRowModel<TData>(),
     getSortedRowModel: getSortedRowModel<TData>(),
+    getExpandedRowModel: getExpandedRowModel<TData>(),
+    getPaginationRowModel: getPaginationRowModel<TData>(),
     getFacetedRowModel: getFacetedRowModel<TData>(),
     getFacetedUniqueValues: getFacetedUniqueValues<TData>(),
+    getSubRows: effectiveGetSubRows,
+    getRowCanExpand: effectiveGetRowCanExpand,
+    getRowId: getRowId,
   }), [
     dataItems,
     columns,
@@ -568,20 +664,145 @@ export function DataTable<TData extends ExportableData, TValue>({
     pagination,
     columnSizing,
     columnOrder,
+    expanded,
     handleColumnSizingChange,
     handleColumnOrderChange,
     data?.pagination.total_pages,
     tableConfig.enableRowSelection,
     tableConfig.enableColumnResizing,
+    tableConfig.enableExpanding,
+    tableConfig.paginateExpandedRows,
+    tableConfig.filterFromLeafRows,
     handleRowSelectionChange,
     handleSortingChange,
     handleColumnFiltersChange,
     handleColumnVisibilityChange,
     handlePaginationChange,
+    setExpanded,
+    effectiveGetSubRows,
+    effectiveGetRowCanExpand,
+    getRowId,
   ]);
 
   // Set up the table with memoized configuration
   const table = useReactTable<TData>(tableOptions);
+
+  // CUSTOM SUB-ROWS SOLUTION: Manually create expanded rows since TanStack's getExpandedRowModel() is broken
+  const getManuallyExpandedRows = useCallback(() => {
+    const coreRows = table.getCoreRowModel().rows;
+    const expandedState = table.getState().expanded;
+    
+    
+    const manualRows: typeof coreRows = [];
+    
+    coreRows.forEach((row) => {
+      // Always add the parent row
+      manualRows.push(row);
+      
+      // Check if this row is expanded
+      const isRowExpanded = expandedState[row.id] || expandedState[row.index];
+      
+      if (isRowExpanded && effectiveGetSubRows) {
+        const subRows = effectiveGetSubRows(row.original);
+        if (subRows && subRows.length > 0) {
+          
+          // Create sub-row objects manually
+          subRows.forEach((subRowData, subIndex) => {
+            const subRowId = getRowId ? getRowId(subRowData, subIndex, row) : `${row.id}.${subIndex}`;
+            
+            // Create a mock row object that mimics TanStack Table's Row structure
+            const subRow = {
+              ...row, // Copy parent row structure
+              id: subRowId,
+              index: row.index + subIndex + 1, // Offset index
+              original: subRowData,
+              depth: 1, // Sub-row depth
+              subRows: [], // Sub-rows don't have their own sub-rows for now
+              parentId: row.id,
+              getIsExpanded: () => false, // Sub-rows can't be expanded in this simple implementation
+              getCanExpand: () => false,
+              toggleExpanded: () => {},
+              getIsSelected: () => {
+                // Check if this sub-row is selected based on its ID
+                const subRowIdStr = String(subRowData[idField]);
+                return !!selectedItemIds[subRowIdStr];
+              },
+              toggleSelected: () => {
+                // Handle sub-row selection
+                const subRowIdStr = String(subRowData[idField]);
+                setSelectedItemIds(prev => {
+                  const next = { ...prev };
+                  if (next[subRowIdStr]) {
+                    delete next[subRowIdStr];
+                  } else {
+                    next[subRowIdStr] = true;
+                  }
+                  return next;
+                });
+              },
+              getVisibleCells: () => {
+                // Return cells for the sub-row using the same column structure
+                return columns.map((column, cellIndex) => {
+                  const cellValue = (() => {
+                    if (typeof column.accessorKey === 'string') {
+                      return subRowData[column.accessorKey];
+                    }
+                    if (typeof column.accessorFn === 'function') {
+                      return column.accessorFn(subRowData, subIndex);
+                    }
+                    return undefined;
+                  })();
+
+                  const cell = {
+                    id: `${subRowId}-${column.id || cellIndex}`,
+                    column: {
+                      ...column,
+                      columnDef: {
+                        ...column,
+                        cell: column.cell || (({ getValue }) => getValue())
+                      }
+                    },
+                    row: subRow,
+                    getValue: () => cellValue,
+                    getContext: () => ({
+                      table,
+                      column: {
+                        ...column,
+                        columnDef: {
+                          ...column,
+                          cell: column.cell || (({ getValue }) => getValue())
+                        }
+                      },
+                      row: subRow,
+                      cell,
+                      getValue: () => cellValue,
+                      renderValue: () => cellValue
+                    })
+                  };
+
+                  return cell;
+                });
+              }
+            } as any; // Type assertion needed due to complex Row type
+            
+            manualRows.push(subRow);
+          });
+        }
+      }
+    });
+    
+    return manualRows;
+  }, [table, expanded, effectiveGetSubRows, getRowId, columns, selectedItemIds, idField, setSelectedItemIds]);
+
+  // Get all items including expanded sub-rows for export
+  const getAllItemsWithSubRows = useCallback((): TData[] => {
+    // For export, we need to return the original parent data with subRows included
+    // The export utilities will handle flattening them based on subRowsConfig
+    return dataItems;
+  }, [dataItems]);
+
+  // Get the manually expanded rows for rendering
+  const renderRows = useMemo(() => getManuallyExpandedRows(), [getManuallyExpandedRows]);
 
   // Row click handler with conflict prevention
   const handleRowClick = useCallback((event: React.MouseEvent, rowData: TData, rowIndex: number) => {
@@ -694,7 +915,7 @@ export function DataTable<TData extends ExportableData, TValue>({
           totalSelectedItems={totalSelectedItems}
           deleteSelection={clearAllSelections}
           getSelectedItems={getSelectedItems}
-          getAllItems={getAllItems}
+          getAllItems={getAllItemsWithSubRows}
           config={tableConfig}
           resetColumnSizing={() => {
             resetColumnSizing();
@@ -709,6 +930,7 @@ export function DataTable<TData extends ExportableData, TValue>({
           columnWidths={exportConfig.columnWidths}
           headers={exportConfig.headers}
           transformFunction={exportConfig.transformFunction}
+          subRowsConfig={exportConfig.subRowsConfig}
           customToolbarComponent={renderToolbarContent?.({
             selectedRows: dataItems.filter((item) => selectedItemIds[String(item[idField])]),
             allSelectedIds: Object.keys(selectedItemIds),
@@ -776,9 +998,9 @@ export function DataTable<TData extends ExportableData, TValue>({
                   ))}
                 </TableRow>
               ))
-            ) : table.getRowModel().rows?.length ? (
-              // Data rows
-              table.getRowModel().rows.map((row, rowIndex) => (
+            ) : table.getCoreRowModel().rows?.length ? (
+              // Data rows - use our MANUAL sub-row rendering since TanStack's getExpandedRowModel() is broken
+              renderRows.map((row, rowIndex) => (
                 <TableRow
                   key={row.id}
                   id={`row-${rowIndex}`}

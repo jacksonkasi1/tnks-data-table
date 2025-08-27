@@ -69,6 +69,7 @@ interface DataTableToolbarProps<TData extends ExportableData> {
   columnWidths?: Array<{ wch: number }>;
   headers?: string[];
   transformFunction?: DataTransformFunction<TData>;
+  subRowsConfig?: import('./utils/export-utils').SubRowsExportConfig;
   customToolbarComponent?: React.ReactNode;
 }
 
@@ -88,6 +89,7 @@ export function DataTableToolbar<TData extends ExportableData>({
   columnWidths,
   headers,
   transformFunction,
+  subRowsConfig,
   customToolbarComponent,
 }: DataTableToolbarProps<TData>) {
   // Get router and pathname for URL state reset
@@ -407,6 +409,7 @@ export function DataTableToolbar<TData extends ExportableData>({
             transformFunction={transformFunction}
             size={config.size}
             config={config}
+            subRowsConfig={subRowsConfig}
           />
         )}
 
