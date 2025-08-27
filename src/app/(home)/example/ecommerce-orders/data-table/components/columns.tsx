@@ -23,7 +23,7 @@ const baseColumns: ColumnDef<ExportableData>[] = [
         );
       } else {
         return (
-          <div className="pl-6 text-muted-foreground">
+          <div className="text-muted-foreground">
             {String(data.productName || '')}
           </div>
         );
@@ -47,7 +47,7 @@ const baseColumns: ColumnDef<ExportableData>[] = [
       } else {
         const category = String(data.category || '');
         return (
-          <div className="pl-6">
+          <div>
             <Badge className={getCategoryColor(category)}>
               {category}
             </Badge>
@@ -71,7 +71,7 @@ const baseColumns: ColumnDef<ExportableData>[] = [
         );
       } else {
         return (
-          <div className="pl-6 text-muted-foreground">
+          <div className="text-muted-foreground">
             {String(data.brand || '')}
           </div>
         );
@@ -93,7 +93,7 @@ const baseColumns: ColumnDef<ExportableData>[] = [
         );
       } else {
         return (
-          <div className="pl-6 font-mono">
+          <div className="font-mono">
             ${Number(data.price || 0).toFixed(2)} × {Number(data.quantity || 0)}
           </div>
         );

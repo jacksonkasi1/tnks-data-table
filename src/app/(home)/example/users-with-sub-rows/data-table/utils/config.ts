@@ -20,6 +20,7 @@ export const tableConfig: TableConfig = {
   enableExpanding: true,
   paginateExpandedRows: false,
   filterFromLeafRows: true,
+  subRowIndentPx: 24, // 24px indentation for sub-rows
 };
 
 export const useExportConfig = () => ({

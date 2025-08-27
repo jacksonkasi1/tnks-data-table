@@ -506,16 +506,16 @@ export function DataTable<TData extends ExportableData, TValue>({
   // Get columns with the deselection handler and sub-row support (memoize to avoid recreation on render)
   const columns = useMemo(() => {
     // Only pass deselection handler if row selection is enabled
-    let processedColumns = getColumns(tableConfig.enableRowSelection ? handleRowDeselection : null, tableConfig.subRowIndentPx);
+    let processedColumns = getColumns(tableConfig.enableRowSelection ? handleRowDeselection : null);
     
     // Process columns for sub-row support if configured
     if (subRows) {
-      processedColumns = subRows.processColumns(processedColumns);
+      processedColumns = subRows.processColumns(processedColumns as ColumnDef<TData>[]) as ColumnDef<TData, TValue>[];
     }
     
     // Add expanding column if expanding is enabled
     return withExpandingColumn(processedColumns, tableConfig.enableExpanding || !!effectiveGetSubRows);
-  }, [getColumns, handleRowDeselection, tableConfig.enableRowSelection, tableConfig.enableExpanding, tableConfig.subRowIndentPx, subRows, effectiveGetSubRows]);
+  }, [getColumns, handleRowDeselection, tableConfig.enableRowSelection, tableConfig.enableExpanding, subRows, effectiveGetSubRows]);
 
   // Create event handlers using utility functions
   const handleSortingChange = useCallback(
@@ -700,7 +700,7 @@ export function DataTable<TData extends ExportableData, TValue>({
       manualRows.push(row);
       
       // Check if this row is expanded
-      const isRowExpanded = expandedState[row.id] || expandedState[row.index];
+      const isRowExpanded = (expandedState as any)[row.id] || (expandedState as any)[row.index];
       
       if (isRowExpanded && effectiveGetSubRows) {
         const subRows = effectiveGetSubRows(row.original);
@@ -744,10 +744,10 @@ export function DataTable<TData extends ExportableData, TValue>({
                 // Return cells for the sub-row using the same column structure
                 return columns.map((column, cellIndex) => {
                   const cellValue = (() => {
-                    if (typeof column.accessorKey === 'string') {
-                      return subRowData[column.accessorKey];
+                    if ('accessorKey' in column && typeof column.accessorKey === 'string') {
+                      return (subRowData as any)[column.accessorKey];
                     }
-                    if (typeof column.accessorFn === 'function') {
+                    if ('accessorFn' in column && typeof column.accessorFn === 'function') {
                       return column.accessorFn(subRowData, subIndex);
                     }
                     return undefined;

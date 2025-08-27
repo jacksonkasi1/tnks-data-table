@@ -6,25 +6,23 @@ import { Checkbox } from "@/components/ui/checkbox";
 import type { ExportableData } from "@/components/data-table/utils/export-utils";
 import { withExpandingColumn } from "@/components/data-table/utils/expanding-utils";
 
-const getBaseColumns = (subRowIndentPx: number = 0): ColumnDef<ExportableData>[] => [
+const getBaseColumns = (): ColumnDef<ExportableData>[] => [
   {
     accessorKey: "name",
     header: "Name / Expense",
     cell: ({ row }) => {
       const data = row.original;
       const isUser = 'email' in data && 'department' in data;
-      const depth = row.depth || 0;
-      const indentStyle = depth > 0 && subRowIndentPx > 0 ? { paddingLeft: `${depth * subRowIndentPx}px` } : {};
       
       if (isUser) {
         return (
-          <div className="font-medium" style={indentStyle}>
+          <div className="font-medium">
             {String(data.name || '')}
           </div>
         );
       } else {
         return (
-          <div style={indentStyle}>
+          <div>
             {String(data.expenseName || '')}
           </div>
         );
@@ -100,11 +98,10 @@ const getBaseColumns = (subRowIndentPx: number = 0): ColumnDef<ExportableData>[]
 ];
 
 export const getColumns = (
-  handleRowDeselection: ((rowId: string) => void) | null | undefined,
-  subRowIndentPx: number = 0
+  handleRowDeselection: ((rowId: string) => void) | null | undefined
 ): ColumnDef<ExportableData>[] => {
   // Start with base columns
-  let columns = [...getBaseColumns(subRowIndentPx)];
+  let columns = [...getBaseColumns()];
   
   // Add selection column if row selection is enabled
   if (handleRowDeselection !== null) {
