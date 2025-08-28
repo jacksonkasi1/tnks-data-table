@@ -27,6 +27,8 @@ export interface SimpleSubRowConfig<TData extends ExportableData = ExportableDat
   visual?: {
     /** Indentation in pixels per level (default: 24) */
     indentSize?: number;
+    /** Horizontal offset in pixels for entire sub-rows (default: 0) */
+    rowOffsetPx?: number;
     /** Apply muted styling to sub-rows (default: true) */
     muteSubRows?: boolean;
     /** Show connecting lines (default: false) */
@@ -67,6 +69,7 @@ export const DEFAULT_SUB_ROW_CONFIG: Partial<SimpleSubRowConfig> = {
   type: 'auto',
   visual: {
     indentSize: 24,
+    rowOffsetPx: 0,
     muteSubRows: true,
     showLines: false,
   },
@@ -151,6 +154,17 @@ export function getSubRowIndentStyle(
 ): React.CSSProperties {
   const indentSize = config?.indentSize ?? 24;
   return depth > 0 ? { paddingLeft: `${depth * indentSize}px` } : {};
+}
+
+/**
+ * Get horizontal offset style for an entire row based on row depth
+ */
+export function getSubRowOffsetStyle(
+  depth: number,
+  config: SimpleSubRowConfig['visual']
+): React.CSSProperties {
+  const offsetPx = config?.rowOffsetPx ?? 0;
+  return depth > 0 && offsetPx !== 0 ? { marginLeft: `${offsetPx}px` } : {};
 }
 
 /**
@@ -242,6 +256,7 @@ export function useSimpleSubRows<TData extends ExportableData>(
     processColumns: (columns: ColumnDef<TData>[]) => processColumnsForSubRows(columns, fullConfig),
     exportConfig: fullConfig.export,
     visualConfig: fullConfig.visual,
+    getRowOffsetStyle: (depth: number) => getSubRowOffsetStyle(depth, fullConfig.visual),
   };
 }
 
@@ -299,6 +314,7 @@ export const SUB_ROW_PRESETS = {
     type: 'different' as const,
     visual: {
       indentSize: 24,
+      rowOffsetPx: 0,
       muteSubRows: true,
     },
     export: {
@@ -316,6 +332,7 @@ export const SUB_ROW_PRESETS = {
     type: 'different' as const,
     visual: {
       indentSize: 24,
+      rowOffsetPx: 0,
       muteSubRows: true,
     },
     export: {
@@ -333,6 +350,7 @@ export const SUB_ROW_PRESETS = {
     type: 'unified' as const,
     visual: {
       indentSize: 20,
+      rowOffsetPx: 0,
       muteSubRows: false,
       showLines: true,
     },
@@ -351,6 +369,7 @@ export const SUB_ROW_PRESETS = {
     type: 'unified' as const,
     visual: {
       indentSize: 24,
+      rowOffsetPx: 0,
       muteSubRows: true,
     },
     export: {

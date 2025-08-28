@@ -74,6 +74,12 @@ export interface TableConfig {
   // Controls how much sub-rows are indented from their parent
   // Default: 0 (no indentation)
   subRowIndentPx: number;
+
+  // Sub-row horizontal offset in pixels
+  // Controls the horizontal positioning of entire sub-rows (left/right offset)
+  // Positive values move sub-rows to the right, negative to the left
+  // Default: 0 (no offset, sub-rows align with parent rows)
+  subRowOffsetPx: number;
 }
 
 // Default configuration
@@ -98,6 +104,7 @@ const defaultConfig: TableConfig = {
   paginateExpandedRows: false,    // Don't paginate expanded rows by default
   filterFromLeafRows: false,      // Filter each row independently by default
   subRowIndentPx: 0,              // No sub-row indentation by default
+  subRowOffsetPx: 0,              // No sub-row horizontal offset by default
 };
 
 /**

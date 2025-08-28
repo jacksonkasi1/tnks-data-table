@@ -21,6 +21,7 @@ export const tableConfig: TableConfig = {
   paginateExpandedRows: false,
   filterFromLeafRows: true,
   subRowIndentPx: 24, // 24px indentation for sub-rows
+  subRowOffsetPx: 0, // No horizontal offset by default (can be adjusted as needed)
 };
 
 export const useExportConfig = () => ({

@@ -468,18 +468,46 @@ export function DataTable<TData extends ExportableData, TValue>({
   const subRows = useMemo(() => {
     // Use new subRowsConfig if provided
     if (subRowsConfig) {
-      return useSimpleSubRows(subRowsConfig);
+      // If subRowsConfig is a function, convert it to a full config
+      if (typeof subRowsConfig === 'function') {
+        return useSimpleSubRows({
+          getSubRows: subRowsConfig,
+          type: 'auto',
+          visual: {
+            indentSize: tableConfig.subRowIndentPx,
+            rowOffsetPx: tableConfig.subRowOffsetPx,
+            muteSubRows: true,
+          },
+        });
+      } else {
+        // Merge table config values with sub-row config, prioritizing sub-row config
+        const mergedConfig = {
+          ...subRowsConfig,
+          visual: {
+            indentSize: tableConfig.subRowIndentPx,
+            rowOffsetPx: tableConfig.subRowOffsetPx,
+            muteSubRows: true,
+            ...subRowsConfig.visual,
+          },
+        };
+        return useSimpleSubRows(mergedConfig);
+      }
     }
     // Fall back to legacy props if provided
     if (legacyGetSubRows) {
       return useSimpleSubRows({
         getSubRows: legacyGetSubRows,
         type: 'auto',
+        visual: {
+          indentSize: tableConfig.subRowIndentPx,
+          rowOffsetPx: tableConfig.subRowOffsetPx,
+          muteSubRows: true,
+        },
       });
     }
     // No sub-rows configuration
     return null;
-  }, [subRowsConfig, legacyGetSubRows]);
+  }, [subRowsConfig, legacyGetSubRows, tableConfig.subRowIndentPx, tableConfig.subRowOffsetPx]);
 
   // Get effective sub-row functions
   const effectiveGetSubRows = useMemo(() => {
@@ -1000,7 +1028,12 @@ export function DataTable<TData extends ExportableData, TValue>({
               ))
             ) : table.getCoreRowModel().rows?.length ? (
               // Data rows - use our MANUAL sub-row rendering since TanStack's getExpandedRowModel() is broken
-              renderRows.map((row, rowIndex) => (
+              renderRows.map((row, rowIndex) => {
+                // Calculate row offset based on depth and sub-row configuration
+                const rowDepth = row.depth;
+                const rowOffset = subRows?.getRowOffsetStyle ? subRows.getRowOffsetStyle(rowDepth) : {};
+                
+                return (
                 <TableRow
                   key={row.id}
                   id={`row-${rowIndex}`}
@@ -1026,7 +1059,8 @@ export function DataTable<TData extends ExportableData, TValue>({
                     e.currentTarget.setAttribute('data-focused', 'true');
                   }}
                   style={{
-                    cursor: onRowClick ? 'pointer' : undefined
+                    cursor: onRowClick ? 'pointer' : undefined,
+                    ...rowOffset
                   }}
                 >
                   {row.getVisibleCells().map((cell, cellIndex) => (
@@ -1043,7 +1077,8 @@ export function DataTable<TData extends ExportableData, TValue>({
                     </TableCell>
                   ))}
                 </TableRow>
-              ))
+                );
+              })
             ) : (
               // No results
               <TableRow>
