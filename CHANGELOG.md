@@ -19,6 +19,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.3.0] - 2025-01-15
+
+### Added
+- **Default Sort Configuration**: Added `defaultSortBy` and `defaultSortOrder` options to TableConfig
+  - Configure initial sort column and direction via table configuration
+  - Supports both snake_case and camelCase field names
+  - Replaces hard-coded "created_at" default with configurable option
+- **Enhanced Case Format Documentation**: Comprehensive documentation for snake_case and camelCase API support
+  - Clear examples showing direct API integration without case conversion
+  - Migration guide from complex case conversion systems
+  - Best practices for case format consistency
+
+### Changed
+- **Simplified Default Sort Implementation**: Removed hard-coded default sort values in favor of configuration-driven approach
+- **Updated README.md**: Added detailed "Default Sort Configuration" section with examples
+- **Enhanced API Documentation**: Improved case format behavior documentation in "Filtering & Sorting" section
+
+### Fixed
+- **TypeScript Compatibility**: All type checking, linting, and build processes pass successfully
+- **Backward Compatibility**: All existing implementations continue to work unchanged
+
 ## [0.2.0] - 2025-08-16
 
 ### Added

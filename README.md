@@ -2,8 +2,8 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jacksonkasi1/tnks-data-table)
 
-**Version:** 0.2.0  
-**Updated:** 2025-08-16  
+**Version:** 0.3.0
+**Updated:** 2025-01-15
 **Author:** Jackson Kasi
 
 ## Table of Contents
@@ -17,6 +17,7 @@
 7. [API Integration](#api-integration)
 8. [Advanced Configuration](#advanced-configuration)
    - [Column Configuration](#column-configuration)
+   - [Default Sort Configuration](#default-sort-configuration)
    - [Row Actions](#row-actions)
    - [Filtering & Sorting](#filtering--sorting)
    - [Pagination](#pagination)
@@ -923,6 +924,101 @@ Columns are defined using TanStack Table's `ColumnDef` interface. Each column ca
 }
 ```
 
+### Default Sort Configuration
+
+Configure the default sorting behavior for your data table using the `defaultSortBy` and `defaultSortOrder` options in the table configuration.
+
+#### Key Principles
+
+- **Match Your API Response**: Use the exact field name as it appears in your API response
+- **Case Consistency**: If your API returns `snake_case`, use `snake_case`. If it returns `camelCase`, use `camelCase`
+- **Column Alignment**: The `defaultSortBy` value should match an `accessorKey` in your column definitions
+
+#### Basic Configuration
+
+```typescript
+<DataTable
+  // ... other props
+  config={{
+    defaultSortBy: "created_at",    // Default sort column
+    defaultSortOrder: "desc",       // Default sort direction
+    // ... other config options
+  }}
+/>
+```
+
+#### Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `defaultSortBy` | `string \| undefined` | `undefined` | Column to sort by on initial load. Must match a column's `accessorKey` |
+| `defaultSortOrder` | `'asc' \| 'desc'` | `'desc'` | Sort direction on initial load |
+
+#### Examples
+
+**Snake_case API (Traditional REST API)**:
+```typescript
+// API Response: { id: 1, user_name: "John", created_at: "2023-01-01" }
+// Column Definition: accessorKey: "created_at"
+
+config={{
+  defaultSortBy: "created_at",      // ✅ Matches API response field
+  defaultSortOrder: "desc",
+  // ... other options
+}}
+```
+
+**CamelCase API (Modern JSON API)**:
+```typescript
+// API Response: { id: 1, userName: "John", createdAt: "2023-01-01" }
+// Column Definition: accessorKey: "createdAt"
+
+config={{
+  defaultSortBy: "createdAt",       // ✅ Matches API response field
+  defaultSortOrder: "desc",
+  // ... other options
+}}
+```
+
+**Custom Sort Options**:
+```typescript
+config={{
+  defaultSortBy: "priority",        // Sort by priority column
+  defaultSortOrder: "asc",         // Ascending order (lowest first)
+  // ... other options
+}}
+```
+
+#### Important Notes
+
+- **No Fallback**: If `defaultSortBy` is not provided, it defaults to `"id"`
+- **Column Match Required**: The `defaultSortBy` value must exist as an `accessorKey` in your column definitions
+- **API Consistency**: The sort parameter sent to your API will use the same case format as `defaultSortBy`
+- **URL State**: The default sort is applied only on initial load. User interactions are saved in URL state
+
+#### Common Patterns
+
+**Date-based Sorting (Most Common)**:
+```typescript
+// Show newest records first
+defaultSortBy: "created_at",        // or "createdAt" for camelCase
+defaultSortOrder: "desc"
+```
+
+**Priority-based Sorting**:
+```typescript
+// Show high priority items first
+defaultSortBy: "priority",
+defaultSortOrder: "desc"
+```
+
+**Name-based Sorting**:
+```typescript
+// Alphabetical ordering
+defaultSortBy: "name",
+defaultSortOrder: "asc"
+```
+
 ### Row Actions
 
 Row actions provide operations on individual rows. They're implemented using the `DataTableRowActions` component:
@@ -1000,11 +1096,55 @@ export function DataTableRowActions<TData>({
 
 ### Filtering & Sorting
 
-The data table supports server-side filtering and sorting. Configure the API to handle the following parameters:
+The data table supports server-side filtering and sorting with automatic case format consistency.
+
+#### API Parameters
+
+Your API will receive the following parameters (case format matches your column definitions):
 
 - `search`: Text search term
-- `sort_by`: Column to sort by
-- `sort_order`: Sort direction (asc/desc)
+- `sortBy` or `sort_by`: Column to sort by (matches your `accessorKey` case format)
+- `sortOrder` or `sort_order`: Sort direction (`"asc"` or `"desc"`)
+
+#### Case Format Behavior
+
+The data table automatically uses the same case format as your column definitions:
+
+**Snake_case Example**:
+```typescript
+// Column Definition
+{ accessorKey: "created_at" }
+
+// API Request Parameters
+{
+  "search": "john",
+  "sort_by": "created_at",      // ✅ Matches column case
+  "sort_order": "desc",
+  "page": 1,
+  "limit": 10
+}
+```
+
+**CamelCase Example**:
+```typescript
+// Column Definition
+{ accessorKey: "createdAt" }
+
+// API Request Parameters
+{
+  "search": "john",
+  "sortBy": "createdAt",        // ✅ Matches column case
+  "sortOrder": "desc",
+  "page": 1,
+  "limit": 10
+}
+```
+
+#### Key Points
+
+- **No Conversion**: The data table uses your API response directly without any case transformations
+- **Consistent Format**: All API parameters follow the same case format as your column `accessorKey` values
+- **Export Consistency**: Data export preserves the same field names and case format as your API
 
 ### Pagination
 
@@ -1444,52 +1584,113 @@ export function useExportConfig() {
 
 ### Case Format Support
 
-The data table supports automatic case format conversion between your frontend (camelCase) and backend (snake_case) APIs. This feature allows you to maintain consistent naming conventions without manual conversion.
+The data table supports both `snake_case` and `camelCase` APIs with a simple, direct approach - **no conversion needed**.
 
-#### Configuration
+#### How It Works
 
-Configure case format conversion in your export config:
+The data table uses your API response exactly as-is, without any case transformations:
+
+1. **Column Definition**: Use `accessorKey` to match your API response fields exactly
+2. **API Requests**: Sort and filter parameters use the same case format as your columns
+3. **Data Display**: API response data is displayed directly without conversion
+4. **Data Export**: Exported files preserve the same field names as your API
+
+#### Snake_case API Example
 
 ```typescript
-// src/app/(section)/entity-table/utils/config.ts
-import { CaseFormatConfig } from "@/components/data-table/utils/case-utils";
-
-export function useExportConfig() {
-  // Case formatting configuration
-  const caseConfig: CaseFormatConfig = useMemo(() => ({
-    urlFormat: 'camelCase',    // Frontend uses camelCase (sortBy, pageSize)
-    apiFormat: 'snake_case',   // Backend expects snake_case (sort_by, page_size)
-    // Optional custom mapping for specific fields
-    keyMapper: (key: string) => {
-      const customMappings: Record<string, string> = {
-        'sortBy': 'order_by',        // Custom field mapping
-        'pageSize': 'per_page',      // Custom field mapping
-      };
-      return customMappings[key] || key;
+// API Response
+{
+  "data": [
+    {
+      "id": 1,
+      "user_name": "John Doe",
+      "created_at": "2023-01-01T10:00:00Z",
+      "total_expenses": "1234.56"
     }
-  }), []);
-
-  return {
-    // ... other config
-    caseConfig
-  };
+  ]
 }
+
+// Column Definitions (matches API exactly)
+{
+  accessorKey: "user_name",      // ✅ Matches API field
+  header: "Name"
+}
+{
+  accessorKey: "created_at",     // ✅ Matches API field
+  header: "Created"
+}
+
+// Table Configuration
+config={{
+  defaultSortBy: "created_at",   // ✅ Matches API field
+  // ... other options
+}}
 ```
 
-#### Supported Formats
-
-- **camelCase**: `sortBy`, `pageSize`, `createdAt`
-- **snake_case**: `sort_by`, `page_size`, `created_at`
-- **Custom mapping**: Define your own field transformations
-
-#### Example Usage
+#### CamelCase API Example
 
 ```typescript
-// Frontend sends: { sortBy: "createdAt", pageSize: 20 }
-// Backend receives: { sort_by: "created_at", page_size: 20 }
+// API Response
+{
+  "data": [
+    {
+      "id": 1,
+      "userName": "John Doe",
+      "createdAt": "2023-01-01T10:00:00Z",
+      "totalExpenses": "1234.56"
+    }
+  ]
+}
 
-// Frontend receives: { createdAt: "2023-01-01", totalCount: 100 }
-// Backend sent: { created_at: "2023-01-01", total_count: 100 }
+// Column Definitions (matches API exactly)
+{
+  accessorKey: "userName",       // ✅ Matches API field
+  header: "Name"
+}
+{
+  accessorKey: "createdAt",      // ✅ Matches API field
+  header: "Created"
+}
+
+// Table Configuration
+config={{
+  defaultSortBy: "createdAt",    // ✅ Matches API field
+  // ... other options
+}}
+```
+
+#### Key Benefits
+
+- **✅ No Conversion Logic**: Eliminates complex case transformation code
+- **✅ Direct Integration**: API responses work immediately without modification
+- **✅ Consistent Exports**: CSV/Excel exports use the same field names as your API
+- **✅ Simple Debugging**: What you see in the API is exactly what's used in the table
+- **✅ Performance**: No overhead from case conversion operations
+
+#### Best Practices
+
+1. **Match Your API**: Always use `accessorKey` values that exactly match your API response
+2. **Stay Consistent**: Pick one case format (snake_case OR camelCase) and use it throughout your API
+3. **Column Headers**: Use human-readable `header` values regardless of API case format
+4. **Default Sort**: Set `defaultSortBy` to match one of your column `accessorKey` values
+
+#### Migration from Complex Case Systems
+
+If you're coming from a system with case conversions:
+
+```typescript
+// ❌ Old Complex Way (don't do this)
+{
+  accessorKey: "userName",           // camelCase column
+  apiField: "user_name",            // snake_case API
+  needsConversion: true
+}
+
+// ✅ New Simple Way (recommended)
+{
+  accessorKey: "user_name"          // Matches API exactly
+  header: "User Name"               // Human readable display
+}
 ```
 
 ### Export Data Transformation
@@ -2610,6 +2811,8 @@ const firstItem = data?.items?.[0]?.title ?? "No items";
 | `columnResizingTableId`    | `string`                    | -           | ID for column resizing persistence       |
 | `searchPlaceholder`        | `string`                    | -           | Custom placeholder text for search input |
 | `allowExportNewColumns`    | `boolean`                   | `true`      | Allow exporting new columns from transform function |
+| `defaultSortBy`            | `string`                    | -           | Default sort column (must match column accessorKey) |
+| `defaultSortOrder`         | `'asc' \| 'desc'`           | `'desc'`    | Default sort direction                   |
 | `size`                     | `'sm' \| 'default' \| 'lg'` | `'default'` | Size for buttons and inputs in the table |
 
 The `size` prop affects the following components:

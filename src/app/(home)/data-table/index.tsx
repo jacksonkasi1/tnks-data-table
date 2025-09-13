@@ -47,7 +47,9 @@ export default function UserTable() {
         enableUrlState: true,
         size: "default",
         columnResizingTableId: "user-table",
-        searchPlaceholder: "Search users"
+        searchPlaceholder: "Search users",
+        defaultSortBy: "created_at",        // Snake_case sorting (matches API response)
+        defaultSortOrder: "desc"
       }}
     />
   );

@@ -56,6 +56,13 @@ export interface TableConfig {
   // When false: Export only includes visible columns (hidden columns always excluded)
   // Note: Hidden columns are ALWAYS excluded regardless of this setting
   allowExportNewColumns: boolean;
+
+  // Default sort column (should match column accessorKey exactly)
+  // Use the same case format as your API response (snake_case or camelCase)
+  defaultSortBy?: string;
+
+  // Default sort direction
+  defaultSortOrder?: 'asc' | 'desc';
 }
 
 // Default configuration
@@ -76,6 +83,8 @@ const defaultConfig: TableConfig = {
   columnResizingTableId: undefined, // No table ID by default
   searchPlaceholder: undefined,   // No custom search placeholder by default
   allowExportNewColumns: true,    // Allow new columns from transform function by default
+  defaultSortBy: undefined,       // No default sort column - must be provided in config
+  defaultSortOrder: 'desc',       // Default to descending order
 };
 
 /**
