@@ -514,8 +514,8 @@ export function DataTable<TData extends ExportableData, TValue>({
     }
     
     // Add expanding column if expanding is enabled
-    return withExpandingColumn(processedColumns, tableConfig.enableExpanding || !!effectiveGetSubRows);
-  }, [getColumns, handleRowDeselection, tableConfig.enableRowSelection, tableConfig.enableExpanding, tableConfig.subRowIndentPx, subRows, effectiveGetSubRows]);
+    return withExpandingColumn(processedColumns, tableConfig.enableExpanding || !!effectiveGetSubRows, tableConfig.expandingColumnWidth);
+  }, [getColumns, handleRowDeselection, tableConfig.enableRowSelection, tableConfig.enableExpanding, tableConfig.subRowIndentPx, tableConfig.expandingColumnWidth, subRows, effectiveGetSubRows]);
 
   // Create event handlers using utility functions
   const handleSortingChange = useCallback(

@@ -72,8 +72,24 @@ export interface TableConfig {
   
   // Sub-row indentation in pixels
   // Controls how much sub-rows are indented from their parent
-  // Default: 0 (no indentation)
+  // Default: 20 (20px indentation)
   subRowIndentPx: number;
+  
+  // Sub-row header configuration for export
+  // Allows custom headers for sub-rows during export
+  subRowHeaders?: {
+    // Custom headers for sub-rows (e.g., ["Sub-Item", "Sub-Category", "Sub-Date", "Sub-Amount"])
+    headers: string[];
+    // Whether to include sub-row headers in export
+    includeInExport: boolean;
+    // Custom indentation for sub-row headers in export
+    exportIndentation?: string;
+  };
+  
+  // Expanding column width in pixels
+  // Controls the width of the expand/collapse column
+  // Default: 40 (40px width)
+  expandingColumnWidth: number;
 }
 
 // Default configuration
@@ -97,7 +113,9 @@ const defaultConfig: TableConfig = {
   enableExpanding: false,         // Row expanding disabled by default
   paginateExpandedRows: false,    // Don't paginate expanded rows by default
   filterFromLeafRows: false,      // Filter each row independently by default
-  subRowIndentPx: 0,              // No sub-row indentation by default
+  subRowIndentPx: 20,             // 20px sub-row indentation by default
+  expandingColumnWidth: 40,       // 40px expanding column width by default
+  subRowHeaders: undefined,       // No custom sub-row headers by default
 };
 
 /**

@@ -125,16 +125,25 @@ export const getColumns = (
           />
         </div>
       ),
-      cell: ({ row }) => (
-        <div className="pl-2">
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-            className="translate-y-[2px]"
-          />
-        </div>
-      ),
+      cell: ({ row }) => {
+        const data = row.original;
+        const depth = row.depth || 0;
+        const isUser = 'email' in data && 'department' in data;
+        
+        // Apply indentation for sub-rows
+        const indentStyle = depth > 0 && subRowIndentPx > 0 ? { paddingLeft: `${depth * subRowIndentPx}px` } : {};
+        
+        return (
+          <div className="pl-2" style={indentStyle}>
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={(value) => row.toggleSelected(!!value)}
+              aria-label={`Select ${isUser ? 'user' : 'expense'} row`}
+              className="translate-y-[2px]"
+            />
+          </div>
+        );
+      },
       enableSorting: false,
       enableHiding: false,
       size: 40,

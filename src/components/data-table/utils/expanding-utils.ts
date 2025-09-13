@@ -10,7 +10,7 @@ export const EXPANDING_COLUMN_ID = "__expanding__";
  * Creates an expanding column definition that can be added to table columns
  * This column shows expand/collapse controls for rows with sub-rows
  */
-export function createExpandingColumn<TData extends ExportableData>(): ColumnDef<TData, unknown> {
+export function createExpandingColumn<TData extends ExportableData>(width: number = 40): ColumnDef<TData, unknown> {
   return {
     id: EXPANDING_COLUMN_ID,
     header: "",
@@ -18,19 +18,24 @@ export function createExpandingColumn<TData extends ExportableData>(): ColumnDef
     enableColumnFilter: false,
     enableHiding: false,
     enableResizing: false,
-    size: 50,
-    minSize: 50,
-    maxSize: 50,
+    size: width,
+    minSize: width,
+    maxSize: width,
     cell: ({ row, table }) => {
       const canExpand = row.getCanExpand();
       const isExpanded = row.getIsExpanded();
       const depth = row.depth;
+      
+      // Get the table config to access subRowIndentPx
+      const tableConfig = (table as any).options?.meta?.tableConfig;
+      const indentPx = tableConfig?.subRowIndentPx || 20;
 
       return ExpandingColumn({
         isExpanded,
         canExpand,
         depth,
         onToggle: () => row.toggleExpanded(),
+        indentPx,
       });
     },
   };
@@ -43,7 +48,8 @@ export function createExpandingColumn<TData extends ExportableData>(): ColumnDef
  */
 export function withExpandingColumn<TData extends ExportableData, TValue = unknown>(
   columns: ColumnDef<TData, TValue>[],
-  enableExpanding: boolean
+  enableExpanding: boolean,
+  expandingColumnWidth: number = 40
 ): ColumnDef<TData, TValue>[] {
   if (!enableExpanding) {
     return columns;
@@ -57,7 +63,7 @@ export function withExpandingColumn<TData extends ExportableData, TValue = unkno
   }
 
   // Add expanding column as the ABSOLUTE first column (before any other columns including selection)
-  return [createExpandingColumn<TData>() as ColumnDef<TData, TValue>, ...columns];
+  return [createExpandingColumn<TData>(expandingColumnWidth) as ColumnDef<TData, TValue>, ...columns];
 }
 
 /**

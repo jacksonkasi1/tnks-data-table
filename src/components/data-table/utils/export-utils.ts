@@ -59,6 +59,28 @@ function flattenDataWithSubRows<T extends ExportableData>(
     if (depth < maxDepth) {
       const subRows = subRowsConfig.getSubRows(row);
       if (subRows && subRows.length > 0) {
+        // Add sub-row headers if configured
+        if (subRowsConfig.subRowHeaders?.includeInExport && depth === 0) {
+          const headerRow: any = {};
+          const subHeaders = subRowsConfig.subRowHeaders.headers;
+          const exportIndent = subRowsConfig.subRowHeaders.exportIndentation || indentation;
+          
+          // Create a header row with indentation
+          subHeaders.forEach((header: string, index: number) => {
+            const key = Object.keys(row)[index] || `subHeader${index}`;
+            headerRow[key] = `${exportIndent}${header}`;
+          });
+          
+          // Fill remaining fields with empty values
+          Object.keys(row).forEach(key => {
+            if (!(key in headerRow)) {
+              headerRow[key] = '';
+            }
+          });
+          
+          flattenedData.push(headerRow as T);
+        }
+        
         const flattenedSubRows = flattenDataWithSubRows(
           subRows,
           subRowsConfig,

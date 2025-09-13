@@ -20,6 +20,13 @@ export const tableConfig: TableConfig = {
   enableExpanding: true,
   paginateExpandedRows: false,
   filterFromLeafRows: true,
+  subRowIndentPx: 24, // 24px indentation for sub-rows
+  expandingColumnWidth: 36, // 36px width for expand column
+  subRowHeaders: {
+    headers: ["Sub-Item", "Sub-Category", "Sub-Date", "Sub-Amount"],
+    includeInExport: true,
+    exportIndentation: "  " // Two spaces for export indentation
+  }
 };
 
 export const useExportConfig = () => ({
