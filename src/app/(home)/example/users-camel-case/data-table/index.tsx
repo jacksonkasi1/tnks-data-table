@@ -62,7 +62,9 @@ export default function UserCamelCaseTable() {
         enableUrlState: true,
         size: "default",
         columnResizingTableId: "user-camel-case-table",
-        searchPlaceholder: "Search users"
+        searchPlaceholder: "Search users",
+        defaultSortBy: "createdAt",         // CamelCase sorting (matches API response)
+        defaultSortOrder: "desc"
       }}
     />
   );
