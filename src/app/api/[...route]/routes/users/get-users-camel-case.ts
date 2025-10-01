@@ -1,19 +1,18 @@
+// ** import core packages
 import { Hono } from "hono";
 
-// ** Third Party Libraries
-import { z } from "zod";
-
-// ** Drizzle
+// ** import database
 import { and, asc, between, count, desc, eq, ilike, or, sql } from "drizzle-orm";
-
-// ** Import DB
 import { db } from "@/db";
 
-// ** Import Schema
+// ** import schema
 import { expenses } from "@/db/schema/tbl_expenses";
 import { users } from "@/db/schema/tbl_users";
 
-// ** Case conversion utilities
+// ** import validation
+import { z } from "zod";
+
+// ** import utils
 import { convertObjectKeys, toCamelCase } from "@/components/data-table/utils/case-utils";
 
 // Create a router
@@ -60,8 +59,20 @@ function convertSortByToDbField(sortBy: string): string {
   return mappings[sortBy] || sortBy;
 }
 
+// Interface for database row
+interface UserRowFromDb {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  age: number;
+  created_at: Date;
+  expense_count: number;
+  total_expenses: string;
+}
+
 // Convert database row to camelCase
-function convertUserRowToCamelCase(row: any) {
+function convertUserRowToCamelCase(row: UserRowFromDb) {
   return {
     id: row.id,
     name: row.name,

@@ -2,8 +2,8 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jacksonkasi1/tnks-data-table)
 
-**Version:** 0.3.0
-**Updated:** 2025-01-15
+**Version:** 0.3.1
+**Updated:** 2025-10-01
 **Author:** Jackson Kasi
 
 ## Table of Contents

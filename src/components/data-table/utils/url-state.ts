@@ -1,5 +1,8 @@
+// ** import core packages
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState, useEffect, useRef, useMemo } from "react";
+
+// ** import utils
 import { isDeepEqual } from "./deep-utils";
 
 // Batch update state management with instance tracking to prevent race conditions
@@ -113,8 +116,10 @@ export function useUrlState<T>(
   const getValueFromUrl = useCallback(() => {
     // Check if we have a pending update for this key that hasn't been applied yet
     if (batchUpdateState.pendingUpdates.has(key)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return batchUpdateState.pendingUpdates.get(key)?.value as T;
+      const pendingUpdate = batchUpdateState.pendingUpdates.get(key);
+      if (pendingUpdate && typeof pendingUpdate.value !== 'undefined') {
+        return pendingUpdate.value as T;
+      }
     }
 
     const paramValue = searchParams.get(key);
