@@ -1,6 +1,13 @@
 "use client";
 
+// ** import types
 import type * as React from "react";
+import type { ColumnDef, ColumnResizeMode } from "@tanstack/react-table";
+import type { TableConfig } from "./utils/table-config";
+import type { CaseFormatConfig } from "./utils/case-utils";
+import type { DataTransformFunction, ExportableData } from "./utils/export-utils";
+
+// ** import core packages
 import {
   type ColumnSizingState,
   flexRender,
@@ -11,11 +18,11 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-  type ColumnDef,
-  type ColumnResizeMode
 } from "@tanstack/react-table";
 import { useEffect, useCallback, useMemo, useRef, useState } from "react";
+import { AlertCircle } from "lucide-react";
 
+// ** import components
 import {
   Table,
   TableBody,
@@ -24,19 +31,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-import { DataTablePagination } from "./pagination";
-import { DataTableToolbar } from "./toolbar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
-import { useTableConfig, type TableConfig } from "./utils/table-config";
-import type { CaseFormatConfig } from "./utils/case-utils";
-import type { DataTransformFunction, ExportableData } from "./utils/export-utils";
-import { useTableColumnResize } from "./hooks/use-table-column-resize";
+import { DataTablePagination } from "./pagination";
+import { DataTableToolbar } from "./toolbar";
 import { DataTableResizer } from "./data-table-resizer";
 
-// Import core utilities
+// ** import utils
+import { useTableConfig } from "./utils/table-config";
+import { useTableColumnResize } from "./hooks/use-table-column-resize";
 import { preprocessSearch } from "./utils/search";
 import {
   createSortingHandler,
@@ -115,7 +118,7 @@ interface DataTableProps<TData extends ExportableData, TValue> {
   // Custom toolbar content render function
   renderToolbarContent?: (props: {
     selectedRows: TData[];
-    allSelectedIds: (string | number)[];
+    allSelectedIds: string[];
     totalSelectedCount: number;
     resetSelection: () => void;
   }) => React.ReactNode;
@@ -178,7 +181,8 @@ export function DataTable<TData extends ExportableData, TValue>({
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
 
   // PERFORMANCE FIX: Use only one selection state as the source of truth
-  const [selectedItemIds, setSelectedItemIds] = useState<Record<string | number, boolean>>({});
+  // All IDs are stored as strings for consistency
+  const [selectedItemIds, setSelectedItemIds] = useState<Record<string, boolean>>({});
 
   // Convert the sorting from URL to the format TanStack Table expects
   const sorting = useMemo(() => createSortingState(sortBy, sortOrder), [sortBy, sortOrder]);
@@ -283,10 +287,11 @@ export function DataTable<TData extends ExportableData, TValue>({
       return [];
     }
 
-    // Get IDs of selected items
-    const selectedIdsArray = Object.keys(selectedItemIds).map(id =>
-      typeof id === 'string' ? Number.parseInt(id, 10) : id as number
-    );
+    // Get IDs of selected items - determine if they are strings or numbers
+    const selectedIdsArray = Object.keys(selectedItemIds);
+
+    // Check if the first item ID is a number to determine the type
+    const isNumericIds = dataItems.length > 0 && typeof dataItems[0][idField] === 'number';
 
     // Find items from current page that are selected
     const itemsInCurrentPage = dataItems.filter(item =>
@@ -294,14 +299,17 @@ export function DataTable<TData extends ExportableData, TValue>({
     );
 
     // Get IDs of items on current page
-    const idsInCurrentPage = itemsInCurrentPage.map(item =>
-      item[idField] as unknown as number
-    );
+    const idsInCurrentPage = itemsInCurrentPage.map(item => String(item[idField]));
 
     // Find IDs that need to be fetched (not on current page)
-    const idsToFetch = selectedIdsArray.filter(id =>
+    const idsToFetchRaw = selectedIdsArray.filter(id =>
       !idsInCurrentPage.includes(id)
     );
+
+    // Convert IDs to the appropriate type for the fetchByIdsFn
+    const idsToFetch = isNumericIds
+      ? idsToFetchRaw.map(id => Number.parseInt(id, 10)).filter(id => !Number.isNaN(id))
+      : idsToFetchRaw;
 
     // If all selected items are on current page or we can't fetch by IDs
     if (idsToFetch.length === 0 || !fetchByIdsFn) {
@@ -309,8 +317,8 @@ export function DataTable<TData extends ExportableData, TValue>({
     }
 
     try {
-      // Fetch missing items in a single batch
-      const fetchedItems = await fetchByIdsFn(idsToFetch);
+      // Fetch missing items in a single batch - TypeScript will infer the correct type
+      const fetchedItems = await fetchByIdsFn(idsToFetch as number[] | string[]);
 
       // Combine current page items with fetched items
       return [...itemsInCurrentPage, ...fetchedItems];
@@ -518,10 +526,17 @@ export function DataTable<TData extends ExportableData, TValue>({
       const savedOrder = localStorage.getItem('data-table-column-order');
       if (savedOrder) {
         const parsedOrder = JSON.parse(savedOrder);
-        setColumnOrder(parsedOrder);
+        // Validate array of strings
+        if (Array.isArray(parsedOrder) && parsedOrder.every(item => typeof item === 'string')) {
+          setColumnOrder(parsedOrder);
+        } else {
+          console.warn('Invalid column order format, ignoring');
+          localStorage.removeItem('data-table-column-order');
+        }
       }
     } catch (error) {
       console.error('Error loading column order:', error);
+      localStorage.removeItem('data-table-column-order');
     }
   }, []);
 
@@ -618,7 +633,7 @@ export function DataTable<TData extends ExportableData, TValue>({
 
   // Initialize default column sizes when columns are available and no saved sizes exist
   useEffect(() => {
-    initializeColumnSizes(columns, tableId, setColumnSizing);
+    initializeColumnSizes(columns as ColumnDef<TData, unknown>[], tableId, setColumnSizing);
   }, [columns, tableId, setColumnSizing]);
 
   // Handle column resizing

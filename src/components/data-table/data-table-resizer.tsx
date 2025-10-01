@@ -1,12 +1,25 @@
 "use client"
 
+// ** import types
+import type { Header, Table } from "@tanstack/react-table"
+
+// ** import core packages
 import React from "react"
-import { Separator } from "@/components/ui/separator"
-import { cn } from "@/lib/utils"
 import { GripVertical } from "lucide-react"
 
-// Simplified resizer component without complex types
-export function DataTableResizer({ header, table }: { header: any; table: any }) {
+// ** import components
+import { Separator } from "@/components/ui/separator"
+
+// ** import utils
+import { cn } from "@/lib/utils"
+
+export function DataTableResizer<TData>({
+  header,
+  table,
+}: {
+  header: Header<TData, unknown>
+  table: Table<TData>
+}) {
   const isResizing = header.column.getIsResizing()
 
   return (

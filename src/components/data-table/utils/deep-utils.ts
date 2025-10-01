@@ -95,7 +95,7 @@ export function isDeepEqual(a: Comparable, b: Comparable): boolean {
     // Handle arrays more efficiently
     if (Array.isArray(a)) {
       if (!Array.isArray(b) || a.length !== b.length) return false;
-      
+
       // For small arrays, use direct comparison
       if (a.length < 20) {
         for (let i = 0; i < a.length; i++) {
@@ -103,25 +103,26 @@ export function isDeepEqual(a: Comparable, b: Comparable): boolean {
         }
         return true;
       }
-      
-      // For larger arrays, handle simple values quickly first
-      const sortedA = [...a].sort(); 
-      const sortedB = [...b].sort();
-      
-      // First do a quick comparison of primitives
-      for (let i = 0; i < sortedA.length; i++) {
-        const itemA = sortedA[i];
-        const itemB = sortedB[i];
-        if (typeof itemA !== 'object' && typeof itemB !== 'object') {
-          if (itemA !== itemB) return false;
+
+      // For larger arrays, check if they contain only primitives
+      const hasPrimitiveValues = a.every(item => typeof item !== 'object' || item === null);
+
+      if (hasPrimitiveValues) {
+        // Only sort arrays containing primitives
+        const sortedA = [...a].sort();
+        const sortedB = [...b].sort();
+
+        // Quick comparison of primitives
+        for (let i = 0; i < sortedA.length; i++) {
+          if (sortedA[i] !== sortedB[i]) return false;
         }
       }
-      
-      // Then compare actual positions
+
+      // Compare actual positions for all arrays
       for (let i = 0; i < a.length; i++) {
         if (!compare(a[i] as Comparable, b[i] as Comparable)) return false;
       }
-      
+
       return true;
     }
     

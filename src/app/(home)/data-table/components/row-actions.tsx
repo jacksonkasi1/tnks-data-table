@@ -1,12 +1,13 @@
 "use client";
 
+// ** import types
+import type { Row, Table } from "@tanstack/react-table";
+
+// ** import core packages
 import * as React from "react";
-
-// ** Import 3rd Party Libs
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
-import { Row } from "@tanstack/react-table";
 
-// ** Import UI Components
+// ** import components
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,16 +17,14 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-// ** Import Schema
-import { userSchema } from "../schema";
-
-// ** Import Actions
 import { DeleteUserPopup } from "./actions/delete-user-popup";
+
+// ** import schema
+import { userSchema } from "../schema";
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
-  table: any; // Table instance
+  table: Table<TData>;
 }
 
 export function DataTableRowActions<TData>({

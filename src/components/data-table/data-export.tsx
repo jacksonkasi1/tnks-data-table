@@ -1,5 +1,17 @@
 "use client";
 
+// ** import types
+import type { JSX } from "react";
+import type { Table } from "@tanstack/react-table";
+import type { ExportableData, DataTransformFunction } from "./utils/export-utils";
+import type { TableConfig } from "./utils/table-config";
+
+// ** import core packages
+import { useState } from "react";
+import { DownloadIcon, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+
+// ** import components
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -7,12 +19,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DownloadIcon, Loader2 } from "lucide-react";
-import { Table } from "@tanstack/react-table";
-import { exportData, exportToCSV, exportToExcel, ExportableData, DataTransformFunction } from "./utils/export-utils";
-import { TableConfig } from "./utils/table-config";
-import { JSX, useState } from "react";
-import { toast } from "sonner";
+
+// ** import utils
+import { exportData, exportToCSV, exportToExcel } from "./utils/export-utils";
 
 interface DataTableExportProps<TData extends ExportableData> {
   table: Table<TData>;
@@ -75,10 +84,15 @@ export function DataTableExport<TData extends ExportableData>({
         
         if (sorting.length > 0) {
           const { id: sortField, desc: isDescending } = sorting[0];
-          
+
+          // Check if array is empty before accessing first item
+          if (sortedItems.length === 0) {
+            return sortedItems;
+          }
+
           // Validate that sortField exists in data before sorting
           const sampleItem = sortedItems[0];
-          if (sampleItem && !(sortField in sampleItem)) {
+          if (!(sortField in sampleItem)) {
             console.warn(`Sort field "${sortField}" not found in data. Skipping sort.`);
             return sortedItems;
           }

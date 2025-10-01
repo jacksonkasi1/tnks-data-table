@@ -19,6 +19,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.3.1] - 2025-10-01
+
+### Fixed
+- **Type Safety Improvements**: Removed all `any` types and replaced with proper TypeScript types
+  - Fixed `DataTableResizer` component with proper `Header<TData, unknown>` and `Table<TData>` types
+  - Fixed `DataTableRowActions` with correct `Table<TData>` type instead of `any`
+  - Added `UserRowFromDb` interface for API route type safety
+  - Improved `case-utils` with `ConvertedKeys<T>` type for better type inference
+  - Enhanced `column-sizing` with proper type guards and `unknown` instead of `any`
+
+- **Enhanced Validation & Error Handling**: Added comprehensive validation for external data sources
+  - Added type guards `hasIdAndSize()` and `hasAccessorKeyAndSize()` for column sizing
+  - Implemented `isValidColumnSizing()` validation for localStorage data
+  - Enhanced URL state validation with proper JSON structure checks
+  - Added empty array checks before accessing array elements in data export
+  - Improved primitive value detection before array sorting in deep-utils
+
+- **ID Handling Improvements**: Standardized ID handling to support all ID formats
+  - Unified internal ID storage to use strings for consistency
+  - Smart type detection for numeric vs string IDs
+  - Full support for UUID, Nano ID, and custom string ID formats
+  - Proper type conversion when calling fetchByIdsFn API
+  - Safe parsing with NaN filtering for numeric conversions
+
+- **localStorage Safety**: Added robust validation for localStorage operations
+  - Validates parsed JSON structure before use
+  - Checks array and object types with proper type guards
+  - Cleans up corrupted data automatically
+  - Comprehensive error handling with try-catch blocks
+
+### Changed
+- **Code Organization**: Applied import organization style guide across all modified files
+  - Proper categorization: types → core packages → components → utils
+  - Lowercase category comments following CLAUDE.md guidelines
+  - Consistent spacing between import sections
+  - Removed non-standard category names
+
+### Added
+- **Documentation**: Created comprehensive documentation files
+  - `ID_HANDLING.md`: Complete guide for ID format support (UUID, Nano ID, numeric, custom strings)
+  - `FINAL_SUMMARY.md`: Detailed summary of all improvements and fixes
+
 ## [0.3.0] - 2025-01-15
 
 ### Added
