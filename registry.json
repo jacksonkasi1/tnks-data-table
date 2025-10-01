@@ -1,0 +1,149 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "tnks-data-table",
+  "homepage": "https://github.com/jacksonkasi1/tnks-data-table",
+  "items": [
+    {
+      "name": "data-table",
+      "type": "registry:ui",
+      "title": "Advanced Data Table",
+      "description": "A highly configurable and feature-rich data table component built on top of Shadcn UI and TanStack Table with server-side processing, row selection, export functionality, and more.",
+      "dependencies": [
+        "@tanstack/react-table",
+        "@tanstack/react-query",
+        "@hookform/resolvers",
+        "react-hook-form",
+        "zod",
+        "sonner",
+        "date-fns",
+        "date-fns-tz",
+        "xlsx",
+        "class-variance-authority",
+        "clsx",
+        "tailwind-merge",
+        "lucide-react",
+        "react-day-picker",
+        "cmdk"
+      ],
+      "registryDependencies": [
+        "button",
+        "checkbox",
+        "input",
+        "select",
+        "popover",
+        "calendar",
+        "dropdown-menu",
+        "separator",
+        "table",
+        "command"
+      ],
+      "files": [
+        {
+          "path": "registry/default/data-table/data-table.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/data-table/column-header.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/data-table/data-export.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/data-table/data-table-resizer.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/data-table/pagination.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/data-table/toolbar.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/data-table/view-options.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/data-table/hooks/use-table-column-resize.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "registry/default/data-table/utils/case-utils.ts",
+          "type": "registry:util"
+        },
+        {
+          "path": "registry/default/data-table/utils/column-sizing.ts",
+          "type": "registry:util"
+        },
+        {
+          "path": "registry/default/data-table/utils/conditional-state.ts",
+          "type": "registry:util"
+        },
+        {
+          "path": "registry/default/data-table/utils/date-format.ts",
+          "type": "registry:util"
+        },
+        {
+          "path": "registry/default/data-table/utils/deep-utils.ts",
+          "type": "registry:util"
+        },
+        {
+          "path": "registry/default/data-table/utils/export-utils.ts",
+          "type": "registry:util"
+        },
+        {
+          "path": "registry/default/data-table/utils/index.ts",
+          "type": "registry:util"
+        },
+        {
+          "path": "registry/default/data-table/utils/keyboard-navigation.ts",
+          "type": "registry:util"
+        },
+        {
+          "path": "registry/default/data-table/utils/search.ts",
+          "type": "registry:util"
+        },
+        {
+          "path": "registry/default/data-table/utils/table-config.ts",
+          "type": "registry:util"
+        },
+        {
+          "path": "registry/default/data-table/utils/table-state-handlers.ts",
+          "type": "registry:util"
+        },
+        {
+          "path": "registry/default/data-table/utils/url-state.ts",
+          "type": "registry:util"
+        }
+      ]
+    },
+    {
+      "name": "calendar-date-picker",
+      "type": "registry:ui",
+      "title": "Calendar Date Picker",
+      "description": "A customizable calendar date picker component with range selection support, required by the data-table component.",
+      "dependencies": [
+        "date-fns",
+        "date-fns-tz",
+        "react-day-picker",
+        "lucide-react",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "button",
+        "calendar",
+        "popover",
+        "select"
+      ],
+      "files": [
+        {
+          "path": "registry/default/calendar-date-picker/calendar-date-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    }
+  ]
+}
