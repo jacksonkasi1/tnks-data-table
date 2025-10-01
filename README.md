@@ -2,9 +2,29 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jacksonkasi1/tnks-data-table)
 
-**Version:** 0.3.1
-**Updated:** 2025-10-01
+**Version:** 0.3.2
+**Updated:** 2025-10-02
 **Author:** Jackson Kasi
+
+## Quick Start
+
+Install the data table component with a single command using Shadcn CLI:
+
+```bash
+# Install required Shadcn UI components first
+npx shadcn@latest init
+npx shadcn@latest add button checkbox input select popover calendar dropdown-menu separator table command
+
+# Install the data-table component
+npx shadcn@latest add https://tnks-data-table.vercel.app/r/data-table.json
+
+# Install the calendar-date-picker (required dependency)
+npx shadcn@latest add https://tnks-data-table.vercel.app/r/calendar-date-picker.json
+```
+
+That's it! See [Installation & Setup](#installation--setup) for detailed installation options.
+
+---
 
 ## Table of Contents
 
@@ -190,7 +210,75 @@ By following this structure, you can easily maintain and extend your data tables
 - **Tailwind CSS**
 - **Shadcn UI components**
 
-### Installation Steps
+### Installation Methods
+
+You can install the data table component in two ways:
+
+1. **Using Shadcn Registry (Recommended)** - Quick and automated installation
+2. **Manual Installation** - Step-by-step manual setup
+
+---
+
+### Method 1: Using Shadcn Registry (Recommended)
+
+The easiest way to install the data table component is using the Shadcn CLI with our custom registry.
+
+#### From Remote Registry (Production)
+
+```bash
+# Install the complete data-table component with all dependencies
+npx shadcn@latest add https://tnks-data-table.vercel.app/r/data-table.json
+
+# Also install the calendar-date-picker (required dependency)
+npx shadcn@latest add https://tnks-data-table.vercel.app/r/calendar-date-picker.json
+```
+
+#### From Local Registry (Development)
+
+If you're developing locally or testing the component:
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/jacksonkasi1/tnks-data-table.git
+cd tnks-data-table
+
+# 2. Install dependencies and build registry
+npm install
+npm run registry:build
+
+# 3. Start the development server
+npm run dev
+
+# 4. In your project directory, install from localhost
+npx shadcn@latest add http://localhost:3000/r/data-table.json
+npx shadcn@latest add http://localhost:3000/r/calendar-date-picker.json
+```
+
+#### What Gets Installed
+
+The registry installation will automatically:
+- ✅ Install all required npm dependencies
+- ✅ Copy all data-table components and utilities
+- ✅ Set up the calendar-date-picker component
+- ✅ Configure proper import paths
+
+#### Required Shadcn UI Components (Prerequisites)
+
+Before installing the data-table component, ensure you have these Shadcn UI components installed:
+
+```bash
+# Initialize Shadcn UI in your project (if not already done)
+npx shadcn@latest init
+
+# Install required Shadcn UI components
+npx shadcn@latest add button checkbox input select popover calendar dropdown-menu separator table command
+```
+
+**Note:** The registry will handle installing the data-table specific components, but you need to have the base Shadcn UI components installed first.
+
+---
+
+### Method 2: Manual Installation
 
 #### 1. Install Required Dependencies
 

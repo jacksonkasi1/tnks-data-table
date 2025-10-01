@@ -19,6 +19,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.3.2] - 2025-10-02
+
+### Added
+- **Shadcn Registry Support**: Complete registry implementation for easy component installation
+  - Created `registry.json` with proper schema and component definitions
+  - Added `scripts/build-registry.ts` for automated registry file generation
+  - Generated registry JSON files in `public/r/` directory (data-table.json, calendar-date-picker.json)
+  - Added `registry:build` npm script for building registry
+  - Created `vercel.json` with proper CORS and caching headers for registry endpoints
+  - Organized registry files in `registry/default/` directory structure
+
+### Changed
+- **Installation Documentation**: Updated README.md with comprehensive installation methods
+  - Added "Quick Start" section with single-command installation
+  - Added "Method 1: Using Shadcn Registry (Recommended)" section with remote and local installation
+  - Added "Method 2: Manual Installation" section for step-by-step setup
+  - Updated installation URLs to use deployed Vercel URL (https://tnks-data-table.vercel.app)
+  - Clarified required Shadcn UI component prerequisites
+  - Improved installation flow and user experience
+
+### Fixed
+- **Registry Import Paths**: Fixed import path in `calendar-date-picker.tsx` for registry compatibility
+  - Changed from relative import `./ui/calendar` to absolute import `@/components/ui/calendar`
+  - Ensures proper module resolution when installed via Shadcn CLI
+
 ## [0.3.1] - 2025-10-01
 
 ### Fixed
