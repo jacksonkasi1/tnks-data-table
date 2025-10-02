@@ -39,84 +39,104 @@
       ],
       "files": [
         {
-          "path": "registry/default/data-table/data-table.tsx",
-          "type": "registry:component"
+          "path": "registry/default/components/data-table/data-table.tsx",
+          "type": "registry:component",
+          "target": "components/data-table/data-table.tsx"
         },
         {
-          "path": "registry/default/data-table/column-header.tsx",
-          "type": "registry:component"
+          "path": "registry/default/components/data-table/column-header.tsx",
+          "type": "registry:component",
+          "target": "components/data-table/column-header.tsx"
         },
         {
-          "path": "registry/default/data-table/data-export.tsx",
-          "type": "registry:component"
+          "path": "registry/default/components/data-table/data-export.tsx",
+          "type": "registry:component",
+          "target": "components/data-table/data-export.tsx"
         },
         {
-          "path": "registry/default/data-table/data-table-resizer.tsx",
-          "type": "registry:component"
+          "path": "registry/default/components/data-table/data-table-resizer.tsx",
+          "type": "registry:component",
+          "target": "components/data-table/data-table-resizer.tsx"
         },
         {
-          "path": "registry/default/data-table/pagination.tsx",
-          "type": "registry:component"
+          "path": "registry/default/components/data-table/pagination.tsx",
+          "type": "registry:component",
+          "target": "components/data-table/pagination.tsx"
         },
         {
-          "path": "registry/default/data-table/toolbar.tsx",
-          "type": "registry:component"
+          "path": "registry/default/components/data-table/toolbar.tsx",
+          "type": "registry:component",
+          "target": "components/data-table/toolbar.tsx"
         },
         {
-          "path": "registry/default/data-table/view-options.tsx",
-          "type": "registry:component"
+          "path": "registry/default/components/data-table/view-options.tsx",
+          "type": "registry:component",
+          "target": "components/data-table/view-options.tsx"
         },
         {
-          "path": "registry/default/data-table/hooks/use-table-column-resize.ts",
-          "type": "registry:hook"
+          "path": "registry/default/components/data-table/hooks/use-table-column-resize.ts",
+          "type": "registry:hook",
+          "target": "components/data-table/hooks/use-table-column-resize.ts"
         },
         {
-          "path": "registry/default/data-table/utils/case-utils.ts",
-          "type": "registry:lib"
+          "path": "registry/default/components/data-table/utils/case-utils.ts",
+          "type": "registry:lib",
+          "target": "components/data-table/utils/case-utils.ts"
         },
         {
-          "path": "registry/default/data-table/utils/column-sizing.ts",
-          "type": "registry:lib"
+          "path": "registry/default/components/data-table/utils/column-sizing.ts",
+          "type": "registry:lib",
+          "target": "components/data-table/utils/column-sizing.ts"
         },
         {
-          "path": "registry/default/data-table/utils/conditional-state.ts",
-          "type": "registry:lib"
+          "path": "registry/default/components/data-table/utils/conditional-state.ts",
+          "type": "registry:lib",
+          "target": "components/data-table/utils/conditional-state.ts"
         },
         {
-          "path": "registry/default/data-table/utils/date-format.ts",
-          "type": "registry:lib"
+          "path": "registry/default/components/data-table/utils/date-format.ts",
+          "type": "registry:lib",
+          "target": "components/data-table/utils/date-format.ts"
         },
         {
-          "path": "registry/default/data-table/utils/deep-utils.ts",
-          "type": "registry:lib"
+          "path": "registry/default/components/data-table/utils/deep-utils.ts",
+          "type": "registry:lib",
+          "target": "components/data-table/utils/deep-utils.ts"
         },
         {
-          "path": "registry/default/data-table/utils/export-utils.ts",
-          "type": "registry:lib"
+          "path": "registry/default/components/data-table/utils/export-utils.ts",
+          "type": "registry:lib",
+          "target": "components/data-table/utils/export-utils.ts"
         },
         {
-          "path": "registry/default/data-table/utils/index.ts",
-          "type": "registry:lib"
+          "path": "registry/default/components/data-table/utils/index.ts",
+          "type": "registry:lib",
+          "target": "components/data-table/utils/index.ts"
         },
         {
-          "path": "registry/default/data-table/utils/keyboard-navigation.ts",
-          "type": "registry:lib"
+          "path": "registry/default/components/data-table/utils/keyboard-navigation.ts",
+          "type": "registry:lib",
+          "target": "components/data-table/utils/keyboard-navigation.ts"
         },
         {
-          "path": "registry/default/data-table/utils/search.ts",
-          "type": "registry:lib"
+          "path": "registry/default/components/data-table/utils/search.ts",
+          "type": "registry:lib",
+          "target": "components/data-table/utils/search.ts"
         },
         {
-          "path": "registry/default/data-table/utils/table-config.ts",
-          "type": "registry:lib"
+          "path": "registry/default/components/data-table/utils/table-config.ts",
+          "type": "registry:lib",
+          "target": "components/data-table/utils/table-config.ts"
         },
         {
-          "path": "registry/default/data-table/utils/table-state-handlers.ts",
-          "type": "registry:lib"
+          "path": "registry/default/components/data-table/utils/table-state-handlers.ts",
+          "type": "registry:lib",
+          "target": "components/data-table/utils/table-state-handlers.ts"
         },
         {
-          "path": "registry/default/data-table/utils/url-state.ts",
-          "type": "registry:lib"
+          "path": "registry/default/components/data-table/utils/url-state.ts",
+          "type": "registry:lib",
+          "target": "components/data-table/utils/url-state.ts"
         }
       ]
     },
@@ -140,8 +160,9 @@
       ],
       "files": [
         {
-          "path": "registry/default/calendar-date-picker/calendar-date-picker.tsx",
-          "type": "registry:component"
+          "path": "registry/default/components/calendar-date-picker.tsx",
+          "type": "registry:component",
+          "target": "components/calendar-date-picker.tsx"
         }
       ]
     }
