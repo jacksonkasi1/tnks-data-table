@@ -9,6 +9,12 @@ import { NewExpense, expenses } from "@/db/schema/tbl_expenses";
 import { NewOrder, orders } from "@/db/schema/tbl_orders";
 import { NewOrderItem, orderItems } from "@/db/schema/tbl_order_items";
 
+// ** Import booking seeds
+import { seedBookings } from "@/db/seed/seed-bookings";
+
+// ** Import ticket seeds
+import { seedTickets } from "@/db/seed/seed-tickets";
+
 /**
  * Generate a random date within the last year
  */
@@ -37,6 +43,14 @@ function getRandomFutureDate(fromDate: Date) {
 
 async function main() {
   console.log("🌱 Starting seed process...");
+
+  // Clear existing data
+  console.log("🗑️  Clearing existing data...");
+  await db.delete(expenses);
+  await db.delete(orderItems);
+  await db.delete(orders);
+  await db.delete(users);
+  console.log("✅ Existing data cleared");
 
   // Generate 200 users
   const userData: NewUser[] = Array.from({ length: 200 }).map(() => {
@@ -195,6 +209,12 @@ async function main() {
   console.log("📋 Inserting order items...");
   const insertedOrderItems = await db.insert(orderItems).values(orderItemData).returning();
   console.log(`✅ Successfully inserted ${insertedOrderItems.length} order items`);
+
+  // Seed bookings
+  await seedBookings();
+
+  // Seed tickets
+  await seedTickets();
 
   console.log("🎉 Seed process completed!");
   process.exit(0);
