@@ -208,7 +208,7 @@ export const getColumns = (
   // 1. Add expand icon column first
   columns.push({
     id: "expand",
-    size: 40,
+    size: 55,
     header: () => null,
     cell: ({ row }) => <ExpandIcon row={row} hideWhenSingle={false} />,
     enableSorting: false,

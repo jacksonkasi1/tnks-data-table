@@ -35,7 +35,7 @@ export function ExpandIcon<TData>({
       onClick={row.getToggleExpandedHandler()}
       className={cn(
         "inline-flex items-center justify-center",
-        "h-4 w-4 cursor-pointer transition-all",
+        "h-6 w-6 cursor-pointer transition-all",
         "hover:bg-muted rounded-sm",
         "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         className
@@ -46,7 +46,7 @@ export function ExpandIcon<TData>({
     >
       <ChevronRight
         className={cn(
-          "h-3 w-3 transition-transform duration-200",
+          "h-4 w-4 transition-transform duration-200",
           row.getIsExpanded() && "rotate-90"
         )}
       />
