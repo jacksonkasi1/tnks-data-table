@@ -24,7 +24,7 @@ export function Header() {
                 pathname === "/" ? "text-primary font-semibold" : ""
               }`}
             >
-              Users (snake_case) 
+              Users (snake_case)
               <span className="ml-1 text-xs opacity-60">API</span>
             </Link>
             <Link
@@ -33,8 +33,17 @@ export function Header() {
                 pathname === "/example/users-camel-case" ? "text-primary font-semibold" : ""
               }`}
             >
-              User CamelCase 
+              User CamelCase
               <span className="ml-1 text-xs opacity-60">API</span>
+            </Link>
+            <Link
+              href="/example/orders"
+              className={`text-sm font-medium transition-colors hover:text-primary ${
+                pathname === "/example/orders" ? "text-primary font-semibold" : ""
+              }`}
+            >
+              Orders
+              <span className="ml-1 text-xs opacity-60">Subrows</span>
             </Link>
           </nav>
         </div>
