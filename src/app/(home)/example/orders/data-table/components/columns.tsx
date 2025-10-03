@@ -210,22 +210,33 @@ export const getColumns = (
     columns.push({
       id: "select",
       header: ({ table }) => {
-        // SUBROW FIX: Only count parent rows (depth 0) for header checkbox
-        const parentRows = table.getRowModel().rows.filter(row => row.depth === 0);
-        const selectedParentRows = parentRows.filter(row => row.getIsSelected());
-        const allParentsSelected = parentRows.length > 0 && selectedParentRows.length === parentRows.length;
-        const someParentsSelected = selectedParentRows.length > 0 && selectedParentRows.length < parentRows.length;
+        // Get all rows (including subrows)
+        const allRows = table.getRowModel().rows;
+        const flatRows = table.getRowModel().flatRows; // Includes all rows at all depths
+
+        // Count selected rows at all levels
+        const selectedRows = flatRows.filter(row => row.getIsSelected());
+        const allSelected = flatRows.length > 0 && selectedRows.length === flatRows.length;
+        const someSelected = selectedRows.length > 0 && selectedRows.length < flatRows.length;
 
         return (
           <div className="pl-2 truncate">
             <Checkbox
-              checked={allParentsSelected || (someParentsSelected && "indeterminate")}
+              checked={allSelected || (someSelected && "indeterminate")}
               onCheckedChange={(value) => {
-                // Toggle only parent rows
+                // Toggle all rows (parents and subrows)
+                const parentRows = allRows.filter(row => row.depth === 0);
                 if (value) {
-                  parentRows.forEach(row => row.toggleSelected(true));
+                  // Select all parents (which will cascade to subrows via our logic)
+                  parentRows.forEach(row => {
+                    row.toggleSelected(true);
+                    if (row.subRows && row.subRows.length > 0) {
+                      row.subRows.forEach(subRow => subRow.toggleSelected(true));
+                    }
+                  });
                 } else {
-                  parentRows.forEach(row => row.toggleSelected(false));
+                  // Deselect everything
+                  flatRows.forEach(row => row.toggleSelected(false));
                 }
               }}
               aria-label="Select all"
@@ -240,15 +251,23 @@ export const getColumns = (
 
         // Check if some (but not all) subrows are selected
         let isSomeSelected = false;
+        let allSubrowsSelected = false;
+
         if (isParent && row.subRows && row.subRows.length > 0) {
           const selectedSubrows = row.subRows.filter(subRow => subRow.getIsSelected());
+          allSubrowsSelected = selectedSubrows.length === row.subRows.length;
           isSomeSelected = selectedSubrows.length > 0 && selectedSubrows.length < row.subRows.length;
         }
+
+        // Determine checkbox state for parent
+        const checkboxState = isParent
+          ? (allSubrowsSelected && isSelected ? true : (isSomeSelected ? "indeterminate" : false))
+          : isSelected;
 
         return (
           <div className="truncate">
             <Checkbox
-              checked={isSelected || (isSomeSelected && "indeterminate")}
+              checked={checkboxState}
               onCheckedChange={(value) => {
                 const rowType = isParent ? "Parent" : "Subrow";
 
@@ -277,6 +296,22 @@ export const getColumns = (
                 } else {
                   // Subrow checkbox: only select/deselect this subrow
                   row.toggleSelected(!!value);
+
+                  // Check if we need to update parent state
+                  if (row.getParentRow()) {
+                    const parent = row.getParentRow()!;
+                    const allSiblingsSelected = parent.subRows?.every(subRow => subRow.getIsSelected());
+                    const noSiblingsSelected = parent.subRows?.every(subRow => !subRow.getIsSelected());
+
+                    // Auto-select parent if all subrows selected
+                    if (value && allSiblingsSelected) {
+                      parent.toggleSelected(true);
+                    }
+                    // Auto-deselect parent if no subrows selected
+                    else if (!value && noSiblingsSelected) {
+                      parent.toggleSelected(false);
+                    }
+                  }
                 }
 
                 // Handle deselection callback

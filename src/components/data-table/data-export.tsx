@@ -36,6 +36,23 @@ interface DataTableExportProps<TData extends ExportableData> {
   transformFunction?: DataTransformFunction<TData>;
   size?: 'sm' | 'default' | 'lg';
   config?: TableConfig;
+  exportType?: "csv" | "excel";
+  buttonText?: string;
+  // Subrow props
+  subRowsConfig?: any;
+  getSelectedParentRows?: () => TData[];
+  getSelectedSubRows?: () => TData[];
+  parentCount?: number;
+  subrowCount?: number;
+  enableCsv?: boolean;
+  enableExcel?: boolean;
+  subRowExportConfig?: {
+    entityName: string;
+    columnMapping: Record<string, string>;
+    columnWidths: Array<{ wch: number }>;
+    headers: string[];
+    transformFunction?: DataTransformFunction<TData>;
+  };
 }
 
 export function DataTableExport<TData extends ExportableData>({
@@ -50,9 +67,75 @@ export function DataTableExport<TData extends ExportableData>({
   headers,
   transformFunction,
   size = 'default',
-  config
+  config,
+  exportType,
+  buttonText,
+  subRowsConfig,
+  getSelectedParentRows,
+  getSelectedSubRows,
+  parentCount = 0,
+  subrowCount = 0,
+  enableCsv = true,
+  enableExcel = true,
+  subRowExportConfig,
 }: DataTableExportProps<TData>): JSX.Element {
   const [isLoading, setIsLoading] = useState(false);
+
+  // Export parent rows only
+  const handleExportParents = async (type: "csv" | "excel") => {
+    if (isLoading || !getSelectedParentRows) return;
+
+    try {
+      setIsLoading(true);
+      const parentData = getSelectedParentRows();
+
+      if (parentData.length === 0) {
+        toast.error("No parent rows selected");
+        return;
+      }
+
+      const success = type === "csv"
+        ? exportToCSV(parentData, `${entityName}-parents-export-${Date.now()}`, headers, columnMapping, transformFunction)
+        : exportToExcel(parentData, `${entityName}-parents-export-${Date.now()}`, columnMapping, columnWidths, headers, transformFunction);
+
+      if (success) {
+        toast.success(`Exported ${parentData.length} parent rows`);
+      }
+    } catch (error) {
+      console.error("Error exporting parents:", error);
+      toast.error("Export failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Export subrows only
+  const handleExportSubrows = async (type: "csv" | "excel") => {
+    if (isLoading || !getSelectedSubRows || !subRowExportConfig) return;
+
+    try {
+      setIsLoading(true);
+      const subrowData = getSelectedSubRows();
+
+      if (subrowData.length === 0) {
+        toast.error("No subrows selected");
+        return;
+      }
+
+      const success = type === "csv"
+        ? exportToCSV(subrowData, `${subRowExportConfig.entityName}-export-${Date.now()}`, subRowExportConfig.headers, subRowExportConfig.columnMapping, subRowExportConfig.transformFunction)
+        : exportToExcel(subrowData, `${subRowExportConfig.entityName}-export-${Date.now()}`, subRowExportConfig.columnMapping, subRowExportConfig.columnWidths, subRowExportConfig.headers, subRowExportConfig.transformFunction);
+
+      if (success) {
+        toast.success(`Exported ${subrowData.length} subrows`);
+      }
+    } catch (error) {
+      console.error("Error exporting subrows:", error);
+      toast.error("Export failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleExport = async (type: "csv" | "excel") => {
     if (isLoading) return; // Prevent multiple export requests
@@ -374,6 +457,30 @@ export function DataTableExport<TData extends ExportableData>({
   // Check if any rows are selected
   const hasSelection = selectedData && selectedData.length > 0;
 
+  // If exportType and buttonText are provided, show single button
+  if (exportType && buttonText) {
+    return (
+      <Button
+        variant="outline"
+        size={size}
+        disabled={isLoading}
+        onClick={() => handleExport(exportType)}
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Exporting...
+          </>
+        ) : (
+          <>
+            <DownloadIcon className="mr-2 h-4 w-4" />
+            {buttonText}
+          </>
+        )}
+      </Button>
+    );
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -387,13 +494,43 @@ export function DataTableExport<TData extends ExportableData>({
             <>
               <DownloadIcon className="mr-2 h-4 w-4" />
               Export
-              {hasSelection && <span className="ml-1">({selectedData?.length})</span>}
+              {hasSelection && subRowsConfig?.enabled && (
+                <span className="ml-1">({parentCount + subrowCount})</span>
+              )}
+              {hasSelection && !subRowsConfig?.enabled && (
+                <span className="ml-1">({selectedData?.length})</span>
+              )}
             </>
           )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {hasSelection ? (
+        {hasSelection && subRowsConfig?.enabled ? (
+          // Subrow tables: Show 4 options
+          <>
+            {parentCount > 0 && enableCsv && (
+              <DropdownMenuItem onClick={() => handleExportParents("csv")} disabled={isLoading}>
+                Export Parents as CSV ({parentCount})
+              </DropdownMenuItem>
+            )}
+            {parentCount > 0 && enableExcel && (
+              <DropdownMenuItem onClick={() => handleExportParents("excel")} disabled={isLoading}>
+                Export Parents as Excel ({parentCount})
+              </DropdownMenuItem>
+            )}
+            {subrowCount > 0 && enableCsv && (
+              <DropdownMenuItem onClick={() => handleExportSubrows("csv")} disabled={isLoading}>
+                Export Subrows as CSV ({subrowCount})
+              </DropdownMenuItem>
+            )}
+            {subrowCount > 0 && enableExcel && (
+              <DropdownMenuItem onClick={() => handleExportSubrows("excel")} disabled={isLoading}>
+                Export Subrows as Excel ({subrowCount})
+              </DropdownMenuItem>
+            )}
+          </>
+        ) : hasSelection ? (
+          // Normal tables: Show 2 options
           <>
             <DropdownMenuItem onClick={() => handleExport("csv")} disabled={isLoading}>
               Export Selected as CSV

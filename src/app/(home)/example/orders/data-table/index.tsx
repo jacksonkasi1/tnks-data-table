@@ -27,6 +27,8 @@ export function OrdersDataTable() {
       fetchDataFn={fetchOrdersGrouped}
       exportConfig={{
         entityName: "orders",
+        enableCsv: true,
+        enableExcel: true,
         columnMapping: {
           order_id: "Order ID",
           customer_name: "Customer",
@@ -63,6 +65,30 @@ export function OrdersDataTable() {
           "status",
           "order_date",
         ],
+        subRowExportConfig: {
+          entityName: "order-items",
+          columnMapping: {
+            order_id: "Order ID",
+            product_name: "Product",
+            quantity: "Quantity",
+            price: "Price",
+            subtotal: "Subtotal",
+          },
+          columnWidths: [
+            { wch: 15 },
+            { wch: 25 },
+            { wch: 10 },
+            { wch: 12 },
+            { wch: 12 },
+          ],
+          headers: [
+            "order_id",
+            "product_name",
+            "quantity",
+            "price",
+            "subtotal",
+          ],
+        },
       }}
       idField="id"
       pageSizeOptions={[10, 20, 30, 50]}

@@ -346,6 +346,64 @@ export function DataTable<TData extends ExportableData, TValue>({
     return dataItems;
   }, [dataItems]);
 
+  // SUBROW HELPERS: Get selected parents and subrows separately
+  const getSelectedParentsAndSubrows = useCallback(() => {
+    if (!subRowsConfig?.enabled) {
+      return { parents: [], subrows: [], parentIds: [], subrowIds: [] };
+    }
+
+    const parents: TData[] = [];
+    const subrows: Array<{ parentId: string | number; subrow: TData }> = [];
+    const parentIds: Array<string | number> = [];
+    const subrowIds: Array<string | number> = [];
+
+    dataItems.forEach((item) => {
+      const itemId = String(item[idField]);
+      const isParentSelected = selectedItemIds[itemId];
+
+      if (isParentSelected) {
+        parents.push(item);
+        const id = item[idField];
+        if (id !== null && id !== undefined) {
+          parentIds.push(id as string | number);
+        }
+      }
+
+      // Check subrows
+      const subRowsData = (item as any)[subRowsConfig.subRowsField || 'subRows'];
+      if (Array.isArray(subRowsData)) {
+        subRowsData.forEach((subRow: any) => {
+          const subRowId = String(subRow[idField]);
+          if (selectedItemIds[subRowId]) {
+            const parentId = item[idField];
+            const subRowItemId = subRow[idField];
+            subrows.push({
+              parentId: (parentId !== null && parentId !== undefined) ? parentId as string | number : 0,
+              subrow: subRow as TData
+            });
+            if (subRowItemId !== null && subRowItemId !== undefined) {
+              subrowIds.push(subRowItemId as string | number);
+            }
+          }
+        });
+      }
+    });
+
+    return { parents, subrows, parentIds, subrowIds };
+  }, [dataItems, selectedItemIds, idField, subRowsConfig]);
+
+  // Get only selected parent rows (for parent export)
+  const getSelectedParentRows = useCallback((): TData[] => {
+    const { parents } = getSelectedParentsAndSubrows();
+    return parents;
+  }, [getSelectedParentsAndSubrows]);
+
+  // Get only selected subrows (for subrow export)
+  const getSelectedSubRows = useCallback((): TData[] => {
+    const { subrows } = getSelectedParentsAndSubrows();
+    return subrows.map(item => item.subrow);
+  }, [getSelectedParentsAndSubrows]);
+
   // Fetch data
   useEffect(() => {
     // Check if the fetchDataFn is a query hook
@@ -759,6 +817,14 @@ export function DataTable<TData extends ExportableData, TValue>({
           columnWidths={exportConfig.columnWidths}
           headers={exportConfig.headers}
           transformFunction={exportConfig.transformFunction}
+          // Subrow-specific props
+          subRowsConfig={subRowsConfig}
+          getSelectedParentsAndSubrows={getSelectedParentsAndSubrows}
+          getSelectedParentRows={getSelectedParentRows}
+          getSelectedSubRows={getSelectedSubRows}
+          enableCsv={exportConfig.enableCsv !== false}
+          enableExcel={exportConfig.enableExcel !== false}
+          subRowExportConfig={exportConfig.subRowExportConfig}
           customToolbarComponent={renderToolbarContent?.({
             selectedRows: dataItems.filter((item) => selectedItemIds[String(item[idField])]),
             allSelectedIds: Object.keys(selectedItemIds),
