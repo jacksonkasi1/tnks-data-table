@@ -2,6 +2,9 @@
 
 // ** import core packages
 import * as React from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 // ** import components
 import { Button } from "@/components/ui/button";
@@ -14,11 +17,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+// ** import api
+import { deleteOrder } from "@/api/order/delete-order";
+import { deleteOrderItem } from "@/api/order/delete-order-item";
+
 interface DeleteOrderPopupProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   orderId: number;
   orderReference: string;
+  isSubrow?: boolean;
   resetSelection?: () => void;
 }
 
@@ -27,27 +35,48 @@ export function DeleteOrderPopup({
   onOpenChange,
   orderId,
   orderReference,
+  isSubrow = false,
   resetSelection,
 }: DeleteOrderPopupProps) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = React.useState(false);
 
   const handleDelete = async () => {
     try {
       setIsLoading(true);
 
-      // TODO: Implement actual delete API call
-      console.log("Delete order:", { orderId, orderReference });
+      // Use different API based on whether it's a subrow or parent row
+      const response = isSubrow
+        ? await deleteOrderItem(orderId)
+        : await deleteOrder(orderId);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (response.success) {
+        toast.success(
+          isSubrow
+            ? "Order item deleted successfully"
+            : "Order and all items deleted successfully"
+        );
+        onOpenChange(false);
 
-      onOpenChange(false);
+        if (resetSelection) {
+          resetSelection();
+        }
 
-      if (resetSelection) {
-        resetSelection();
+        router.refresh();
+        await queryClient.invalidateQueries({ queryKey: ["orders"] });
+      } else {
+        toast.error(
+          response.error ||
+            `Failed to delete ${isSubrow ? "order item" : "order"}`
+        );
       }
     } catch (error) {
-      console.error("Failed to delete order:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : `Failed to delete ${isSubrow ? "order item" : "order"}`
+      );
     } finally {
       setIsLoading(false);
     }
@@ -57,10 +86,18 @@ export function DeleteOrderPopup({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Delete Order</DialogTitle>
+          <DialogTitle>
+            {isSubrow ? "Delete Order Item" : "Delete Order"}
+          </DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete order <strong>{orderReference}</strong>?
-            This action cannot be undone.
+            Are you sure you want to delete order{" "}
+            <strong>{orderReference}</strong>?
+            {!isSubrow && (
+              <span className="block mt-2 text-destructive">
+                This will delete the entire order and all its items.
+              </span>
+            )}
+            <span className="block mt-1">This action cannot be undone.</span>
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

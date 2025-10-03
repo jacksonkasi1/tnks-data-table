@@ -29,17 +29,47 @@ export function OrdersDataTable() {
         allSelectedIds,
         totalSelectedCount,
         resetSelection,
-      }) => (
-        <ToolbarOptions
-          selectedOrders={selectedRows.map((row) => ({
-            id: row.id,
-            order_id: row.order_id,
-          }))}
-          allSelectedIds={allSelectedIds}
-          totalSelectedCount={totalSelectedCount}
-          resetSelection={resetSelection}
-        />
-      )}
+      }) => {
+        // Separate parent orders from child items
+        const parentOrders = selectedRows.filter(
+          (row) => !row.item_id || row.item_id === undefined
+        );
+        const childItems = selectedRows.filter(
+          (row) => row.item_id !== undefined && row.item_id !== null
+        );
+
+        // Get parent order_ids to check if child's parent is also selected
+        const parentOrderIds = new Set(
+          parentOrders.map((order) => order.order_id)
+        );
+
+        // Filter out child items whose parent order is already selected
+        const independentChildItems = childItems.filter(
+          (child) => !parentOrderIds.has(child.order_id)
+        );
+
+        return (
+          <ToolbarOptions
+            selectedOrders={selectedRows.map((row) => ({
+              id: row.id,
+              order_id: row.order_id,
+              item_id: row.item_id,
+            }))}
+            parentOrders={parentOrders.map((row) => ({
+              id: row.id,
+              order_id: row.order_id,
+            }))}
+            independentChildItems={independentChildItems.map((row) => ({
+              id: row.id,
+              order_id: row.order_id,
+              item_id: row.item_id,
+            }))}
+            allSelectedIds={allSelectedIds}
+            totalSelectedCount={totalSelectedCount}
+            resetSelection={resetSelection}
+          />
+        );
+      }}
       subRowsConfig={{
         enabled: true,
         mode: "same-columns", // "same-columns" | "nested"

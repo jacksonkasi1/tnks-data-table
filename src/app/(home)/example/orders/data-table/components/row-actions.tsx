@@ -34,12 +34,22 @@ export function DataTableRowActions<TData>({
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const order = row.original as Order;
 
+  // Check if this is a subrow (has parent) or parent row
+  const isSubrow = row.depth > 0;
+
+  // For subrows, use the item_id if it exists, otherwise use id
+  // For parent rows, always use id (which is the order id)
+  const deleteId = isSubrow && order.item_id ? order.item_id : order.id;
+
   const handleEdit = () => {
-    console.log("Edit order:", order);
+    console.log(isSubrow ? "Edit order item:" : "Edit order:", order);
   };
 
   const handleViewDetails = () => {
-    console.log("View order details:", order);
+    console.log(
+      isSubrow ? "View item details:" : "View order details:",
+      order
+    );
   };
 
   // Function to reset all selections
@@ -66,7 +76,7 @@ export function DataTableRowActions<TData>({
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setDeleteDialogOpen(true)}>
-            Delete
+            {isSubrow ? "Delete Item" : "Delete Order"}
             <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -75,8 +85,9 @@ export function DataTableRowActions<TData>({
       <DeleteOrderPopup
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        orderId={order.id}
+        orderId={deleteId}
         orderReference={order.order_id}
+        isSubrow={isSubrow}
         resetSelection={resetSelection}
       />
     </>
