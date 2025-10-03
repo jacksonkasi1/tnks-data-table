@@ -1,38 +1,37 @@
 // ** import core packages
 import { Suspense } from "react";
-import Link from "next/link";
 
 // ** import components
 import { OrdersDataTable } from "./data-table";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-function OrdersTableWrapper() {
-  return (
-    <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-      <OrdersDataTable />
-    </Suspense>
-  );
-}
+// ** import icons
+import { Info } from "lucide-react";
 
 export default function OrdersPage() {
   return (
-    <div className="container mx-auto py-10">
-      <div className="mb-8">
-        {/* Breadcrumb/Navigation Path */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-          <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
-          <span>/</span>
-          <Link href="/example" className="hover:text-foreground transition-colors">Examples</Link>
-          <span>/</span>
-          <span className="text-foreground font-medium">Orders</span>
-        </div>
-
-        <h1 className="text-3xl font-bold tracking-tight">Orders & Products</h1>
-        <p className="text-muted-foreground mt-2">
-          Example of subrows feature with same-columns mode. Each order shows its first product in the parent row, with remaining products as expandable subrows.
-        </p>
+    <main className="container mx-auto py-10">
+      <div className="flex items-center gap-2 mb-4">
+        <h1 className="text-xl font-bold">Orders & Products</h1>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="text-muted-foreground hover:text-foreground transition-colors">
+              <Info className="h-4 w-4" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80">
+            <div className="space-y-2">
+              <h4 className="font-medium">Subrows Feature</h4>
+              <p className="text-sm text-muted-foreground">
+                Example of subrows feature with same-columns mode. Each order shows its first product in the parent row, with remaining products as expandable subrows.
+              </p>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
-      <OrdersTableWrapper />
-    </div>
+      <Suspense fallback={<div>Loading...</div>}>
+        <OrdersDataTable />
+      </Suspense>
+    </main>
   );
 }
