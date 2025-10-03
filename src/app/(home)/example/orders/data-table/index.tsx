@@ -1,10 +1,7 @@
 "use client";
 
-// ** import core packages
+// ** import components
 import { DataTable } from "@/components/data-table/data-table";
-
-// ** import api
-import { fetchOrdersGrouped } from "@/api/order/fetch-orders-grouped";
 
 // ** import schema
 import { Order } from "./schema";
@@ -12,86 +9,37 @@ import { Order } from "./schema";
 // ** import columns
 import { getColumns } from "./components/columns";
 
+// ** import utils
+import { useExportConfig } from "./utils/config";
+import { useOrdersData } from "./utils/data-fetching";
+
+// ** import toolbar
+import { ToolbarOptions } from "./components/toolbar-options";
+
 export function OrdersDataTable() {
   return (
     <DataTable<Order, unknown>
-      config={{
-        enableRowSelection: true,
-        enableToolbar: true,
-        enablePagination: true,
-        enableColumnResizing: true,
-        columnResizingTableId: "orders-table",
-        defaultSortBy: "order_id",
-      }}
       getColumns={getColumns}
-      fetchDataFn={fetchOrdersGrouped}
-      exportConfig={{
-        entityName: "orders",
-        enableCsv: true,
-        enableExcel: true,
-        columnMapping: {
-          order_id: "Order ID",
-          customer_name: "Customer",
-          product_name: "Product",
-          quantity: "Quantity",
-          price: "Price",
-          subtotal: "Subtotal",
-          total_items: "Total Items",
-          total_amount: "Total Amount",
-          status: "Status",
-          order_date: "Order Date",
-        },
-        columnWidths: [
-          { wch: 15 },
-          { wch: 25 },
-          { wch: 25 },
-          { wch: 10 },
-          { wch: 12 },
-          { wch: 12 },
-          { wch: 12 },
-          { wch: 15 },
-          { wch: 12 },
-          { wch: 15 },
-        ],
-        headers: [
-          "order_id",
-          "customer_name",
-          "product_name",
-          "quantity",
-          "price",
-          "subtotal",
-          "total_items",
-          "total_amount",
-          "status",
-          "order_date",
-        ],
-        subRowExportConfig: {
-          entityName: "order-items",
-          columnMapping: {
-            order_id: "Order ID",
-            product_name: "Product",
-            quantity: "Quantity",
-            price: "Price",
-            subtotal: "Subtotal",
-          },
-          columnWidths: [
-            { wch: 15 },
-            { wch: 25 },
-            { wch: 10 },
-            { wch: 12 },
-            { wch: 12 },
-          ],
-          headers: [
-            "order_id",
-            "product_name",
-            "quantity",
-            "price",
-            "subtotal",
-          ],
-        },
-      }}
+      fetchDataFn={useOrdersData}
       idField="id"
       pageSizeOptions={[10, 20, 30, 50]}
+      exportConfig={useExportConfig()}
+      renderToolbarContent={({
+        selectedRows,
+        allSelectedIds,
+        totalSelectedCount,
+        resetSelection,
+      }) => (
+        <ToolbarOptions
+          selectedOrders={selectedRows.map((row) => ({
+            id: row.id,
+            order_id: row.order_id,
+          }))}
+          allSelectedIds={allSelectedIds}
+          totalSelectedCount={totalSelectedCount}
+          resetSelection={resetSelection}
+        />
+      )}
       subRowsConfig={{
         enabled: true,
         mode: "same-columns",
@@ -99,6 +47,14 @@ export function OrdersDataTable() {
         hideExpandIconWhenSingle: false,
         autoExpandSingle: false,
         indentSize: 24,
+      }}
+      config={{
+        enableRowSelection: true,
+        enableToolbar: true,
+        enablePagination: true,
+        enableColumnResizing: true,
+        columnResizingTableId: "orders-table",
+        defaultSortBy: "order_id",
       }}
     />
   );

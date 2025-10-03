@@ -5,7 +5,6 @@ import { ColumnDef } from "@tanstack/react-table";
 
 // ** import core packages
 import { format } from "date-fns";
-import { memo } from "react";
 
 // ** import components
 import { DataTableColumnHeader } from "@/components/data-table/column-header";
@@ -16,10 +15,13 @@ import { ExpandIcon } from "@/components/data-table/expand-icon";
 // ** import schema
 import { Order } from "../schema";
 
+// ** import row actions
+import { DataTableRowActions } from "./row-actions";
+
 export const getColumns = (
   handleRowDeselection: ((rowId: string) => void) | null | undefined
 ): ColumnDef<Order>[] => {
-  // Base columns without select and expand
+  // Base columns (without expand and select)
   const baseColumns: ColumnDef<Order>[] = [
     {
       accessorKey: "order_id",
@@ -190,12 +192,20 @@ export const getColumns = (
       },
       size: 120,
     },
+    {
+      id: "actions",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Actions" />
+      ),
+      cell: ({ row, table }) => <DataTableRowActions row={row} table={table} />,
+      size: 80,
+    },
   ];
 
-  // Build final columns array with expand icon and optional select
+  // Build final columns array
   const columns: ColumnDef<Order>[] = [];
 
-  // Add expand icon first
+  // 1. Add expand icon column first
   columns.push({
     id: "expand",
     size: 40,
@@ -205,38 +215,35 @@ export const getColumns = (
     enableHiding: false,
   });
 
-  // Add select column if row selection is enabled
+  // 2. Add select column if row selection is enabled
   if (handleRowDeselection !== null) {
     columns.push({
       id: "select",
       header: ({ table }) => {
-        // Get all rows (including subrows)
         const allRows = table.getRowModel().rows;
-        const flatRows = table.getRowModel().flatRows; // Includes all rows at all depths
+        const flatRows = table.getRowModel().flatRows;
 
-        // Count selected rows at all levels
-        const selectedRows = flatRows.filter(row => row.getIsSelected());
-        const allSelected = flatRows.length > 0 && selectedRows.length === flatRows.length;
-        const someSelected = selectedRows.length > 0 && selectedRows.length < flatRows.length;
+        const selectedRows = flatRows.filter((row) => row.getIsSelected());
+        const allSelected =
+          flatRows.length > 0 && selectedRows.length === flatRows.length;
+        const someSelected =
+          selectedRows.length > 0 && selectedRows.length < flatRows.length;
 
         return (
           <div className="pl-2 truncate">
             <Checkbox
               checked={allSelected || (someSelected && "indeterminate")}
               onCheckedChange={(value) => {
-                // Toggle all rows (parents and subrows)
-                const parentRows = allRows.filter(row => row.depth === 0);
+                const parentRows = allRows.filter((row) => row.depth === 0);
                 if (value) {
-                  // Select all parents (which will cascade to subrows via our logic)
-                  parentRows.forEach(row => {
+                  parentRows.forEach((row) => {
                     row.toggleSelected(true);
                     if (row.subRows && row.subRows.length > 0) {
-                      row.subRows.forEach(subRow => subRow.toggleSelected(true));
+                      row.subRows.forEach((subRow) => subRow.toggleSelected(true));
                     }
                   });
                 } else {
-                  // Deselect everything
-                  flatRows.forEach(row => row.toggleSelected(false));
+                  flatRows.forEach((row) => row.toggleSelected(false));
                 }
               }}
               aria-label="Select all"
@@ -249,19 +256,25 @@ export const getColumns = (
         const isParent = row.depth === 0;
         const isSelected = row.getIsSelected();
 
-        // Check if some (but not all) subrows are selected
         let isSomeSelected = false;
         let allSubrowsSelected = false;
 
         if (isParent && row.subRows && row.subRows.length > 0) {
-          const selectedSubrows = row.subRows.filter(subRow => subRow.getIsSelected());
+          const selectedSubrows = row.subRows.filter((subRow) =>
+            subRow.getIsSelected()
+          );
           allSubrowsSelected = selectedSubrows.length === row.subRows.length;
-          isSomeSelected = selectedSubrows.length > 0 && selectedSubrows.length < row.subRows.length;
+          isSomeSelected =
+            selectedSubrows.length > 0 &&
+            selectedSubrows.length < row.subRows.length;
         }
 
-        // Determine checkbox state for parent
         const checkboxState = isParent
-          ? (allSubrowsSelected && isSelected ? true : (isSomeSelected ? "indeterminate" : false))
+          ? allSubrowsSelected && isSelected
+            ? true
+            : isSomeSelected
+              ? "indeterminate"
+              : false
           : isSelected;
 
         return (
@@ -269,52 +282,33 @@ export const getColumns = (
             <Checkbox
               checked={checkboxState}
               onCheckedChange={(value) => {
-                const rowType = isParent ? "Parent" : "Subrow";
-
-                // Only log when selecting (not unselecting)
-                if (value) {
-                  const orderData = row.original;
-                  console.log(`[${rowType} Selection]`, {
-                    selected: value,
-                    rowId: row.id,
-                    depth: row.depth,
-                    order_id: orderData.order_id,
-                    item_id: orderData.id,
-                    product: orderData.product_name,
-                  });
-                }
-
-                // Manual cascading logic for parent-child selection
                 if (isParent) {
-                  // Parent checkbox: select/deselect parent AND all subrows
                   row.toggleSelected(!!value);
                   if (row.subRows && row.subRows.length > 0) {
-                    row.subRows.forEach(subRow => {
+                    row.subRows.forEach((subRow) => {
                       subRow.toggleSelected(!!value);
                     });
                   }
                 } else {
-                  // Subrow checkbox: only select/deselect this subrow
                   row.toggleSelected(!!value);
 
-                  // Check if we need to update parent state
                   if (row.getParentRow()) {
                     const parent = row.getParentRow()!;
-                    const allSiblingsSelected = parent.subRows?.every(subRow => subRow.getIsSelected());
-                    const noSiblingsSelected = parent.subRows?.every(subRow => !subRow.getIsSelected());
+                    const allSiblingsSelected = parent.subRows?.every((subRow) =>
+                      subRow.getIsSelected()
+                    );
+                    const noSiblingsSelected = parent.subRows?.every(
+                      (subRow) => !subRow.getIsSelected()
+                    );
 
-                    // Auto-select parent if all subrows selected
                     if (value && allSiblingsSelected) {
                       parent.toggleSelected(true);
-                    }
-                    // Auto-deselect parent if no subrows selected
-                    else if (!value && noSiblingsSelected) {
+                    } else if (!value && noSiblingsSelected) {
                       parent.toggleSelected(false);
                     }
                   }
                 }
 
-                // Handle deselection callback
                 if (!value && handleRowDeselection) {
                   handleRowDeselection(row.id);
                 }
@@ -331,7 +325,7 @@ export const getColumns = (
     });
   }
 
-  // Add all base columns
+  // 3. Add all base columns
   columns.push(...baseColumns);
 
   return columns;
