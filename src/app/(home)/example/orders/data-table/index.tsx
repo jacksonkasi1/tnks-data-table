@@ -42,8 +42,8 @@ export function OrdersDataTable() {
       )}
       subRowsConfig={{
         enabled: true,
-        mode: "same-columns",
-        expandIconPosition: "first",
+        mode: "same-columns", // "same-columns" | "nested"
+        expandIconPosition: "after-checkbox", // "first" | "after-checkbox" | "before-checkbox"
         hideExpandIconWhenSingle: false,
         autoExpandSingle: false,
         indentSize: 24,
