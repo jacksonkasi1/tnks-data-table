@@ -8,9 +8,11 @@ import { format } from "date-fns";
 
 // ** import components
 import { DataTableColumnHeader } from "@/components/data-table/column-header";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { ExpandIcon } from "@/components/data-table/expand-icon";
+import {
+  createExpandColumn,
+  createSubRowSelectColumn,
+} from "@/components/data-table/subrow-columns";
 
 // ** import schema
 import { Order } from "../schema";
@@ -202,130 +204,15 @@ export const getColumns = (
     },
   ];
 
-  // Build final columns array
+  // Build final columns array using helper functions
   const columns: ColumnDef<Order>[] = [];
 
   // 1. Add expand icon column first
-  columns.push({
-    id: "expand",
-    size: 55,
-    header: () => null,
-    cell: ({ row }) => <ExpandIcon row={row} hideWhenSingle={false} />,
-    enableSorting: false,
-    enableHiding: false,
-  });
+  columns.push(createExpandColumn<Order>({ hideWhenSingle: false }));
 
   // 2. Add select column if row selection is enabled
   if (handleRowDeselection !== null) {
-    columns.push({
-      id: "select",
-      header: ({ table }) => {
-        const allRows = table.getRowModel().rows;
-        const flatRows = table.getRowModel().flatRows;
-
-        const selectedRows = flatRows.filter((row) => row.getIsSelected());
-        const allSelected =
-          flatRows.length > 0 && selectedRows.length === flatRows.length;
-        const someSelected =
-          selectedRows.length > 0 && selectedRows.length < flatRows.length;
-
-        return (
-          <div className="pl-2 truncate">
-            <Checkbox
-              checked={allSelected || (someSelected && "indeterminate")}
-              onCheckedChange={(value) => {
-                const parentRows = allRows.filter((row) => row.depth === 0);
-                if (value) {
-                  parentRows.forEach((row) => {
-                    row.toggleSelected(true);
-                    if (row.subRows && row.subRows.length > 0) {
-                      row.subRows.forEach((subRow) => subRow.toggleSelected(true));
-                    }
-                  });
-                } else {
-                  flatRows.forEach((row) => row.toggleSelected(false));
-                }
-              }}
-              aria-label="Select all"
-              className="translate-y-0.5 cursor-pointer"
-            />
-          </div>
-        );
-      },
-      cell: ({ row }) => {
-        const isParent = row.depth === 0;
-        const isSelected = row.getIsSelected();
-
-        let isSomeSelected = false;
-        let allSubrowsSelected = false;
-        const hasSubrows = isParent && row.subRows && row.subRows.length > 0;
-
-        if (hasSubrows) {
-          const selectedSubrows = row.subRows.filter((subRow) =>
-            subRow.getIsSelected()
-          );
-          allSubrowsSelected = selectedSubrows.length === row.subRows.length;
-          isSomeSelected =
-            selectedSubrows.length > 0 &&
-            selectedSubrows.length < row.subRows.length;
-        }
-
-        const checkboxState = isParent
-          ? hasSubrows
-            ? allSubrowsSelected && isSelected
-              ? true
-              : isSomeSelected
-                ? "indeterminate"
-                : false
-            : isSelected
-          : isSelected;
-
-        return (
-          <div className="truncate">
-            <Checkbox
-              checked={checkboxState}
-              onCheckedChange={(value) => {
-                if (isParent) {
-                  row.toggleSelected(!!value);
-                  if (row.subRows && row.subRows.length > 0) {
-                    row.subRows.forEach((subRow) => {
-                      subRow.toggleSelected(!!value);
-                    });
-                  }
-                } else {
-                  row.toggleSelected(!!value);
-
-                  if (row.getParentRow()) {
-                    const parent = row.getParentRow()!;
-                    const allSiblingsSelected = parent.subRows?.every((subRow) =>
-                      subRow.getIsSelected()
-                    );
-                    const noSiblingsSelected = parent.subRows?.every(
-                      (subRow) => !subRow.getIsSelected()
-                    );
-
-                    if (value && allSiblingsSelected) {
-                      parent.toggleSelected(true);
-                    } else if (!value && noSiblingsSelected) {
-                      parent.toggleSelected(false);
-                    }
-                  }
-                }
-
-                if (!value && handleRowDeselection) {
-                  handleRowDeselection(row.id);
-                }
-              }}
-              aria-label="Select row"
-              className="translate-y-0.5 cursor-pointer"
-            />
-          </div>
-        );
-      },
-      enableSorting: false,
-      enableHiding: false,
-      size: 50,
-    });
+    columns.push(createSubRowSelectColumn<Order>({ handleRowDeselection }));
   }
 
   // 3. Add all base columns
