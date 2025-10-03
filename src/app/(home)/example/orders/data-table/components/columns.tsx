@@ -258,8 +258,9 @@ export const getColumns = (
 
         let isSomeSelected = false;
         let allSubrowsSelected = false;
+        const hasSubrows = isParent && row.subRows && row.subRows.length > 0;
 
-        if (isParent && row.subRows && row.subRows.length > 0) {
+        if (hasSubrows) {
           const selectedSubrows = row.subRows.filter((subRow) =>
             subRow.getIsSelected()
           );
@@ -270,11 +271,13 @@ export const getColumns = (
         }
 
         const checkboxState = isParent
-          ? allSubrowsSelected && isSelected
-            ? true
-            : isSomeSelected
-              ? "indeterminate"
-              : false
+          ? hasSubrows
+            ? allSubrowsSelected && isSelected
+              ? true
+              : isSomeSelected
+                ? "indeterminate"
+                : false
+            : isSelected
           : isSelected;
 
         return (
