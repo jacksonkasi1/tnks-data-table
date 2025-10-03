@@ -244,6 +244,12 @@ export function DataTable<TData extends ExportableData, TValue>({
   // All IDs are stored as strings for consistency
   const [selectedItemIds, setSelectedItemIds] = useState<Record<string, boolean>>({});
 
+  // Track parent and subrow IDs separately for accurate counts across pages
+  const [selectedParentIds, setSelectedParentIds] = useState<Set<string>>(new Set());
+  const [selectedSubrowIds, setSelectedSubrowIds] = useState<Set<string>>(new Set());
+  // Track which parent each subrow belongs to (subrowId -> parentId)
+  const [subrowToParentMap, setSubrowToParentMap] = useState<Map<string, string>>(new Map());
+
   // Convert the sorting from URL to the format TanStack Table expects
   const sorting = useMemo(() => createSortingState(sortBy, sortOrder), [sortBy, sortOrder]);
 
@@ -260,6 +266,10 @@ export function DataTable<TData extends ExportableData, TValue>({
     [selectedItemIds]
   );
 
+  // Calculate parent and subrow counts across all pages using tracked Sets
+  const totalParentCount = selectedParentIds.size;
+  const totalSubrowCount = selectedSubrowIds.size;
+
   // PERFORMANCE FIX: Optimized row deselection handler
   const handleRowDeselection = useCallback((rowId: string) => {
     // With getRowId, rowId is already the actual item ID (not an index)
@@ -268,11 +278,33 @@ export function DataTable<TData extends ExportableData, TValue>({
       delete next[rowId];
       return next;
     });
-  }, []);
+
+    // Also remove from parent/subrow tracking
+    if (subRowsConfig?.enabled) {
+      setSelectedParentIds(prev => {
+        const next = new Set(prev);
+        next.delete(rowId);
+        return next;
+      });
+      setSelectedSubrowIds(prev => {
+        const next = new Set(prev);
+        next.delete(rowId);
+        return next;
+      });
+      setSubrowToParentMap(prev => {
+        const next = new Map(prev);
+        next.delete(rowId);
+        return next;
+      });
+    }
+  }, [subRowsConfig]);
 
   // Clear all selections
   const clearAllSelections = useCallback(() => {
     setSelectedItemIds({});
+    setSelectedParentIds(new Set());
+    setSelectedSubrowIds(new Set());
+    setSubrowToParentMap(new Map());
   }, []);
 
   // PERFORMANCE FIX: Optimized row selection handler
@@ -283,11 +315,76 @@ export function DataTable<TData extends ExportableData, TValue>({
         ? updaterOrValue(prev)
         : updaterOrValue;
 
+      // Update parent and subrow tracking sets if subrows are enabled
+      if (subRowsConfig?.enabled) {
+        // Build maps of parent and subrow IDs from current page data
+        const parentIdsMap = new Map<string, boolean>();
+        const subrowIdsMap = new Map<string, boolean>();
+        const subrowParentMap = new Map<string, string>();
+
+        dataItems.forEach((item) => {
+          const itemId = String(item[idField]);
+          parentIdsMap.set(itemId, true);
+
+          const subRowsData = (item as any)[subRowsConfig.subRowsField || 'subRows'];
+          if (Array.isArray(subRowsData)) {
+            subRowsData.forEach((subRow: any) => {
+              const subRowId = String(subRow[idField]);
+              subrowIdsMap.set(subRowId, true);
+              subrowParentMap.set(subRowId, itemId);
+            });
+          }
+        });
+
+        // Find newly selected and deselected IDs
+        const prevIds = new Set(Object.keys(prev));
+        const newIds = new Set(Object.keys(newRowSelection));
+
+        const addedIds = Array.from(newIds).filter(id => !prevIds.has(id));
+        const removedIds = Array.from(prevIds).filter(id => !newIds.has(id));
+
+        // Update parent and subrow sets
+        setSelectedParentIds(prevParents => {
+          const newParents = new Set(prevParents);
+          addedIds.forEach(id => {
+            if (parentIdsMap.has(id)) newParents.add(id);
+          });
+          removedIds.forEach(id => {
+            newParents.delete(id);
+          });
+          return newParents;
+        });
+
+        setSelectedSubrowIds(prevSubrows => {
+          const newSubrows = new Set(prevSubrows);
+          addedIds.forEach(id => {
+            if (subrowIdsMap.has(id)) newSubrows.add(id);
+          });
+          removedIds.forEach(id => {
+            newSubrows.delete(id);
+          });
+          return newSubrows;
+        });
+
+        // Update subrow-to-parent mapping
+        setSubrowToParentMap(prevMap => {
+          const newMap = new Map(prevMap);
+          addedIds.forEach(id => {
+            const parentId = subrowParentMap.get(id);
+            if (parentId) newMap.set(id, parentId);
+          });
+          removedIds.forEach(id => {
+            newMap.delete(id);
+          });
+          return newMap;
+        });
+      }
+
       // With getRowId, rowIds are actual item IDs (not indices)
       // So we can directly use newRowSelection as selectedItemIds
       return newRowSelection;
     });
-  }, []);
+  }, [dataItems, idField, subRowsConfig]);
 
   // Get selected items data
   const getSelectedItems = useCallback(async () => {
@@ -389,17 +486,146 @@ export function DataTable<TData extends ExportableData, TValue>({
     return { parents, subrows, parentIds, subrowIds };
   }, [dataItems, selectedItemIds, idField, subRowsConfig]);
 
-  // Get only selected parent rows (for parent export)
-  const getSelectedParentRows = useCallback((): TData[] => {
-    const { parents } = getSelectedParentsAndSubrows();
-    return parents;
-  }, [getSelectedParentsAndSubrows]);
+  // Get only selected parent rows (for parent export) - with cross-page support
+  const getSelectedParentRows = useCallback(async (): Promise<TData[]> => {
+    if (!subRowsConfig?.enabled) {
+      return [];
+    }
 
-  // Get only selected subrows (for subrow export)
-  const getSelectedSubRows = useCallback((): TData[] => {
-    const { subrows } = getSelectedParentsAndSubrows();
-    return subrows.map(item => item.subrow);
-  }, [getSelectedParentsAndSubrows]);
+    // Get all selected parent IDs
+    const allParentIds = Array.from(selectedParentIds);
+
+    if (allParentIds.length === 0) {
+      return [];
+    }
+
+    // Check if the first item ID is a number to determine the type
+    const isNumericIds = dataItems.length > 0 && typeof dataItems[0][idField] === 'number';
+
+    // Find parent items from current page
+    const parentsInCurrentPage = dataItems.filter(item =>
+      selectedParentIds.has(String(item[idField]))
+    );
+
+    // Get IDs of parents on current page
+    const idsInCurrentPage = new Set(parentsInCurrentPage.map(item => String(item[idField])));
+
+    // Find parent IDs that need to be fetched (not on current page)
+    const idsToFetchRaw = allParentIds.filter(id => !idsInCurrentPage.has(id));
+
+    // If all selected parents are on current page or we can't fetch by IDs
+    if (idsToFetchRaw.length === 0 || !fetchByIdsFn) {
+      return parentsInCurrentPage;
+    }
+
+    try {
+      // Convert IDs to the appropriate type for the fetchByIdsFn
+      const idsToFetch = isNumericIds
+        ? idsToFetchRaw.map(id => Number.parseInt(id, 10)).filter(id => !Number.isNaN(id))
+        : idsToFetchRaw;
+
+      // Fetch missing parent items in a single batch
+      const fetchedItems = await fetchByIdsFn(idsToFetch as number[] | string[]);
+
+      // Filter fetched items to only include parents (not subrows)
+      const fetchedParents = fetchedItems.filter((item: any) => {
+        // A parent row either has no item_id, or has parent-level fields
+        // We can identify parents by checking if they have subRows or parent-level fields
+        return !item.item_id || item.total_amount !== undefined || item.status !== undefined;
+      });
+
+      // Combine current page parents with fetched parents
+      return [...parentsInCurrentPage, ...fetchedParents];
+    } catch (error) {
+      console.error("Error fetching selected parent rows:", error);
+      return parentsInCurrentPage;
+    }
+  }, [selectedParentIds, dataItems, fetchByIdsFn, idField, subRowsConfig]);
+
+  // Get only selected subrows (for subrow export) - with cross-page support
+  const getSelectedSubRows = useCallback(async (): Promise<TData[]> => {
+    if (!subRowsConfig?.enabled) {
+      return [];
+    }
+
+    // Get all selected subrow IDs
+    const allSubrowIds = Array.from(selectedSubrowIds);
+
+    if (allSubrowIds.length === 0) {
+      return [];
+    }
+
+    // Check if the first item ID is a number to determine the type
+    const isNumericIds = dataItems.length > 0 && typeof dataItems[0][idField] === 'number';
+
+    // Find subrow items from current page
+    const subrowsInCurrentPage: TData[] = [];
+    dataItems.forEach((item) => {
+      const subRowsData = (item as any)[subRowsConfig.subRowsField || 'subRows'];
+      if (Array.isArray(subRowsData)) {
+        subRowsData.forEach((subRow: any) => {
+          if (selectedSubrowIds.has(String(subRow[idField]))) {
+            subrowsInCurrentPage.push(subRow as TData);
+          }
+        });
+      }
+    });
+
+    // Get IDs of subrows on current page
+    const idsInCurrentPage = new Set(subrowsInCurrentPage.map(item => String(item[idField])));
+
+    // Find subrow IDs that need to be fetched (not on current page)
+    const subrowIdsToFetch = allSubrowIds.filter(id => !idsInCurrentPage.has(id));
+
+    // If all selected subrows are on current page or we can't fetch by IDs
+    if (subrowIdsToFetch.length === 0 || !fetchByIdsFn) {
+      return subrowsInCurrentPage;
+    }
+
+    try {
+      // Find the parent order IDs for subrows that need to be fetched
+      const parentIdsToFetch = new Set<string>();
+      subrowIdsToFetch.forEach(subrowId => {
+        const parentId = subrowToParentMap.get(subrowId);
+        if (parentId) {
+          parentIdsToFetch.add(parentId);
+        }
+      });
+
+      if (parentIdsToFetch.size === 0) {
+        console.warn("No parent IDs found for selected subrows. This may indicate a selection tracking issue.");
+        return subrowsInCurrentPage;
+      }
+
+      // Convert parent IDs to the appropriate type for the fetchByIdsFn
+      const parentIdsArray = Array.from(parentIdsToFetch);
+      const idsToFetch = isNumericIds
+        ? parentIdsArray.map(id => Number.parseInt(id, 10)).filter(id => !Number.isNaN(id))
+        : parentIdsArray;
+
+      // Fetch parent orders that contain the selected subrows
+      const fetchedParentOrders = await fetchByIdsFn(idsToFetch as number[] | string[]);
+
+      // Extract only the selected subrows from fetched parent orders
+      const fetchedSubrows: TData[] = [];
+      fetchedParentOrders.forEach((item: any) => {
+        const subRowsData = (item as any)[subRowsConfig.subRowsField || 'subRows'];
+        if (Array.isArray(subRowsData)) {
+          subRowsData.forEach((subRow: any) => {
+            if (selectedSubrowIds.has(String(subRow[idField]))) {
+              fetchedSubrows.push(subRow as TData);
+            }
+          });
+        }
+      });
+
+      // Combine current page subrows with fetched subrows
+      return [...subrowsInCurrentPage, ...fetchedSubrows];
+    } catch (error) {
+      console.error("Error fetching selected subrows:", error);
+      return subrowsInCurrentPage;
+    }
+  }, [selectedSubrowIds, subrowToParentMap, dataItems, fetchByIdsFn, idField, subRowsConfig]);
 
   // Fetch data
   useEffect(() => {
@@ -819,6 +1045,8 @@ export function DataTable<TData extends ExportableData, TValue>({
           getSelectedParentsAndSubrows={getSelectedParentsAndSubrows}
           getSelectedParentRows={getSelectedParentRows}
           getSelectedSubRows={getSelectedSubRows}
+          totalParentCount={totalParentCount}
+          totalSubrowCount={totalSubrowCount}
           enableCsv={exportConfig.enableCsv !== false}
           enableExcel={exportConfig.enableExcel !== false}
           subRowExportConfig={exportConfig.subRowExportConfig}

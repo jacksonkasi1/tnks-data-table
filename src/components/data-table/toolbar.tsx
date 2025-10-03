@@ -73,8 +73,10 @@ interface DataTableToolbarProps<TData extends ExportableData> {
   // Subrow props
   subRowsConfig?: any;
   getSelectedParentsAndSubrows?: () => { parents: TData[]; subrows: any[]; parentIds: any[]; subrowIds: any[] };
-  getSelectedParentRows?: () => TData[];
-  getSelectedSubRows?: () => TData[];
+  getSelectedParentRows?: () => Promise<TData[]>;
+  getSelectedSubRows?: () => Promise<TData[]>;
+  totalParentCount?: number;
+  totalSubrowCount?: number;
   enableCsv?: boolean;
   enableExcel?: boolean;
   subRowExportConfig?: {
@@ -107,6 +109,8 @@ export function DataTableToolbar<TData extends ExportableData>({
   getSelectedParentsAndSubrows,
   getSelectedParentRows,
   getSelectedSubRows,
+  totalParentCount: totalParentCountProp,
+  totalSubrowCount: totalSubrowCountProp,
   enableCsv = true,
   enableExcel = true,
   subRowExportConfig,
@@ -123,8 +127,9 @@ export function DataTableToolbar<TData extends ExportableData>({
     ? getSelectedParentsAndSubrows()
     : { parents: [], subrows: [] };
 
-  const parentCount = parents.length;
-  const subrowCount = subrows.length;
+  // Use prop counts if available (cross-page), otherwise use current page counts
+  const parentCount = totalParentCountProp !== undefined ? totalParentCountProp : parents.length;
+  const subrowCount = totalSubrowCountProp !== undefined ? totalSubrowCountProp : subrows.length;
 
   // Get search value directly from URL query parameter
   const searchParamFromUrl = searchParams.get("search") || "";

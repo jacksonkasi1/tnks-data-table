@@ -13,6 +13,9 @@ import { getColumns } from "./components/columns";
 import { useExportConfig } from "./utils/config";
 import { useOrdersData } from "./utils/data-fetching";
 
+// ** import api
+import { fetchOrdersByIds } from "@/api/order/fetch-orders-by-ids";
+
 // ** import toolbar
 import { ToolbarOptions } from "./components/toolbar-options";
 
@@ -21,6 +24,7 @@ export function OrdersDataTable() {
     <DataTable<Order, unknown>
       getColumns={getColumns}
       fetchDataFn={useOrdersData}
+      fetchByIdsFn={fetchOrdersByIds}
       idField="id"
       pageSizeOptions={[10, 20, 30, 50]}
       exportConfig={useExportConfig()}

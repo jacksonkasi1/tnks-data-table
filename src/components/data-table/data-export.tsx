@@ -40,8 +40,8 @@ interface DataTableExportProps<TData extends ExportableData> {
   buttonText?: string;
   // Subrow props
   subRowsConfig?: any;
-  getSelectedParentRows?: () => TData[];
-  getSelectedSubRows?: () => TData[];
+  getSelectedParentRows?: () => Promise<TData[]>;
+  getSelectedSubRows?: () => Promise<TData[]>;
   parentCount?: number;
   subrowCount?: number;
   enableCsv?: boolean;
@@ -87,23 +87,36 @@ export function DataTableExport<TData extends ExportableData>({
 
     try {
       setIsLoading(true);
-      const parentData = getSelectedParentRows();
+
+      // Show loading toast for fetching
+      toast.loading("Preparing export...", {
+        description: "Fetching selected parent rows...",
+        id: "export-parents-toast",
+      });
+
+      const parentData = await getSelectedParentRows();
 
       if (parentData.length === 0) {
-        toast.error("No parent rows selected");
+        toast.error("No parent rows selected", { id: "export-parents-toast" });
         return;
       }
+
+      // Update toast for processing
+      toast.loading("Processing data...", {
+        description: "Generating export file...",
+        id: "export-parents-toast",
+      });
 
       const success = type === "csv"
         ? exportToCSV(parentData, `${entityName}-parents-export-${Date.now()}`, headers, columnMapping, transformFunction)
         : exportToExcel(parentData, `${entityName}-parents-export-${Date.now()}`, columnMapping, columnWidths, headers, transformFunction);
 
       if (success) {
-        toast.success(`Exported ${parentData.length} parent rows`);
+        toast.success(`Exported ${parentData.length} parent rows`, { id: "export-parents-toast" });
       }
     } catch (error) {
       console.error("Error exporting parents:", error);
-      toast.error("Export failed");
+      toast.error("Export failed", { id: "export-parents-toast" });
     } finally {
       setIsLoading(false);
     }
@@ -115,23 +128,36 @@ export function DataTableExport<TData extends ExportableData>({
 
     try {
       setIsLoading(true);
-      const subrowData = getSelectedSubRows();
+
+      // Show loading toast for fetching
+      toast.loading("Preparing export...", {
+        description: "Fetching selected subrows...",
+        id: "export-subrows-toast",
+      });
+
+      const subrowData = await getSelectedSubRows();
 
       if (subrowData.length === 0) {
-        toast.error("No subrows selected");
+        toast.error("No subrows selected", { id: "export-subrows-toast" });
         return;
       }
+
+      // Update toast for processing
+      toast.loading("Processing data...", {
+        description: "Generating export file...",
+        id: "export-subrows-toast",
+      });
 
       const success = type === "csv"
         ? exportToCSV(subrowData, `${subRowExportConfig.entityName}-export-${Date.now()}`, subRowExportConfig.headers, subRowExportConfig.columnMapping, subRowExportConfig.transformFunction)
         : exportToExcel(subrowData, `${subRowExportConfig.entityName}-export-${Date.now()}`, subRowExportConfig.columnMapping, subRowExportConfig.columnWidths, subRowExportConfig.headers, subRowExportConfig.transformFunction);
 
       if (success) {
-        toast.success(`Exported ${subrowData.length} subrows`);
+        toast.success(`Exported ${subrowData.length} subrows`, { id: "export-subrows-toast" });
       }
     } catch (error) {
       console.error("Error exporting subrows:", error);
-      toast.error("Export failed");
+      toast.error("Export failed", { id: "export-subrows-toast" });
     } finally {
       setIsLoading(false);
     }
