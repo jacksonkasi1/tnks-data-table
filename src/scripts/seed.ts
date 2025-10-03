@@ -6,6 +6,8 @@ import { db } from "@/db";
 // ** Table
 import { NewUser, users } from "@/db/schema/tbl_users";
 import { NewExpense, expenses } from "@/db/schema/tbl_expenses";
+import { NewOrder, orders } from "@/db/schema/tbl_orders";
+import { NewOrderItem, orderItems } from "@/db/schema/tbl_order_items";
 
 /**
  * Generate a random date within the last year
@@ -112,6 +114,87 @@ async function main() {
     .values(expenseData)
     .returning();
   console.log(`✅ Successfully inserted ${insertedExpenses.length} expenses`);
+
+  // Generate 200 orders with 1-25 items each
+  const orderData: NewOrder[] = [];
+  const orderItemData: NewOrderItem[] = [];
+
+  const statuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
+  const paymentMethods = ["Credit Card", "Debit Card", "PayPal", "Bank Transfer", "Cash on Delivery"];
+
+  const products = [
+    { name: "Laptop", price: { min: 500, max: 2000 } },
+    { name: "Mouse", price: { min: 10, max: 80 } },
+    { name: "Keyboard", price: { min: 30, max: 200 } },
+    { name: "Monitor", price: { min: 150, max: 800 } },
+    { name: "Headphones", price: { min: 20, max: 300 } },
+    { name: "Webcam", price: { min: 30, max: 150 } },
+    { name: "USB Cable", price: { min: 5, max: 25 } },
+    { name: "Phone Case", price: { min: 10, max: 50 } },
+    { name: "Screen Protector", price: { min: 5, max: 30 } },
+    { name: "Power Bank", price: { min: 20, max: 100 } },
+    { name: "SSD Drive", price: { min: 50, max: 300 } },
+    { name: "RAM Module", price: { min: 30, max: 200 } },
+    { name: "Graphics Card", price: { min: 200, max: 1500 } },
+    { name: "Motherboard", price: { min: 100, max: 500 } },
+    { name: "CPU Processor", price: { min: 150, max: 800 } },
+  ];
+
+  console.log("🛒 Generating orders...");
+
+  for (let i = 1; i <= 200; i++) {
+    const orderId = `ORD-${String(i).padStart(5, '0')}`;
+    const orderDate = getRandomDateInPastYear();
+    const itemCount = faker.number.int({ min: 1, max: 25 });
+
+    let totalAmount = 0;
+    const items: NewOrderItem[] = [];
+
+    // Generate items for this order
+    for (let j = 0; j < itemCount; j++) {
+      const product = faker.helpers.arrayElement(products);
+      const quantity = faker.number.int({ min: 1, max: 5 });
+      const price = faker.number.float({
+        min: product.price.min,
+        max: product.price.max,
+        fractionDigits: 2
+      });
+      const subtotal = quantity * price;
+      totalAmount += subtotal;
+
+      items.push({
+        order_id: orderId,
+        product_name: product.name,
+        quantity,
+        price: price.toFixed(2),
+        subtotal: subtotal.toFixed(2),
+      });
+    }
+
+    orderData.push({
+      order_id: orderId,
+      customer_name: faker.person.fullName(),
+      customer_email: faker.internet.email().toLowerCase(),
+      order_date: orderDate,
+      status: faker.helpers.arrayElement(statuses),
+      total_items: itemCount,
+      total_amount: totalAmount.toFixed(2),
+      shipping_address: `${faker.location.streetAddress()}, ${faker.location.city()}, ${faker.location.state()} ${faker.location.zipCode()}`,
+      payment_method: faker.helpers.arrayElement(paymentMethods),
+      created_at: orderDate,
+      updated_at: getRandomFutureDate(orderDate),
+    });
+
+    orderItemData.push(...items);
+  }
+
+  console.log("📦 Inserting orders...");
+  const insertedOrders = await db.insert(orders).values(orderData).returning();
+  console.log(`✅ Successfully inserted ${insertedOrders.length} orders`);
+
+  console.log("📋 Inserting order items...");
+  const insertedOrderItems = await db.insert(orderItems).values(orderItemData).returning();
+  console.log(`✅ Successfully inserted ${insertedOrderItems.length} order items`);
 
   console.log("🎉 Seed process completed!");
   process.exit(0);

@@ -2,7 +2,7 @@
 
 // ** import types
 import type * as React from "react";
-import type { ColumnDef, ColumnResizeMode } from "@tanstack/react-table";
+import type { ColumnDef, ColumnResizeMode, Row, ExpandedState } from "@tanstack/react-table";
 import type { TableConfig } from "./utils/table-config";
 import type { CaseFormatConfig } from "./utils/case-utils";
 import type { DataTransformFunction, ExportableData } from "./utils/export-utils";
@@ -12,6 +12,7 @@ import {
   type ColumnSizingState,
   flexRender,
   getCoreRowModel,
+  getExpandedRowModel,
   getFacetedRowModel,
   getFacetedUniqueValues,
   getFilteredRowModel,
@@ -38,6 +39,7 @@ import { DataTableToolbar } from "./toolbar";
 import { DataTableResizer } from "./data-table-resizer";
 
 // ** import utils
+import { cn } from "@/lib/utils";
 import { useTableConfig } from "./utils/table-config";
 import { useTableColumnResize } from "./hooks/use-table-column-resize";
 import { preprocessSearch } from "./utils/search";
@@ -85,6 +87,43 @@ type SortingUpdater = (prev: { id: string; desc: boolean }[]) => { id: string; d
 type ColumnOrderUpdater = (prev: string[]) => string[];
 type RowSelectionUpdater = (prev: Record<string, boolean>) => Record<string, boolean>;
 
+// Subrows configuration interface
+export interface SubRowsConfig<TData> {
+  // Enable subrows feature
+  enabled: boolean;
+
+  // Rendering mode
+  mode: 'same-columns' | 'custom-columns' | 'custom-component';
+
+  // Field name for accessing subrows in data (default: 'subRows')
+  subRowsField?: string;
+
+  // For custom-columns mode: different columns for subrows
+  subRowColumns?: ColumnDef<TData, unknown>[];
+  showSubRowHeaders?: boolean;
+
+  // For custom-component mode: custom component for subrows
+  SubRowComponent?: React.ComponentType<{
+    row: Row<TData>;
+    data: TData;
+  }>;
+
+  // Expand icon position
+  expandIconPosition?: 'before-checkbox' | 'after-checkbox' | 'first';
+
+  // Hide expand icon when only 1 subrow
+  hideExpandIconWhenSingle?: boolean;
+
+  // Auto-expand rows with single subrow
+  autoExpandSingle?: boolean;
+
+  // Indentation size for subrows (in pixels)
+  indentSize?: number;
+
+  // Default expanded state
+  defaultExpanded?: boolean | ExpandedState;
+}
+
 interface DataTableProps<TData extends ExportableData, TValue> {
   // Allow overriding the table configuration
   config?: Partial<TableConfig>;
@@ -125,6 +164,9 @@ interface DataTableProps<TData extends ExportableData, TValue> {
 
   // Row click callback
   onRowClick?: (rowData: TData, rowIndex: number) => void;
+
+  // Subrows configuration
+  subRowsConfig?: SubRowsConfig<TData>;
 }
 
 export function DataTable<TData extends ExportableData, TValue>({
@@ -136,7 +178,8 @@ export function DataTable<TData extends ExportableData, TValue>({
   idField = 'id' as keyof TData,
   pageSizeOptions,
   renderToolbarContent,
-  onRowClick
+  onRowClick,
+  subRowsConfig
 }: DataTableProps<TData, TValue>) {
   // Load table configuration with any overrides
   const tableConfig = useTableConfig(config);
@@ -180,6 +223,15 @@ export function DataTable<TData extends ExportableData, TValue>({
   // Column order state (managed separately from URL state as it's persisted in localStorage)
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
 
+  // Expanded state for subrows
+  const [expanded, setExpanded] = useState<ExpandedState>(() => {
+    const defaultVal = subRowsConfig?.defaultExpanded;
+    if (typeof defaultVal === 'boolean') {
+      return defaultVal ? true : {};
+    }
+    return defaultVal ?? {};
+  });
+
   // PERFORMANCE FIX: Use only one selection state as the source of truth
   // All IDs are stored as strings for consistency
   const [selectedItemIds, setSelectedItemIds] = useState<Record<string, boolean>>({});
@@ -190,22 +242,9 @@ export function DataTable<TData extends ExportableData, TValue>({
   // Get current data items - memoize to avoid recalculations
   const dataItems = useMemo(() => data?.data || [], [data?.data]);
 
-  // PERFORMANCE FIX: Derive rowSelection from selectedItemIds using memoization
-  const rowSelection = useMemo(() => {
-    if (!dataItems.length) return {};
-
-    // Map selectedItemIds to row indices for the table
-    const selection: Record<string, boolean> = {};
-
-    dataItems.forEach((item, index) => {
-      const itemId = String(item[idField]);
-      if (selectedItemIds[itemId]) {
-        selection[String(index)] = true;
-      }
-    });
-
-    return selection;
-  }, [dataItems, selectedItemIds, idField]);
+  // PERFORMANCE FIX: rowSelection is now directly selectedItemIds (no conversion needed)
+  // Since getRowId returns actual IDs, TanStack Table uses IDs as keys
+  const rowSelection = selectedItemIds;
 
   // Calculate total selected items - memoize to avoid recalculation
   const totalSelectedItems = useMemo(() =>
@@ -215,21 +254,13 @@ export function DataTable<TData extends ExportableData, TValue>({
 
   // PERFORMANCE FIX: Optimized row deselection handler
   const handleRowDeselection = useCallback((rowId: string) => {
-    if (!dataItems.length) return;
-
-    const rowIndex = Number.parseInt(rowId, 10);
-    const item = dataItems[rowIndex];
-
-    if (item) {
-      const itemId = String(item[idField]);
-      setSelectedItemIds(prev => {
-        // Remove this item ID from selection
-        const next = { ...prev };
-        delete next[itemId];
-        return next;
-      });
-    }
-  }, [dataItems, idField]);
+    // With getRowId, rowId is already the actual item ID (not an index)
+    setSelectedItemIds(prev => {
+      const next = { ...prev };
+      delete next[rowId];
+      return next;
+    });
+  }, []);
 
   // Clear all selections
   const clearAllSelections = useCallback(() => {
@@ -238,47 +269,17 @@ export function DataTable<TData extends ExportableData, TValue>({
 
   // PERFORMANCE FIX: Optimized row selection handler
   const handleRowSelectionChange = useCallback((updaterOrValue: RowSelectionUpdater | Record<string, boolean>) => {
-    // Determine the new row selection value
-    const newRowSelection = typeof updaterOrValue === 'function'
-      ? updaterOrValue(rowSelection)
-      : updaterOrValue;
-
-    // Batch update selectedItemIds based on the new row selection
     setSelectedItemIds(prev => {
-      const next = { ...prev };
+      // Determine the new row selection value
+      const newRowSelection = typeof updaterOrValue === 'function'
+        ? updaterOrValue(prev)
+        : updaterOrValue;
 
-      // Process changes for current page
-      if (dataItems.length) {
-        // First handle explicit selections in newRowSelection
-        for (const [rowId, isSelected] of Object.entries(newRowSelection)) {
-          const rowIndex = Number.parseInt(rowId, 10);
-          if (rowIndex >= 0 && rowIndex < dataItems.length) {
-            const item = dataItems[rowIndex];
-            const itemId = String(item[idField]);
-
-            if (isSelected) {
-              next[itemId] = true;
-            } else {
-              delete next[itemId];
-            }
-          }
-        }
-
-        // Then handle implicit deselection (rows that were selected but aren't in newRowSelection)
-        dataItems.forEach((item, index) => {
-          const itemId = String(item[idField]);
-          const rowId = String(index);
-
-          // If item was selected but isn't in new selection, deselect it
-          if (prev[itemId] && newRowSelection[rowId] === undefined) {
-            delete next[itemId];
-          }
-        });
-      }
-
-      return next;
+      // With getRowId, rowIds are actual item IDs (not indices)
+      // So we can directly use newRowSelection as selectedItemIds
+      return newRowSelection;
     });
-  }, [dataItems, rowSelection, idField]);
+  }, []);
 
   // Get selected items data
   const getSelectedItems = useCallback(async () => {
@@ -552,6 +553,7 @@ export function DataTable<TData extends ExportableData, TValue>({
       pagination,
       columnSizing,
       columnOrder,
+      ...(subRowsConfig?.enabled && { expanded }),
     },
     columnResizeMode: 'onChange' as ColumnResizeMode,
     onColumnSizingChange: handleColumnSizingChange,
@@ -559,6 +561,20 @@ export function DataTable<TData extends ExportableData, TValue>({
     pageCount: data?.pagination.total_pages || 0,
     enableRowSelection: tableConfig.enableRowSelection,
     enableColumnResizing: tableConfig.enableColumnResizing,
+    // SUBROW SELECTION: Disable automatic cascading
+    // We handle parent-child selection manually in the checkbox handler
+    enableSubRowSelection: false,
+    // SUBROW ID FIX: Use actual IDs instead of row indices
+    // This generates unique IDs for parent and subrow selection tracking
+    getRowId: (row: TData, index: number, parent?: Row<TData>) => {
+      if (subRowsConfig?.enabled) {
+        // For subrows, use the id field from the row data
+        // Parent rows use their order/parent ID, subrows use their unique item ID
+        return String((row as any)[idField]);
+      }
+      // Default: use the idField value
+      return String((row as any)[idField]);
+    },
     manualPagination: true,
     manualSorting: true,
     manualFiltering: true,
@@ -567,6 +583,11 @@ export function DataTable<TData extends ExportableData, TValue>({
     onColumnFiltersChange: handleColumnFiltersChange,
     onColumnVisibilityChange: handleColumnVisibilityChange,
     onPaginationChange: handlePaginationChange,
+    ...(subRowsConfig?.enabled && {
+      onExpandedChange: setExpanded,
+      getExpandedRowModel: getExpandedRowModel(),
+      getSubRows: (row: TData) => (row as any)[subRowsConfig.subRowsField || 'subRows'],
+    }),
     getCoreRowModel: getCoreRowModel<TData>(),
     getFilteredRowModel: getFilteredRowModel<TData>(),
     getPaginationRowModel: getPaginationRowModel<TData>(),
@@ -583,6 +604,7 @@ export function DataTable<TData extends ExportableData, TValue>({
     pagination,
     columnSizing,
     columnOrder,
+    expanded,
     handleColumnSizingChange,
     handleColumnOrderChange,
     data?.pagination.total_pages,
@@ -593,6 +615,8 @@ export function DataTable<TData extends ExportableData, TValue>({
     handleColumnFiltersChange,
     handleColumnVisibilityChange,
     handlePaginationChange,
+    subRowsConfig,
+    idField,
   ]);
 
   // Set up the table with memoized configuration
@@ -793,50 +817,111 @@ export function DataTable<TData extends ExportableData, TValue>({
               ))
             ) : table.getRowModel().rows?.length ? (
               // Data rows
-              table.getRowModel().rows.map((row, rowIndex) => (
-                <TableRow
-                  key={row.id}
-                  id={`row-${rowIndex}`}
-                  data-row-index={rowIndex}
-                  data-state={row.getIsSelected() ? "selected" : undefined}
-                  tabIndex={0}
-                  aria-selected={row.getIsSelected()}
-                  onClick={(event) => {
-                    // Handle click row select if enabled
-                    if (tableConfig.enableClickRowSelect) {
-                      row.toggleSelected();
-                    }
-                    // Handle custom row click callback
-                    if (onRowClick) {
-                      handleRowClick(event, row.original, rowIndex);
-                    }
-                  }}
-                  onFocus={(e) => {
-                    // Add a data attribute to the currently focused row
-                    for (const el of document.querySelectorAll('[data-focused="true"]')) {
-                      el.removeAttribute('data-focused');
-                    }
-                    e.currentTarget.setAttribute('data-focused', 'true');
-                  }}
-                  style={{
-                    cursor: onRowClick ? 'pointer' : undefined
-                  }}
-                >
-                  {row.getVisibleCells().map((cell, cellIndex) => (
-                    <TableCell
-                      className="px-4 py-2 truncate max-w-0 text-left"
-                      key={cell.id}
-                      id={`cell-${rowIndex}-${cellIndex}`}
-                      data-cell-index={cellIndex}
+              table.getRowModel().rows.map((row, rowIndex) => {
+                const isSubRow = row.depth > 0;
+                const indentSize = subRowsConfig?.indentSize || 24;
+
+                // For custom-component mode with subrows
+                if (subRowsConfig?.enabled && subRowsConfig.mode === 'custom-component' && isSubRow) {
+                  const SubRowComponent = subRowsConfig.SubRowComponent;
+                  if (SubRowComponent) {
+                    return (
+                      <TableRow
+                        key={row.id}
+                        id={`row-${rowIndex}`}
+                        data-row-index={rowIndex}
+                        data-depth={row.depth}
+                        className={cn(isSubRow && "bg-muted/30")}
+                      >
+                        <TableCell colSpan={columns.length} className="p-0">
+                          <SubRowComponent row={row} data={row.original} />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+                }
+
+                // For custom-columns mode with subrows - render different columns
+                if (subRowsConfig?.enabled && subRowsConfig.mode === 'custom-columns' && isSubRow && subRowsConfig.subRowColumns) {
+                  return (
+                    <TableRow
+                      key={row.id}
+                      id={`row-${rowIndex}`}
+                      data-row-index={rowIndex}
+                      data-depth={row.depth}
+                      data-state={row.getIsSelected() ? "selected" : undefined}
+                      tabIndex={0}
+                      aria-selected={row.getIsSelected()}
+                      className={cn(isSubRow && "bg-muted/30")}
+                      onClick={(event) => {
+                        if (tableConfig.enableClickRowSelect) {
+                          row.toggleSelected();
+                        }
+                        if (onRowClick) {
+                          handleRowClick(event, row.original, rowIndex);
+                        }
+                      }}
                     >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+                      {row.getVisibleCells().map((cell, cellIndex) => (
+                        <TableCell
+                          key={cell.id}
+                          className="px-4 py-2 truncate max-w-0 text-left"
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  );
+                }
+
+                // Default rendering (same-columns mode or parent rows)
+                return (
+                  <TableRow
+                    key={row.id}
+                    id={`row-${rowIndex}`}
+                    data-row-index={rowIndex}
+                    data-depth={row.depth}
+                    data-state={row.getIsSelected() ? "selected" : undefined}
+                    tabIndex={0}
+                    aria-selected={row.getIsSelected()}
+                    className={cn(isSubRow && "bg-muted/30")}
+                    onClick={(event) => {
+                      if (tableConfig.enableClickRowSelect) {
+                        row.toggleSelected();
+                      }
+                      if (onRowClick) {
+                        handleRowClick(event, row.original, rowIndex);
+                      }
+                    }}
+                    onFocus={(e) => {
+                      for (const el of document.querySelectorAll('[data-focused="true"]')) {
+                        el.removeAttribute('data-focused');
+                      }
+                      e.currentTarget.setAttribute('data-focused', 'true');
+                    }}
+                    style={{
+                      cursor: onRowClick ? 'pointer' : undefined
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell, cellIndex) => (
+                      <TableCell
+                        className="px-4 py-2 truncate max-w-0 text-left"
+                        key={cell.id}
+                        id={`cell-${rowIndex}-${cellIndex}`}
+                        data-cell-index={cellIndex}
+                        style={{
+                          paddingLeft: isSubRow && cellIndex === 0 ? `${indentSize + 16}px` : undefined
+                        }}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                );
+              })
             ) : (
               // No results
               <TableRow>

@@ -3,7 +3,50 @@ import * as XLSX from "xlsx";
 
 
 // Generic type for exportable data - should have string keys and values that can be converted to string
-export type ExportableData = Record<string, string | number | boolean | null | undefined>;
+// Allow arrays for hierarchical data (subRows)
+export type ExportableData = Record<string, string | number | boolean | null | undefined | any[]>;
+
+/**
+ * Flatten hierarchical data for export
+ */
+export function flattenHierarchicalData<T extends ExportableData>(
+  data: T[],
+  subRowsField: string = 'subRows',
+  includeDepth: boolean = false
+): T[] {
+  const flattened: T[] = [];
+
+  const flatten = (items: T[], depth: number = 0) => {
+    items.forEach((item) => {
+      const { [subRowsField]: subRows, ...itemData } = item as any;
+      flattened.push(
+        includeDepth
+          ? ({ ...itemData, _depth: depth } as T)
+          : (itemData as T)
+      );
+
+      if (subRows && Array.isArray(subRows) && subRows.length > 0) {
+        flatten(subRows, depth + 1);
+      }
+    });
+  };
+
+  flatten(data);
+  return flattened;
+}
+
+/**
+ * Export only parent rows (remove subrows)
+ */
+export function exportParentRowsOnly<T extends ExportableData>(
+  data: T[],
+  subRowsField: string = 'subRows'
+): T[] {
+  return data.map((item) => {
+    const { [subRowsField]: _, ...parentData } = item as any;
+    return parentData as T;
+  });
+}
 
 // Type for transformation function that developers can provide
 export type DataTransformFunction<T extends ExportableData> = (row: T) => ExportableData;
