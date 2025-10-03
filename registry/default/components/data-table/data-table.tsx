@@ -108,9 +108,6 @@ export interface SubRowsConfig<TData> {
     data: TData;
   }>;
 
-  // Expand icon position
-  expandIconPosition?: 'before-checkbox' | 'after-checkbox' | 'first';
-
   // Hide expand icon when only 1 subrow
   hideExpandIconWhenSingle?: boolean;
 
