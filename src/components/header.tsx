@@ -45,6 +45,24 @@ export function Header() {
               Orders
               <span className="ml-1 text-xs opacity-60">Subrows</span>
             </Link>
+            <Link
+              href="/example/bookings"
+              className={`text-sm font-medium transition-colors hover:text-primary ${
+                pathname === "/example/bookings" ? "text-primary font-semibold" : ""
+              }`}
+            >
+              Bookings
+              <span className="ml-1 text-xs opacity-60">Subrows</span>
+            </Link>
+            <Link
+              href="/example/tickets"
+              className={`text-sm font-medium transition-colors hover:text-primary ${
+                pathname === "/example/tickets" ? "text-primary font-semibold" : ""
+              }`}
+            >
+              Tickets
+              <span className="ml-1 text-xs opacity-60">Subrows</span>
+            </Link>
           </nav>
         </div>
         <div className="flex items-center gap-2">

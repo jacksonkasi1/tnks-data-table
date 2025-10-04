@@ -19,6 +19,9 @@ import { ticketColumns } from "./ticket-columns";
 // ** import custom component
 import { CommentComponent } from "./comment-component";
 
+// ** import row actions
+import { DataTableRowActions } from "./row-actions";
+
 export const getColumns = (
   handleRowDeselection: ((rowId: string) => void) | null | undefined
 ): ColumnDef<Ticket>[] => {
@@ -47,6 +50,16 @@ export const getColumns = (
   });
 
   columns.push(...ticketColumnsWithHeaders);
+
+  // Add actions column at the end
+  columns.push({
+    id: "actions",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Actions" />
+    ),
+    cell: ({ row, table }) => <DataTableRowActions row={row} table={table} />,
+    size: 100,
+  });
 
   return columns;
 };

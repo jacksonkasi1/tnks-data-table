@@ -17,6 +17,9 @@ import { Booking } from "../schema";
 import { parentColumns } from "./parent-columns";
 import { subrowColumns } from "./subrow-columns";
 
+// ** import row actions
+import { DataTableRowActions } from "./row-actions";
+
 export const getColumns = (
   handleRowDeselection: ((rowId: string) => void) | null | undefined
 ): ColumnDef<Booking>[] => {
@@ -45,6 +48,16 @@ export const getColumns = (
   });
 
   columns.push(...parentColumnsWithHeaders);
+
+  // Add actions column at the end
+  columns.push({
+    id: "actions",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Actions" />
+    ),
+    cell: ({ row, table }) => <DataTableRowActions row={row} table={table} />,
+    size: 100,
+  });
 
   return columns;
 };
