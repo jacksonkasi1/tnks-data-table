@@ -1244,7 +1244,7 @@ export function DataTable<TData extends ExportableData, TValue>({
                         id={`row-${rowIndex}`}
                         data-row-index={rowIndex}
                         data-depth={row.depth}
-                        className={cn(isSubRow && "bg-muted/30")}
+                        className=""
                       >
                         <TableCell colSpan={columns.length} className="p-0">
                           <SubRowComponent row={row} data={row.original} />
@@ -1304,7 +1304,7 @@ export function DataTable<TData extends ExportableData, TValue>({
                               <TableCell
                                 key={`subheader-${parentRow.id}-${colIndex}`}
                                 className={cn(
-                                  "px-2 py-2 text-left relative bg-muted/50 font-medium text-sm text-muted-foreground h-10 align-middle",
+                                  "px-2 py-2 text-left relative bg-muted/20 font-medium text-sm h-10 align-middle",
                                   isSortable && "cursor-pointer hover:bg-muted transition-colors select-none"
                                 )}
                                 style={{
@@ -1339,7 +1339,7 @@ export function DataTable<TData extends ExportableData, TValue>({
                           data-state={row.getIsSelected() ? "selected" : undefined}
                           tabIndex={0}
                           aria-selected={row.getIsSelected()}
-                          className="bg-muted/30"
+                          className=""
                         >
                           {subRowColumns.map((column, colIndex) => {
                             // Get the value from the subrow data
@@ -1381,7 +1381,7 @@ export function DataTable<TData extends ExportableData, TValue>({
                       data-state={row.getIsSelected() ? "selected" : undefined}
                       tabIndex={0}
                       aria-selected={row.getIsSelected()}
-                      className="bg-muted/30"
+                      className=""
                     >
                       {subRowColumns.map((column, colIndex) => {
                         // Get the value from the subrow data
@@ -1425,7 +1425,7 @@ export function DataTable<TData extends ExportableData, TValue>({
                     data-state={row.getIsSelected() ? "selected" : undefined}
                     tabIndex={0}
                     aria-selected={row.getIsSelected()}
-                    className={cn(isSubRow && "bg-muted/30")}
+                    className=""
                     onClick={(event) => {
                       if (tableConfig.enableClickRowSelect) {
                         row.toggleSelected();
