@@ -20,7 +20,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import React, { useEffect, useCallback, useMemo, useRef, useState } from "react";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, GripVertical } from "lucide-react";
 
 // ** import components
 import {
@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 import { DataTablePagination } from "./pagination";
 import { DataTableToolbar } from "./toolbar";
 import { DataTableResizer } from "./data-table-resizer";
@@ -120,121 +121,7 @@ export interface SubRowsConfig<TData> {
   defaultExpanded?: boolean | ExpandedState;
 }
 
-// SubRowTable component to handle individual subrow table instances
-// This ensures useReactTable is called at the top level (fixing hooks rules violation)
-function SubRowTable<TData>({
-  subRowsData,
-  subRowColumns,
-  parentId,
-  subRowTableStates,
-  setSubRowTableStates,
-  enableColumnResizing,
-  showHeaders,
-}: {
-  subRowsData: any[];
-  subRowColumns: ColumnDef<any, unknown>[];
-  parentId: string;
-  subRowTableStates: Record<string, { sorting: any[]; columnSizing: ColumnSizingState }>;
-  setSubRowTableStates: React.Dispatch<React.SetStateAction<Record<string, { sorting: any[]; columnSizing: ColumnSizingState }>>>;
-  enableColumnResizing: boolean;
-  showHeaders?: boolean;
-}) {
-  const currentState = subRowTableStates[parentId] || {
-    sorting: [],
-    columnSizing: {},
-  };
-
-  const subRowTable = useReactTable({
-    data: subRowsData,
-    columns: subRowColumns,
-    state: {
-      sorting: currentState.sorting,
-      columnSizing: currentState.columnSizing,
-    },
-    onSortingChange: (updater) => {
-      setSubRowTableStates(prev => {
-        const prevState = prev[parentId] || { sorting: [], columnSizing: {} };
-        const newSorting = typeof updater === 'function'
-          ? updater(prevState.sorting)
-          : updater;
-        return {
-          ...prev,
-          [parentId]: { ...prevState, sorting: newSorting }
-        };
-      });
-    },
-    onColumnSizingChange: (updater) => {
-      setSubRowTableStates(prev => {
-        const prevState = prev[parentId] || { sorting: [], columnSizing: {} };
-        const newSizing = typeof updater === 'function'
-          ? updater(prevState.columnSizing)
-          : updater;
-        return {
-          ...prev,
-          [parentId]: { ...prevState, columnSizing: newSizing }
-        };
-      });
-    },
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    columnResizeMode: 'onChange' as ColumnResizeMode,
-    enableSorting: true,
-    enableColumnResizing: enableColumnResizing,
-  });
-
-  return (
-    <>
-      {showHeaders && (
-        <TableRow
-          data-subrow-header="true"
-          className="bg-muted/50 border-t-2"
-        >
-          {subRowTable.getHeaderGroups()[0]?.headers.map((header) => (
-            <TableHead
-              key={header.id}
-              className="px-2 py-2 relative text-left group/th"
-              style={{
-                width: header.getSize(),
-              }}
-              data-column-resizing={header.column.getIsResizing() ? "true" : undefined}
-            >
-              {header.isPlaceholder
-                ? null
-                : flexRender(
-                    header.column.columnDef.header,
-                    header.getContext(),
-                  )}
-              {enableColumnResizing && header.column.getCanResize() && (
-                <DataTableResizer header={header} table={subRowTable} />
-              )}
-            </TableHead>
-          ))}
-        </TableRow>
-      )}
-      {subRowTable.getRowModel().rows.map((sortedRow) => (
-        <TableRow
-          key={sortedRow.id}
-          data-state={sortedRow.getIsSelected() ? "selected" : undefined}
-          tabIndex={0}
-          aria-selected={sortedRow.getIsSelected()}
-          className="bg-muted/30"
-        >
-          {sortedRow.getVisibleCells().map((cell) => (
-            <TableCell
-              key={cell.id}
-              className="px-4 py-2 truncate max-w-0 text-left"
-              style={{
-                width: cell.column.getSize(),
-              }}
-            >
-              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-            </TableCell>
-          ))}
-        </TableRow>
-      ))}
-    </>
-  );
-}
+// Removed SubRowTable component - it was causing browser hangs due to multiple table instances
 
 interface DataTableProps<TData extends ExportableData, TValue> {
   // Allow overriding the table configuration
@@ -359,6 +246,13 @@ export function DataTable<TData extends ExportableData, TValue>({
     return defaultVal ?? {};
   });
 
+  // Subrow sorting state - tracks sorting per parent row
+  // Format: { [parentId]: { columnId: string, direction: 'asc' | 'desc' } }
+  const [subrowSorting, setSubrowSorting] = useState<Record<string, { columnId: string; direction: 'asc' | 'desc' }>>({});
+
+  // Subrow column sizing state - tracks column widths for subrows
+  const [subrowColumnSizing, setSubrowColumnSizing] = useState<ColumnSizingState>({});
+
   // PERFORMANCE FIX: Use only one selection state as the source of truth
   // All IDs are stored as strings for consistency
   const [selectedItemIds, setSelectedItemIds] = useState<Record<string, boolean>>({});
@@ -372,8 +266,69 @@ export function DataTable<TData extends ExportableData, TValue>({
   // Convert the sorting from URL to the format TanStack Table expects
   const sorting = useMemo(() => createSortingState(sortBy, sortOrder), [sortBy, sortOrder]);
 
+  // Function to sort subrows for a specific parent
+  const getSortedSubrows = useCallback((parentId: string, subrows: any[]) => {
+    const sortConfig = subrowSorting[parentId];
+    
+    if (!sortConfig || !subrows || subrows.length === 0) {
+      return subrows;
+    }
+    
+    const sorted = [...subrows].sort((a, b) => {
+      const aValue = a[sortConfig.columnId];
+      const bValue = b[sortConfig.columnId];
+      
+      // Handle null/undefined values
+      if (aValue == null && bValue == null) return 0;
+      if (aValue == null) return 1;
+      if (bValue == null) return -1;
+      
+      // Compare values
+      let comparison = 0;
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        comparison = aValue.localeCompare(bValue);
+      } else if (typeof aValue === 'number' && typeof bValue === 'number') {
+        comparison = aValue - bValue;
+      } else {
+        comparison = String(aValue).localeCompare(String(bValue));
+      }
+      
+      return sortConfig.direction === 'asc' ? comparison : -comparison;
+    });
+    
+    return sorted;
+  }, [subrowSorting]);
+
   // Get current data items - memoize to avoid recalculations
-  const dataItems = useMemo(() => data?.data || [], [data?.data]);
+  // Apply subrow sorting if enabled
+  const dataItems = useMemo(() => {
+    const items = data?.data || [];
+    
+    // If subrows are not enabled or no sorting applied, return as-is
+    if (!subRowsConfig?.enabled || Object.keys(subrowSorting).length === 0) {
+      return items;
+    }
+    
+    // Apply sorting to subrows for each parent
+    return items.map(item => {
+      const itemId = String(item[idField]);
+      const subRows = (item as any)[subRowsConfig.subRowsField || 'subRows'];
+      
+      // If no subrows or no sorting for this parent, return as-is
+      if (!Array.isArray(subRows) || !subrowSorting[itemId]) {
+        return item;
+      }
+      
+      // Sort the subrows
+      const sortedSubrows = getSortedSubrows(itemId, subRows);
+      
+      // Return new item with sorted subrows
+      return {
+        ...item,
+        [subRowsConfig.subRowsField || 'subRows']: sortedSubrows
+      };
+    });
+  }, [data?.data, subRowsConfig, subrowSorting, idField, getSortedSubrows]);
 
   // PERFORMANCE FIX: rowSelection is now directly selectedItemIds (no conversion needed)
   // Since getRowId returns actual IDs, TanStack Table uses IDs as keys
@@ -846,11 +801,7 @@ export function DataTable<TData extends ExportableData, TValue>({
     return null;
   }, [getSubRowColumns, handleRowDeselection, tableConfig.enableRowSelection, subRowsConfig]);
 
-  // Subrow table state management (per parent row)
-  const [subRowTableStates, setSubRowTableStates] = useState<Record<string, {
-    sorting: any[];
-    columnSizing: ColumnSizingState;
-  }>>({});
+  // Removed subrow table states - was causing performance issues
 
   // Create event handlers using utility functions
   const handleSortingChange = useCallback(
@@ -1124,6 +1075,45 @@ export function DataTable<TData extends ExportableData, TValue>({
     table.setSorting(sorting);
   }, [table, sorting]);
 
+  // Subrow sorting handler
+  const handleSubrowHeaderClick = useCallback((parentId: string, columnId: string) => {
+    setSubrowSorting(prev => {
+      const currentSort = prev[parentId];
+      
+      // If clicking the same column, toggle direction
+      if (currentSort?.columnId === columnId) {
+        return {
+          ...prev,
+          [parentId]: {
+            columnId,
+            direction: currentSort.direction === 'asc' ? 'desc' : 'asc'
+          }
+        };
+      }
+      
+      // Otherwise, set new column with ascending order
+      return {
+        ...prev,
+        [parentId]: {
+          columnId,
+          direction: 'asc'
+        }
+      };
+    });
+  }, []);
+
+  // Subrow column sizing handler
+  const handleSubrowColumnSizingChange = useCallback(
+    (updaterOrValue: ColumnSizingState | ((prev: ColumnSizingState) => ColumnSizingState)) => {
+      if (typeof updaterOrValue === 'function') {
+        setSubrowColumnSizing(current => updaterOrValue(current));
+      } else {
+        setSubrowColumnSizing(updaterOrValue);
+      }
+    },
+    [setSubrowColumnSizing]
+  );
+
   // Keep pagination in sync with URL parameters
   useEffect(() => {
     // Make sure table pagination state matches URL state
@@ -1280,31 +1270,226 @@ export function DataTable<TData extends ExportableData, TValue>({
                   }
                 }
 
-                // For custom-columns mode with subrows - render with SubRowTable component
+                // For custom-columns mode with subrows - render directly without SubRowTable
                 if (subRowsConfig?.enabled && subRowsConfig.mode === 'custom-columns' && isSubRow && subRowColumns) {
                   const parentRow = row.getParentRow();
                   if (!parentRow) return null;
 
-                  const parentId = parentRow.id;
-                  const subRowsData = (parentRow.original as any)?.[subRowsConfig.subRowsField || 'subRows'] || [];
+                  // Check if this is the first subrow of this parent
+                  // We do this by checking the row index in the flat rows array
+                  const flatRows = table.getRowModel().flatRows;
+                  const currentRowIndex = flatRows.findIndex(r => r.id === row.id);
+                  const prevRowIndex = currentRowIndex - 1;
+                  const isFirstSubRow = prevRowIndex >= 0 && flatRows[prevRowIndex].id === parentRow.id;
 
-                  // Only render once for the first subrow of each parent
-                  const parentSubRows = parentRow.subRows || [];
-                  const isFirstSubRow = parentSubRows.length > 0 && parentSubRows[0].id === row.id;
-
-                  if (!isFirstSubRow) return null;
-
+                  // Render header row separately if this is the first subrow
+                  if (isFirstSubRow && subRowsConfig.showSubRowHeaders) {
+                    const parentId = String(parentRow.original[idField]);
+                    const currentSort = subrowSorting[parentId];
+                    
+                    return (
+                      <React.Fragment key={`subrow-group-${row.id}`}>
+                        <TableRow
+                          key={`subrow-header-${parentRow.id}`}
+                          data-subrow-header="true"
+                          className="border-t"
+                        >
+                          {subRowColumns.map((column, colIndex) => {
+                            // Get header text - handle both string and function headers
+                            let headerText = '';
+                            if (typeof column.header === 'string') {
+                              headerText = column.header;
+                            } else if (column.id === 'expand') {
+                              headerText = ''; // Empty for expand column
+                            } else if (column.id === 'select') {
+                              headerText = ''; // Empty for select column
+                            } else if (column.id === 'actions') {
+                              headerText = 'Actions';
+                            } else if ((column as any).meta?.title) {
+                              headerText = (column as any).meta.title;
+                            }
+                            
+                            // Check if this column is sortable (has accessorKey)
+                            const accessorKey = (column as any).accessorKey;
+                            const isSortable = !!accessorKey && column.id !== 'select' && column.id !== 'actions' && column.id !== 'expand';
+                            const columnId = accessorKey || column.id || '';
+                            const isSorted = currentSort?.columnId === columnId;
+                            const sortDirection = isSorted ? currentSort.direction : null;
+                            
+                            // Get column width from sizing state or default
+                            const columnWidth = subrowColumnSizing[columnId] || column.size || 'auto';
+                            
+                            return (
+                              <TableCell
+                                key={`subheader-${parentRow.id}-${colIndex}`}
+                                className={cn(
+                                  "px-2 py-2 text-left relative group/th bg-muted/50 font-medium text-sm text-muted-foreground h-10 align-middle",
+                                  isSortable && "cursor-pointer hover:bg-muted transition-colors select-none"
+                                )}
+                                style={{
+                                  width: typeof columnWidth === 'number' ? `${columnWidth}px` : columnWidth,
+                                }}
+                                onClick={isSortable ? () => handleSubrowHeaderClick(parentId, columnId) : undefined}
+                              >
+                                <div className="flex items-center gap-1.5">
+                                  <span>{headerText}</span>
+                                  {isSortable && (
+                                    <span className="text-xs opacity-50 hover:opacity-100 transition-opacity">
+                                      {isSorted ? (
+                                        sortDirection === 'asc' ? (
+                                          <span className="inline-block">↑</span>
+                                        ) : (
+                                          <span className="inline-block">↓</span>
+                                        )
+                                      ) : (
+                                        <span className="inline-block opacity-40">↕</span>
+                                      )}
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                {/* Resize handle */}
+                                {tableConfig.enableColumnResizing && (
+                                  <div
+                                    className={cn(
+                                      "absolute right-0 top-0 flex h-full w-4 cursor-col-resize select-none touch-none items-center justify-center",
+                                      "opacity-0 group-hover/th:opacity-100 z-10"
+                                    )}
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      
+                                      const startX = e.clientX;
+                                      const startWidth = typeof columnWidth === 'number' ? columnWidth : (column.size || 150);
+                                      
+                                      const handleMouseMove = (moveEvent: MouseEvent) => {
+                                        const diff = moveEvent.clientX - startX;
+                                        const newWidth = Math.max(50, startWidth + diff); // Min width 50px
+                                        
+                                        setSubrowColumnSizing(prev => ({
+                                          ...prev,
+                                          [columnId]: newWidth
+                                        }));
+                                      };
+                                      
+                                      const handleMouseUp = () => {
+                                        document.removeEventListener('mousemove', handleMouseMove);
+                                        document.removeEventListener('mouseup', handleMouseUp);
+                                        document.body.style.cursor = '';
+                                        document.body.style.userSelect = '';
+                                      };
+                                      
+                                      document.addEventListener('mousemove', handleMouseMove);
+                                      document.addEventListener('mouseup', handleMouseUp);
+                                      document.body.style.cursor = 'col-resize';
+                                      document.body.style.userSelect = 'none';
+                                    }}
+                                  >
+                                    <div className="flex h-4/5 items-center justify-center">
+                                      <Separator
+                                        orientation="vertical"
+                                        decorative={false}
+                                        className="h-4/5 w-0.5 bg-border transition-colors duration-200"
+                                      />
+                                      <GripVertical 
+                                        className="absolute h-4 w-4 text-muted-foreground/70"
+                                        strokeWidth={1.5}
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                        
+                        {/* Render current subrow with SUBROW COLUMNS */}
+                        <TableRow
+                          key={row.id}
+                          data-state={row.getIsSelected() ? "selected" : undefined}
+                          tabIndex={0}
+                          aria-selected={row.getIsSelected()}
+                          className="bg-muted/30"
+                        >
+                          {subRowColumns.map((column, colIndex) => {
+                            // Get the value from the subrow data
+                            const accessorKey = (column as any).accessorKey;
+                            const value = accessorKey 
+                              ? (row.original as any)[accessorKey]
+                              : null;
+                            
+                            // Get column ID and width
+                            const columnId = accessorKey || column.id || '';
+                            const columnWidth = subrowColumnSizing[columnId] || column.size || 'auto';
+                            
+                            return (
+                              <TableCell
+                                key={`subrow-cell-${row.id}-${colIndex}`}
+                                className="px-4 py-2 truncate max-w-0 text-left"
+                                style={{
+                                  width: typeof columnWidth === 'number' ? `${columnWidth}px` : columnWidth,
+                                }}
+                              >
+                                {/* Render cell content */}
+                                {column.cell && typeof column.cell === 'function'
+                                  ? column.cell({ 
+                                      getValue: () => value,
+                                      row,
+                                      column,
+                                      cell: { getValue: () => value } as any,
+                                      table
+                                    } as any)
+                                  : value}
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                      </React.Fragment>
+                    );
+                  }
+                  
+                  // For non-first subrows, just render the row
                   return (
-                    <SubRowTable
-                      key={`subrow-table-${parentId}`}
-                      subRowsData={subRowsData}
-                      subRowColumns={subRowColumns}
-                      parentId={parentId}
-                      subRowTableStates={subRowTableStates}
-                      setSubRowTableStates={setSubRowTableStates}
-                      enableColumnResizing={tableConfig.enableColumnResizing}
-                      showHeaders={subRowsConfig.showSubRowHeaders}
-                    />
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() ? "selected" : undefined}
+                      tabIndex={0}
+                      aria-selected={row.getIsSelected()}
+                      className="bg-muted/30"
+                    >
+                      {subRowColumns.map((column, colIndex) => {
+                        // Get the value from the subrow data
+                        const accessorKey = (column as any).accessorKey;
+                        const value = accessorKey 
+                          ? (row.original as any)[accessorKey]
+                          : null;
+                        
+                        // Get column ID and width
+                        const columnId = accessorKey || column.id || '';
+                        const columnWidth = subrowColumnSizing[columnId] || column.size || 'auto';
+                        
+                        return (
+                          <TableCell
+                            key={`subrow-cell-${row.id}-${colIndex}`}
+                            className="px-4 py-2 truncate max-w-0 text-left"
+                            style={{
+                              width: typeof columnWidth === 'number' ? `${columnWidth}px` : columnWidth,
+                            }}
+                          >
+                            {/* Render cell content */}
+                            {column.cell && typeof column.cell === 'function'
+                              ? column.cell({ 
+                                  getValue: () => value,
+                                  row,
+                                  column,
+                                  cell: { getValue: () => value } as any,
+                                  table
+                                } as any)
+                              : value}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
                   );
                 }
 

@@ -16,6 +16,10 @@ export function mapColumnsWithHeaders<TData>(
       const title = col.header;
       return {
         ...col,
+        meta: {
+          ...(col.meta || {}),
+          title, // Store original title for subrow headers
+        },
         header: ({ column }: { column: any }) => (
           <DataTableColumnHeader column={column} title={title} />
         ),
