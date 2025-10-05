@@ -20,7 +20,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import React, { useEffect, useCallback, useMemo, useRef, useState } from "react";
-import { AlertCircle, GripVertical } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 
 // ** import components
 import {
@@ -33,7 +33,6 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
 import { DataTablePagination } from "./pagination";
 import { DataTableToolbar } from "./toolbar";
 import { DataTableResizer } from "./data-table-resizer";
@@ -249,9 +248,6 @@ export function DataTable<TData extends ExportableData, TValue>({
   // Subrow sorting state - tracks sorting per parent row
   // Format: { [parentId]: { columnId: string, direction: 'asc' | 'desc' } }
   const [subrowSorting, setSubrowSorting] = useState<Record<string, { columnId: string; direction: 'asc' | 'desc' }>>({});
-
-  // Subrow column sizing state - tracks column widths for subrows
-  const [subrowColumnSizing, setSubrowColumnSizing] = useState<ColumnSizingState>({});
 
   // PERFORMANCE FIX: Use only one selection state as the source of truth
   // All IDs are stored as strings for consistency
@@ -1102,18 +1098,6 @@ export function DataTable<TData extends ExportableData, TValue>({
     });
   }, []);
 
-  // Subrow column sizing handler
-  const handleSubrowColumnSizingChange = useCallback(
-    (updaterOrValue: ColumnSizingState | ((prev: ColumnSizingState) => ColumnSizingState)) => {
-      if (typeof updaterOrValue === 'function') {
-        setSubrowColumnSizing(current => updaterOrValue(current));
-      } else {
-        setSubrowColumnSizing(updaterOrValue);
-      }
-    },
-    [setSubrowColumnSizing]
-  );
-
   // Keep pagination in sync with URL parameters
   useEffect(() => {
     // Make sure table pagination state matches URL state
@@ -1316,18 +1300,15 @@ export function DataTable<TData extends ExportableData, TValue>({
                             const isSorted = currentSort?.columnId === columnId;
                             const sortDirection = isSorted ? currentSort.direction : null;
                             
-                            // Get column width from sizing state or default
-                            const columnWidth = subrowColumnSizing[columnId] || column.size || 'auto';
-                            
                             return (
                               <TableCell
                                 key={`subheader-${parentRow.id}-${colIndex}`}
                                 className={cn(
-                                  "px-2 py-2 text-left relative group/th bg-muted/50 font-medium text-sm text-muted-foreground h-10 align-middle",
+                                  "px-2 py-2 text-left relative bg-muted/50 font-medium text-sm text-muted-foreground h-10 align-middle",
                                   isSortable && "cursor-pointer hover:bg-muted transition-colors select-none"
                                 )}
                                 style={{
-                                  width: typeof columnWidth === 'number' ? `${columnWidth}px` : columnWidth,
+                                  width: column.size || 'auto',
                                 }}
                                 onClick={isSortable ? () => handleSubrowHeaderClick(parentId, columnId) : undefined}
                               >
@@ -1347,57 +1328,6 @@ export function DataTable<TData extends ExportableData, TValue>({
                                     </span>
                                   )}
                                 </div>
-                                
-                                {/* Resize handle */}
-                                {tableConfig.enableColumnResizing && (
-                                  <div
-                                    className={cn(
-                                      "absolute right-0 top-0 flex h-full w-4 cursor-col-resize select-none touch-none items-center justify-center",
-                                      "opacity-0 group-hover/th:opacity-100 z-10"
-                                    )}
-                                    onMouseDown={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      
-                                      const startX = e.clientX;
-                                      const startWidth = typeof columnWidth === 'number' ? columnWidth : (column.size || 150);
-                                      
-                                      const handleMouseMove = (moveEvent: MouseEvent) => {
-                                        const diff = moveEvent.clientX - startX;
-                                        const newWidth = Math.max(50, startWidth + diff); // Min width 50px
-                                        
-                                        setSubrowColumnSizing(prev => ({
-                                          ...prev,
-                                          [columnId]: newWidth
-                                        }));
-                                      };
-                                      
-                                      const handleMouseUp = () => {
-                                        document.removeEventListener('mousemove', handleMouseMove);
-                                        document.removeEventListener('mouseup', handleMouseUp);
-                                        document.body.style.cursor = '';
-                                        document.body.style.userSelect = '';
-                                      };
-                                      
-                                      document.addEventListener('mousemove', handleMouseMove);
-                                      document.addEventListener('mouseup', handleMouseUp);
-                                      document.body.style.cursor = 'col-resize';
-                                      document.body.style.userSelect = 'none';
-                                    }}
-                                  >
-                                    <div className="flex h-4/5 items-center justify-center">
-                                      <Separator
-                                        orientation="vertical"
-                                        decorative={false}
-                                        className="h-4/5 w-0.5 bg-border transition-colors duration-200"
-                                      />
-                                      <GripVertical 
-                                        className="absolute h-4 w-4 text-muted-foreground/70"
-                                        strokeWidth={1.5}
-                                      />
-                                    </div>
-                                  </div>
-                                )}
                               </TableCell>
                             );
                           })}
@@ -1418,16 +1348,12 @@ export function DataTable<TData extends ExportableData, TValue>({
                               ? (row.original as any)[accessorKey]
                               : null;
                             
-                            // Get column ID and width
-                            const columnId = accessorKey || column.id || '';
-                            const columnWidth = subrowColumnSizing[columnId] || column.size || 'auto';
-                            
                             return (
                               <TableCell
                                 key={`subrow-cell-${row.id}-${colIndex}`}
                                 className="px-4 py-2 truncate max-w-0 text-left"
                                 style={{
-                                  width: typeof columnWidth === 'number' ? `${columnWidth}px` : columnWidth,
+                                  width: column.size || 'auto',
                                 }}
                               >
                                 {/* Render cell content */}
@@ -1464,16 +1390,12 @@ export function DataTable<TData extends ExportableData, TValue>({
                           ? (row.original as any)[accessorKey]
                           : null;
                         
-                        // Get column ID and width
-                        const columnId = accessorKey || column.id || '';
-                        const columnWidth = subrowColumnSizing[columnId] || column.size || 'auto';
-                        
                         return (
                           <TableCell
                             key={`subrow-cell-${row.id}-${colIndex}`}
                             className="px-4 py-2 truncate max-w-0 text-left"
                             style={{
-                              width: typeof columnWidth === 'number' ? `${columnWidth}px` : columnWidth,
+                              width: column.size || 'auto',
                             }}
                           >
                             {/* Render cell content */}
