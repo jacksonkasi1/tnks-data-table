@@ -8,6 +8,9 @@ import { format } from "date-fns";
 
 // ** import components
 import { DataTableColumnHeader } from "@/components/data-table/column-header";
+
+// ** import utils
+import { formatCurrency } from "@/lib/table-utils";
 import { Badge } from "@/components/ui/badge";
 import {
   createExpandColumn,
@@ -86,10 +89,7 @@ export const getColumns = (
         const price = row.getValue("price") as string | null;
         if (!price) return <span className="text-muted-foreground">-</span>;
 
-        const formatted = new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-        }).format(parseFloat(price));
+        const formatted = formatCurrency(price);
 
         return <div className="text-left font-medium">{formatted}</div>;
       },
@@ -104,10 +104,7 @@ export const getColumns = (
         const subtotal = row.getValue("subtotal") as string | null;
         if (!subtotal) return <span className="text-muted-foreground">-</span>;
 
-        const formatted = new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-        }).format(parseFloat(subtotal));
+        const formatted = formatCurrency(subtotal);
 
         return <div className="text-left font-medium">{formatted}</div>;
       },
@@ -141,10 +138,7 @@ export const getColumns = (
         if (row.depth > 0) return null;
 
         const amount = row.getValue("total_amount") as string;
-        const formatted = new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-        }).format(parseFloat(amount || "0"));
+        const formatted = formatCurrency(amount);
 
         return <div className="text-left font-medium">{formatted}</div>;
       },

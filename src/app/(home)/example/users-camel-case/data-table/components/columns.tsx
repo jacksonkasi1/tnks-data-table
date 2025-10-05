@@ -7,6 +7,9 @@ import { ColumnDef } from "@tanstack/react-table";
 // ** Import Components
 import { DataTableColumnHeader } from "@/components/data-table/column-header";
 
+// ** Import Utils
+import { formatCurrency } from "@/lib/table-utils";
+
 // ** Import UI Components
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -112,11 +115,7 @@ export const getColumns = (
       ),
       cell: ({ row }) => {
         const amount = row.getValue("totalExpenses") as string;
-        // Format as currency
-        const formatted = new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-        }).format(parseFloat(amount || "0"));
+        const formatted = formatCurrency(amount);
 
         return (
           <div className="max-w-full text-left font-medium truncate">
