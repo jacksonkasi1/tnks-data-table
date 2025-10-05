@@ -2,48 +2,77 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { BookingStop } from "../schema";
 
+// ** import components
+import { DataTableColumnHeader } from "@/components/data-table/column-header";
+
 export const subrowColumns: ColumnDef<BookingStop>[] = [
   {
     accessorKey: "stop_number",
-    header: "Stop #",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Stop #" />
+    ),
     size: 80,
+    enableSorting: true,
+    enableResizing: true,
   },
   {
     accessorKey: "stop_type",
-    header: "Type",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Type" />
+    ),
     size: 100,
+    enableSorting: true,
+    enableResizing: true,
   },
   {
     accessorKey: "location_name",
-    header: "Location",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Location" />
+    ),
     size: 180,
+    enableSorting: true,
+    enableResizing: true,
   },
   {
     accessorKey: "location_address",
-    header: "Address",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Address" />
+    ),
     size: 200,
+    enableSorting: true,
+    enableResizing: true,
   },
   {
     accessorKey: "location_city",
-    header: "City",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="City" />
+    ),
     size: 130,
     cell: ({ getValue }) => {
       const city = getValue() as string | null;
       return city || "—";
     },
+    enableSorting: true,
+    enableResizing: true,
   },
   {
     accessorKey: "contact_name",
-    header: "Contact",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Contact" />
+    ),
     size: 140,
     cell: ({ getValue }) => {
       const contact = getValue() as string | null;
       return contact || "—";
     },
+    enableSorting: true,
+    enableResizing: true,
   },
   {
     accessorKey: "scheduled_time",
-    header: "Scheduled",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Scheduled" />
+    ),
     size: 150,
     cell: ({ getValue }) => {
       const time = getValue() as string | null;
@@ -55,10 +84,16 @@ export const subrowColumns: ColumnDef<BookingStop>[] = [
         minute: "2-digit",
       });
     },
+    enableSorting: true,
+    enableResizing: true,
   },
   {
     accessorKey: "status",
-    header: "Status",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Status" />
+    ),
     size: 120,
+    enableSorting: true,
+    enableResizing: true,
   },
 ];

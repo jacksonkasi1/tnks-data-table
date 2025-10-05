@@ -2,35 +2,50 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { Booking } from "../schema";
 
+// ** import components
+import { DataTableColumnHeader } from "@/components/data-table/column-header";
+
 export const parentColumns: ColumnDef<Booking>[] = [
   {
     accessorKey: "booking_id",
-    header: "Booking ID",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Booking ID" />
+    ),
     size: 120,
   },
   {
     accessorKey: "customer_name",
-    header: "Customer",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Customer" />
+    ),
     size: 160,
   },
   {
     accessorKey: "customer_email",
-    header: "Email",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Email" />
+    ),
     size: 200,
   },
   {
     accessorKey: "pickup_location",
-    header: "Pickup",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Pickup" />
+    ),
     size: 180,
   },
   {
     accessorKey: "delivery_location",
-    header: "Delivery",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Delivery" />
+    ),
     size: 180,
   },
   {
     accessorKey: "booking_date",
-    header: "Booking Date",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Booking Date" />
+    ),
     size: 130,
     cell: ({ getValue }) => {
       const date = getValue() as string;
@@ -43,17 +58,23 @@ export const parentColumns: ColumnDef<Booking>[] = [
   },
   {
     accessorKey: "status",
-    header: "Status",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Status" />
+    ),
     size: 120,
   },
   {
     accessorKey: "total_stops",
-    header: "Stops",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Stops" />
+    ),
     size: 80,
   },
   {
     accessorKey: "total_amount",
-    header: "Amount",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Amount" />
+    ),
     size: 100,
     cell: ({ getValue }) => {
       const amount = getValue() as string;
@@ -62,7 +83,9 @@ export const parentColumns: ColumnDef<Booking>[] = [
   },
   {
     accessorKey: "driver_name",
-    header: "Driver",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Driver" />
+    ),
     size: 140,
     cell: ({ getValue }) => {
       const driver = getValue() as string | null;

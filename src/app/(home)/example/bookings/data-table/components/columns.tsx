@@ -17,9 +17,6 @@ import { Booking, BookingStop } from "../schema";
 import { parentColumns } from "./parent-columns";
 import { subrowColumns } from "./subrow-columns";
 
-// ** import utils
-import { mapColumnsWithHeaders } from "./column-utils";
-
 // ** import row actions
 import { DataTableRowActions } from "./row-actions";
 
@@ -36,8 +33,8 @@ export const getColumns = (
     columns.push(createSubRowSelectColumn<Booking>({ handleRowDeselection }));
   }
 
-  // Add parent columns with proper headers using shared utility
-  columns.push(...mapColumnsWithHeaders(parentColumns));
+  // Add parent columns (headers already defined)
+  columns.push(...parentColumns);
 
   // Add actions column at the end
   columns.push({
@@ -66,14 +63,8 @@ export const getSubRowColumns = (
     columns.push(createSubRowSelectColumn<BookingStop>({ handleRowDeselection }));
   }
 
-  // Add subrow columns with sortable headers and resizing using shared utility
-  const subrowColumnsWithHeaders = mapColumnsWithHeaders(subrowColumns).map((col) => ({
-    ...col,
-    enableSorting: true,
-    enableResizing: true,
-  }));
-
-  columns.push(...subrowColumnsWithHeaders);
+  // Add subrow columns (headers, sorting, and resizing already configured)
+  columns.push(...subrowColumns);
 
   // Add actions column at the end
   columns.push({
