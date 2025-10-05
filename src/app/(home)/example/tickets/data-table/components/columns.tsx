@@ -9,18 +9,130 @@ import {
   createExpandColumn,
   createSubRowSelectColumn,
 } from "@/components/data-table/subrow-columns";
+import { Badge } from "@/components/ui/badge";
 
 // ** import schema
 import { Ticket } from "../schema";
-
-// ** import columns
-import { ticketColumns } from "./ticket-columns";
 
 // ** import custom component
 import { CommentComponent } from "./comment-component";
 
 // ** import row actions
 import { DataTableRowActions } from "./row-actions";
+
+const priorityColors = {
+  low: "bg-blue-500",
+  medium: "bg-yellow-500",
+  high: "bg-orange-500",
+  urgent: "bg-red-500",
+};
+
+const statusColors = {
+  open: "bg-blue-500",
+  "in-progress": "bg-purple-500",
+  resolved: "bg-green-500",
+  closed: "bg-gray-500",
+};
+
+const ticketColumns: ColumnDef<Ticket>[] = [
+  {
+    accessorKey: "ticket_id",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Ticket ID" />
+    ),
+    size: 120,
+  },
+  {
+    accessorKey: "title",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Title" />
+    ),
+    size: 280,
+  },
+  {
+    accessorKey: "customer_name",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Customer" />
+    ),
+    size: 160,
+  },
+  {
+    accessorKey: "priority",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Priority" />
+    ),
+    size: 100,
+    cell: ({ getValue }) => {
+      const priority = (getValue() as string).toLowerCase();
+      const color = priorityColors[priority as keyof typeof priorityColors] || "bg-gray-500";
+      return (
+        <Badge className={`${color} text-white`}>
+          {priority.charAt(0).toUpperCase() + priority.slice(1)}
+        </Badge>
+      );
+    },
+  },
+  {
+    accessorKey: "status",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Status" />
+    ),
+    size: 120,
+    cell: ({ getValue }) => {
+      const status = (getValue() as string).toLowerCase();
+      const color = statusColors[status as keyof typeof statusColors] || "bg-gray-500";
+      return (
+        <Badge className={`${color} text-white`}>
+          {status.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
+        </Badge>
+      );
+    },
+  },
+  {
+    accessorKey: "category",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Category" />
+    ),
+    size: 120,
+    cell: ({ getValue }) => {
+      const category = getValue() as string | null;
+      return category ? category.charAt(0).toUpperCase() + category.slice(1) : "—";
+    },
+  },
+  {
+    accessorKey: "assigned_to",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Assigned To" />
+    ),
+    size: 150,
+    cell: ({ getValue }) => {
+      const assigned = getValue() as string | null;
+      return assigned || "—";
+    },
+  },
+  {
+    accessorKey: "total_comments",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Comments" />
+    ),
+    size: 100,
+  },
+  {
+    accessorKey: "created_at",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Created" />
+    ),
+    size: 140,
+    cell: ({ getValue }) => {
+      const date = getValue() as string;
+      return new Date(date).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    },
+  },
+];
 
 export const getColumns = (
   handleRowDeselection: ((rowId: string) => void) | null | undefined
@@ -35,21 +147,8 @@ export const getColumns = (
     columns.push(createSubRowSelectColumn<Ticket>({ handleRowDeselection }));
   }
 
-  // Add ticket columns with proper headers
-  const ticketColumnsWithHeaders = ticketColumns.map((col) => {
-    if (typeof col.header === "string") {
-      const title = col.header;
-      return {
-        ...col,
-        header: ({ column }: { column: any }) => (
-          <DataTableColumnHeader column={column} title={title} />
-        ),
-      } as ColumnDef<Ticket>;
-    }
-    return col;
-  });
-
-  columns.push(...ticketColumnsWithHeaders);
+  // Add ticket columns (headers already defined)
+  columns.push(...ticketColumns);
 
   // Add actions column at the end
   columns.push({
