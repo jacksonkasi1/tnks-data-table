@@ -5,6 +5,9 @@ import type { BookingStop } from "../schema";
 // ** import components
 import { DataTableColumnHeader } from "@/components/data-table/column-header";
 
+// ** import utils
+import { formatDateTime } from "@/lib/table-utils";
+
 export const subrowColumns: ColumnDef<BookingStop>[] = [
   {
     accessorKey: "stop_number",
@@ -84,12 +87,7 @@ export const subrowColumns: ColumnDef<BookingStop>[] = [
     cell: ({ getValue }) => {
       const time = getValue() as string | null;
       if (!time) return "—";
-      return new Date(time).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+      return formatDateTime(time);
     },
     enableSorting: true,
     enableResizing: true,

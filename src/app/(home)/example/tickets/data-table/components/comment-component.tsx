@@ -4,6 +4,10 @@ import type { Ticket, TicketComment } from "../schema";
 
 // ** import components
 import { Badge } from "@/components/ui/badge";
+import { RoleBadge } from "@/components/table/status-badge";
+
+// ** import utils
+import { formatDateTime } from "@/lib/table-utils";
 
 interface CommentComponentProps {
   row: Row<Ticket>;
@@ -13,14 +17,7 @@ interface CommentComponentProps {
 export function CommentComponent({ data }: CommentComponentProps) {
   // Cast to TicketComment for subrow data
   const comment = data as unknown as TicketComment;
-  const roleColors = {
-    customer: "bg-blue-500",
-    agent: "bg-green-500",
-    admin: "bg-purple-500",
-  };
-
-  const role = (comment.author_role || "customer").toLowerCase();
-  const roleColor = roleColors[role as keyof typeof roleColors] || "bg-gray-500";
+  const role = comment.author_role || "customer";
 
   return (
     <div className="flex gap-4 py-3 px-4 border-l-2 border-muted">
@@ -32,22 +29,14 @@ export function CommentComponent({ data }: CommentComponentProps) {
       <div className="flex-1 space-y-2">
         <div className="flex items-center gap-2">
           <span className="font-medium">{comment.author_name}</span>
-          <Badge className={`${roleColor} text-white text-xs`}>
-            {role.charAt(0).toUpperCase() + role.slice(1)}
-          </Badge>
+          <RoleBadge role={role} className="text-xs" />
           {comment.is_internal === 1 && (
             <Badge variant="outline" className="text-xs">
               Internal
             </Badge>
           )}
           <span className="text-xs text-muted-foreground ml-auto">
-            {new Date(comment.created_at).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+            {formatDateTime(comment.created_at)}
           </span>
         </div>
         <div className="text-sm">{comment.comment_text}</div>

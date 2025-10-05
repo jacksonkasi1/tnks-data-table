@@ -1,18 +1,17 @@
 "use client";
 
 // ** Import 3rd Party Libs
-import { format } from "date-fns";
 import { ColumnDef } from "@tanstack/react-table";
 
 // ** Import Components
 import { DataTableColumnHeader } from "@/components/data-table/column-header";
+import { CountBadge } from "@/components/table/status-badge";
 
 // ** Import Utils
-import { formatCurrency } from "@/lib/table-utils";
+import { formatCurrency, formatShortDate } from "@/lib/table-utils";
 
 // ** Import UI Components
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 
 // ** Import Schema
 import { User } from "../schema";
@@ -100,9 +99,7 @@ export const getColumns = (
         const count = row.getValue("expense_count") as number;
         return (
           <div className="max-w-full text-left">
-            <Badge variant="outline" className="truncate">
-              {count}
-            </Badge>
+            <CountBadge count={count} />
           </div>
         );
       },
@@ -131,9 +128,8 @@ export const getColumns = (
         <DataTableColumnHeader column={column} title="Joined" />
       ),
       cell: ({ row }) => {
-        const date = new Date(row.getValue("created_at"));
-        // Format date as "MMM d, yyyy" (e.g., "Mar 16, 2025")
-        const formattedDate = format(date, "MMM d, yyyy");
+        const date = row.getValue("created_at") as string;
+        const formattedDate = formatShortDate(date);
         return (
           <div className="max-w-full text-left truncate">{formattedDate}</div>
         );

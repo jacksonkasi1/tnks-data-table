@@ -3,15 +3,12 @@
 // ** import types
 import { ColumnDef } from "@tanstack/react-table";
 
-// ** import core packages
-import { format } from "date-fns";
-
 // ** import components
 import { DataTableColumnHeader } from "@/components/data-table/column-header";
+import { CountBadge, OrderStatusBadge } from "@/components/table/status-badge";
 
 // ** import utils
-import { formatCurrency } from "@/lib/table-utils";
-import { Badge } from "@/components/ui/badge";
+import { formatCurrency, formatShortDate } from "@/lib/table-utils";
 import {
   createExpandColumn,
   createSubRowSelectColumn,
@@ -120,11 +117,7 @@ export const getColumns = (
         if (row.depth > 0) return null;
 
         const count = row.getValue("total_items") as number;
-        return (
-          <Badge variant="outline" className="truncate">
-            {count}
-          </Badge>
-        );
+        return <CountBadge count={count} />;
       },
       size: 80,
     },
@@ -154,22 +147,7 @@ export const getColumns = (
         if (row.depth > 0) return null;
 
         const status = row.getValue("status") as string;
-        const variant =
-          status === "delivered"
-            ? "default"
-            : status === "shipped"
-              ? "secondary"
-              : status === "processing"
-                ? "outline"
-                : status === "cancelled"
-                  ? "destructive"
-                  : "outline";
-
-        return (
-          <Badge variant={variant} className="truncate capitalize">
-            {status}
-          </Badge>
-        );
+        return <OrderStatusBadge status={status} />;
       },
       size: 110,
     },
@@ -182,9 +160,8 @@ export const getColumns = (
         // Only show for parent rows (depth 0)
         if (row.depth > 0) return null;
 
-        const date = new Date(row.getValue("order_date"));
-        const formattedDate = format(date, "MMM d, yyyy");
-        return <div className="text-left truncate">{formattedDate}</div>;
+        const date = row.getValue("order_date") as string;
+        return <div className="text-left truncate">{formatShortDate(date)}</div>;
       },
       size: 120,
     },

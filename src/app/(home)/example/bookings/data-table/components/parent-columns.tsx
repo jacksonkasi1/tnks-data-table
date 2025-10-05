@@ -5,6 +5,9 @@ import type { Booking } from "../schema";
 // ** import components
 import { DataTableColumnHeader } from "@/components/data-table/column-header";
 
+// ** import utils
+import { formatShortDate } from "@/lib/table-utils";
+
 export const parentColumns: ColumnDef<Booking>[] = [
   {
     accessorKey: "booking_id",
@@ -49,11 +52,7 @@ export const parentColumns: ColumnDef<Booking>[] = [
     size: 130,
     cell: ({ getValue }) => {
       const date = getValue() as string;
-      return new Date(date).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
+      return formatShortDate(date);
     },
   },
   {
