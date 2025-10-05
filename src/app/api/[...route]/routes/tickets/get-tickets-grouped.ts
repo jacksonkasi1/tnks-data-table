@@ -56,6 +56,9 @@ router.get("/", async (c) => {
         case "customer_name": return tickets.customer_name;
         case "priority": return tickets.priority;
         case "status": return tickets.status;
+        case "category": return tickets.category;
+        case "assigned_to": return tickets.assigned_to;
+        case "total_comments": return tickets.total_comments;
         case "created_at": return tickets.created_at;
         case "updated_at": return tickets.updated_at;
         default: return tickets.created_at;

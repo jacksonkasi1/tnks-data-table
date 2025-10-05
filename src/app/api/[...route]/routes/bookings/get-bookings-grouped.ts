@@ -28,10 +28,14 @@ const querySchema = z.object({
     .enum([
       "booking_id",
       "customer_name",
+      "customer_email",
+      "pickup_location",
+      "delivery_location",
       "booking_date",
       "status",
       "total_stops",
       "total_amount",
+      "driver_name",
     ])
     .default("booking_date"),
   sort_order: z.enum(["asc", "desc"]).default("desc"),
@@ -124,7 +128,19 @@ router.get("/", async (c) => {
             ? sort_order === "asc"
               ? asc(bookings.customer_name)
               : desc(bookings.customer_name)
-            : sort_by === "status"
+            : sort_by === "customer_email"
+              ? sort_order === "asc"
+                ? asc(bookings.customer_email)
+                : desc(bookings.customer_email)
+              : sort_by === "pickup_location"
+                ? sort_order === "asc"
+                  ? asc(bookings.pickup_location)
+                  : desc(bookings.pickup_location)
+                : sort_by === "delivery_location"
+                  ? sort_order === "asc"
+                    ? asc(bookings.delivery_location)
+                    : desc(bookings.delivery_location)
+                  : sort_by === "status"
               ? sort_order === "asc"
                 ? asc(bookings.status)
                 : desc(bookings.status)
@@ -136,9 +152,13 @@ router.get("/", async (c) => {
                   ? sort_order === "asc"
                     ? asc(bookings.total_amount)
                     : desc(bookings.total_amount)
-                  : sort_order === "asc"
-                    ? asc(bookings.booking_date)
-                    : desc(bookings.booking_date)
+                  : sort_by === "driver_name"
+                    ? sort_order === "asc"
+                      ? asc(bookings.driver_name)
+                      : desc(bookings.driver_name)
+                    : sort_order === "asc"
+                      ? asc(bookings.booking_date)
+                      : desc(bookings.booking_date)
       )
       .limit(limit)
       .offset((page - 1) * limit);

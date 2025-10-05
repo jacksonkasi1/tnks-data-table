@@ -29,6 +29,10 @@ const querySchema = z.object({
       "order_id",
       "customer_name",
       "customer_email",
+      "product_name",
+      "quantity",
+      "price",
+      "subtotal",
       "order_date",
       "status",
       "total_items",
@@ -95,56 +99,119 @@ router.get("/", async (c) => {
       .from(orders)
       .where(filters.length > 0 ? and(...filters) : undefined);
 
-    // Get orders with sorting and pagination
-    const ordersQuery = db
-      .select({
-        id: orders.id,
-        order_id: orders.order_id,
-        customer_name: orders.customer_name,
-        customer_email: orders.customer_email,
-        order_date: orders.order_date,
-        status: orders.status,
-        total_items: orders.total_items,
-        total_amount: orders.total_amount,
-        shipping_address: orders.shipping_address,
-        payment_method: orders.payment_method,
-        created_at: orders.created_at,
-      })
-      .from(orders)
-      .where(filters.length > 0 ? and(...filters) : undefined)
-      .orderBy(
-        sort_by === "order_id"
-          ? sort_order === "asc"
-            ? asc(orders.order_id)
-            : desc(orders.order_id)
-          : sort_by === "customer_name"
-            ? sort_order === "asc"
-              ? asc(orders.customer_name)
-              : desc(orders.customer_name)
-            : sort_by === "customer_email"
-              ? sort_order === "asc"
-                ? asc(orders.customer_email)
-                : desc(orders.customer_email)
-              : sort_by === "status"
-                ? sort_order === "asc"
-                  ? asc(orders.status)
-                  : desc(orders.status)
-                : sort_by === "total_items"
-                  ? sort_order === "asc"
-                    ? asc(orders.total_items)
-                    : desc(orders.total_items)
-                  : sort_by === "total_amount"
-                    ? sort_order === "asc"
-                      ? asc(orders.total_amount)
-                      : desc(orders.total_amount)
-                    : sort_order === "asc"
-                      ? asc(orders.order_date)
-                      : desc(orders.order_date)
-      )
-      .limit(limit)
-      .offset((page - 1) * limit);
+    // For sorting by item fields, we need first item data
+    const needsItemJoin = ["product_name", "quantity", "price", "subtotal"].includes(sort_by);
 
-    const ordersList = await ordersQuery;
+    let ordersList;
+
+    if (needsItemJoin) {
+      // Complex query: join with first item for sorting
+      const ordersWithFirstItem = await db
+        .select({
+          id: orders.id,
+          order_id: orders.order_id,
+          customer_name: orders.customer_name,
+          customer_email: orders.customer_email,
+          order_date: orders.order_date,
+          status: orders.status,
+          total_items: orders.total_items,
+          total_amount: orders.total_amount,
+          shipping_address: orders.shipping_address,
+          payment_method: orders.payment_method,
+          created_at: orders.created_at,
+          first_item_product: orderItems.product_name,
+          first_item_quantity: orderItems.quantity,
+          first_item_price: orderItems.price,
+          first_item_subtotal: orderItems.subtotal,
+        })
+        .from(orders)
+        .leftJoin(
+          orderItems,
+          sql`${orderItems.order_id} = ${orders.order_id} AND ${orderItems.id} = (
+            SELECT id FROM ${orderItems} oi2
+            WHERE oi2.order_id = ${orders.order_id}
+            ORDER BY oi2.id ASC
+            LIMIT 1
+          )`
+        )
+        .where(filters.length > 0 ? and(...filters) : undefined)
+        .orderBy(
+          sort_by === "product_name"
+            ? sort_order === "asc"
+              ? asc(orderItems.product_name)
+              : desc(orderItems.product_name)
+            : sort_by === "quantity"
+              ? sort_order === "asc"
+                ? asc(orderItems.quantity)
+                : desc(orderItems.quantity)
+              : sort_by === "price"
+                ? sort_order === "asc"
+                  ? asc(orderItems.price)
+                  : desc(orderItems.price)
+                : sort_by === "subtotal"
+                  ? sort_order === "asc"
+                    ? asc(orderItems.subtotal)
+                    : desc(orderItems.subtotal)
+                  : sort_order === "asc"
+                    ? asc(orders.order_date)
+                    : desc(orders.order_date)
+        )
+        .limit(limit)
+        .offset((page - 1) * limit);
+
+      ordersList = ordersWithFirstItem.map(({ first_item_product, first_item_quantity, first_item_price, first_item_subtotal, ...order }) => order);
+    } else {
+      // Simple query: no join needed
+      const ordersQuery = db
+        .select({
+          id: orders.id,
+          order_id: orders.order_id,
+          customer_name: orders.customer_name,
+          customer_email: orders.customer_email,
+          order_date: orders.order_date,
+          status: orders.status,
+          total_items: orders.total_items,
+          total_amount: orders.total_amount,
+          shipping_address: orders.shipping_address,
+          payment_method: orders.payment_method,
+          created_at: orders.created_at,
+        })
+        .from(orders)
+        .where(filters.length > 0 ? and(...filters) : undefined)
+        .orderBy(
+          sort_by === "order_id"
+            ? sort_order === "asc"
+              ? asc(orders.order_id)
+              : desc(orders.order_id)
+            : sort_by === "customer_name"
+              ? sort_order === "asc"
+                ? asc(orders.customer_name)
+                : desc(orders.customer_name)
+              : sort_by === "customer_email"
+                ? sort_order === "asc"
+                  ? asc(orders.customer_email)
+                  : desc(orders.customer_email)
+                : sort_by === "status"
+                  ? sort_order === "asc"
+                    ? asc(orders.status)
+                    : desc(orders.status)
+                  : sort_by === "total_items"
+                    ? sort_order === "asc"
+                      ? asc(orders.total_items)
+                      : desc(orders.total_items)
+                    : sort_by === "total_amount"
+                      ? sort_order === "asc"
+                        ? asc(orders.total_amount)
+                        : desc(orders.total_amount)
+                      : sort_order === "asc"
+                        ? asc(orders.order_date)
+                        : desc(orders.order_date)
+        )
+        .limit(limit)
+        .offset((page - 1) * limit);
+
+      ordersList = await ordersQuery;
+    }
 
     // Get items for each order (limited to MAX_SUBROWS_PER_ORDER)
     const ordersWithItems = await Promise.all(
