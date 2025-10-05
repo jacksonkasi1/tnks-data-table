@@ -11,11 +11,14 @@ import {
 } from "@/components/data-table/subrow-columns";
 
 // ** import schema
-import { Booking } from "../schema";
+import { Booking, BookingStop } from "../schema";
 
 // ** import columns
 import { parentColumns } from "./parent-columns";
 import { subrowColumns } from "./subrow-columns";
+
+// ** import utils
+import { mapColumnsWithHeaders } from "./column-utils";
 
 // ** import row actions
 import { DataTableRowActions } from "./row-actions";
@@ -33,21 +36,8 @@ export const getColumns = (
     columns.push(createSubRowSelectColumn<Booking>({ handleRowDeselection }));
   }
 
-  // Add parent columns with proper headers
-  const parentColumnsWithHeaders = parentColumns.map((col) => {
-    if (typeof col.header === "string") {
-      const title = col.header;
-      return {
-        ...col,
-        header: ({ column }: { column: any }) => (
-          <DataTableColumnHeader column={column} title={title} />
-        ),
-      } as ColumnDef<Booking>;
-    }
-    return col;
-  });
-
-  columns.push(...parentColumnsWithHeaders);
+  // Add parent columns with proper headers using shared utility
+  columns.push(...mapColumnsWithHeaders(parentColumns));
 
   // Add actions column at the end
   columns.push({
@@ -62,5 +52,39 @@ export const getColumns = (
   return columns;
 };
 
-// Export subrow columns for DataTable to use in custom-columns mode
-export { subrowColumns };
+// Create complete subrow columns with expand, checkbox, and actions
+export const getSubRowColumns = (
+  handleRowDeselection: ((rowId: string) => void) | null | undefined
+): ColumnDef<BookingStop>[] => {
+  const columns: ColumnDef<BookingStop>[] = [];
+
+  // Add expand column for subrows (same as parent)
+  columns.push(createExpandColumn<BookingStop>({ hideWhenSingle: false }));
+
+  // Add select column if handleRowDeselection is provided
+  if (handleRowDeselection !== null) {
+    columns.push(createSubRowSelectColumn<BookingStop>({ handleRowDeselection }));
+  }
+
+  // Add subrow columns with sortable headers and resizing using shared utility
+  const subrowColumnsWithHeaders = mapColumnsWithHeaders(subrowColumns).map((col) => ({
+    ...col,
+    enableSorting: true,
+    enableResizing: true,
+  }));
+
+  columns.push(...subrowColumnsWithHeaders);
+
+  // Add actions column at the end
+  columns.push({
+    id: "actions",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Actions" />
+    ),
+    cell: ({ row, table }) => <DataTableRowActions row={row} table={table} />,
+    size: 100,
+    enableResizing: true,
+  });
+
+  return columns;
+};

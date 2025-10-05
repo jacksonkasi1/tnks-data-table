@@ -7,7 +7,7 @@ import { DataTable } from "@/components/data-table/data-table";
 import { Booking } from "./schema";
 
 // ** import columns
-import { getColumns } from "./components/columns";
+import { getColumns, getSubRowColumns } from "./components/columns";
 
 // ** import utils
 import { useExportConfig } from "./utils/config";
@@ -17,6 +17,7 @@ export function BookingsDataTable() {
   return (
     <DataTable<Booking, unknown>
       getColumns={getColumns}
+      getSubRowColumns={getSubRowColumns}
       fetchDataFn={useBookingsData}
       idField="id"
       pageSizeOptions={[10, 20, 30, 50]}
@@ -24,9 +25,10 @@ export function BookingsDataTable() {
       subRowsConfig={{
         enabled: true,
         mode: "custom-columns",
+        showSubRowHeaders: true,
         hideExpandIconWhenSingle: false,
         autoExpandSingle: false,
-        indentSize: 24,
+        indentSize: 0,
       }}
       config={{
         enableRowSelection: true,

@@ -1,7 +1,6 @@
 "use client";
 
 // ** import types
-import type * as React from "react";
 import type { ColumnDef, ColumnResizeMode, Row, ExpandedState } from "@tanstack/react-table";
 import type { TableConfig } from "./utils/table-config";
 import type { CaseFormatConfig } from "./utils/case-utils";
@@ -20,7 +19,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useEffect, useCallback, useMemo, useRef, useState } from "react";
+import React, { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { AlertCircle } from "lucide-react";
 
 // ** import components
@@ -99,7 +98,7 @@ export interface SubRowsConfig<TData> {
   subRowsField?: string;
 
   // For custom-columns mode: different columns for subrows
-  subRowColumns?: ColumnDef<TData, unknown>[];
+  subRowColumns?: ColumnDef<any, unknown>[];
   showSubRowHeaders?: boolean;
 
   // For custom-component mode: custom component for subrows
@@ -121,6 +120,122 @@ export interface SubRowsConfig<TData> {
   defaultExpanded?: boolean | ExpandedState;
 }
 
+// SubRowTable component to handle individual subrow table instances
+// This ensures useReactTable is called at the top level (fixing hooks rules violation)
+function SubRowTable<TData>({
+  subRowsData,
+  subRowColumns,
+  parentId,
+  subRowTableStates,
+  setSubRowTableStates,
+  enableColumnResizing,
+  showHeaders,
+}: {
+  subRowsData: any[];
+  subRowColumns: ColumnDef<any, unknown>[];
+  parentId: string;
+  subRowTableStates: Record<string, { sorting: any[]; columnSizing: ColumnSizingState }>;
+  setSubRowTableStates: React.Dispatch<React.SetStateAction<Record<string, { sorting: any[]; columnSizing: ColumnSizingState }>>>;
+  enableColumnResizing: boolean;
+  showHeaders?: boolean;
+}) {
+  const currentState = subRowTableStates[parentId] || {
+    sorting: [],
+    columnSizing: {},
+  };
+
+  const subRowTable = useReactTable({
+    data: subRowsData,
+    columns: subRowColumns,
+    state: {
+      sorting: currentState.sorting,
+      columnSizing: currentState.columnSizing,
+    },
+    onSortingChange: (updater) => {
+      setSubRowTableStates(prev => {
+        const prevState = prev[parentId] || { sorting: [], columnSizing: {} };
+        const newSorting = typeof updater === 'function'
+          ? updater(prevState.sorting)
+          : updater;
+        return {
+          ...prev,
+          [parentId]: { ...prevState, sorting: newSorting }
+        };
+      });
+    },
+    onColumnSizingChange: (updater) => {
+      setSubRowTableStates(prev => {
+        const prevState = prev[parentId] || { sorting: [], columnSizing: {} };
+        const newSizing = typeof updater === 'function'
+          ? updater(prevState.columnSizing)
+          : updater;
+        return {
+          ...prev,
+          [parentId]: { ...prevState, columnSizing: newSizing }
+        };
+      });
+    },
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    columnResizeMode: 'onChange' as ColumnResizeMode,
+    enableSorting: true,
+    enableColumnResizing: enableColumnResizing,
+  });
+
+  return (
+    <>
+      {showHeaders && (
+        <TableRow
+          data-subrow-header="true"
+          className="bg-muted/50 border-t-2"
+        >
+          {subRowTable.getHeaderGroups()[0]?.headers.map((header) => (
+            <TableHead
+              key={header.id}
+              className="px-2 py-2 relative text-left group/th"
+              style={{
+                width: header.getSize(),
+              }}
+              data-column-resizing={header.column.getIsResizing() ? "true" : undefined}
+            >
+              {header.isPlaceholder
+                ? null
+                : flexRender(
+                    header.column.columnDef.header,
+                    header.getContext(),
+                  )}
+              {enableColumnResizing && header.column.getCanResize() && (
+                <DataTableResizer header={header} table={subRowTable} />
+              )}
+            </TableHead>
+          ))}
+        </TableRow>
+      )}
+      {subRowTable.getRowModel().rows.map((sortedRow) => (
+        <TableRow
+          key={sortedRow.id}
+          data-state={sortedRow.getIsSelected() ? "selected" : undefined}
+          tabIndex={0}
+          aria-selected={sortedRow.getIsSelected()}
+          className="bg-muted/30"
+        >
+          {sortedRow.getVisibleCells().map((cell) => (
+            <TableCell
+              key={cell.id}
+              className="px-4 py-2 truncate max-w-0 text-left"
+              style={{
+                width: cell.column.getSize(),
+              }}
+            >
+              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+            </TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </>
+  );
+}
+
 interface DataTableProps<TData extends ExportableData, TValue> {
   // Allow overriding the table configuration
   config?: Partial<TableConfig>;
@@ -128,8 +243,11 @@ interface DataTableProps<TData extends ExportableData, TValue> {
   // Column definitions generator
   getColumns: (handleRowDeselection: ((rowId: string) => void) | null | undefined) => ColumnDef<TData, TValue>[];
 
+  // Subrow column definitions generator (for custom-columns mode)
+  getSubRowColumns?: (handleRowDeselection: ((rowId: string) => void) | null | undefined) => ColumnDef<any, unknown>[];
+
   // Data fetching function
-  fetchDataFn: ((params: DataFetchParams) => Promise<DataFetchResult<TData>>) | 
+  fetchDataFn: ((params: DataFetchParams) => Promise<DataFetchResult<TData>>) |
                ((page: number, pageSize: number, search: string, dateRange: { from_date: string; to_date: string }, sortBy: string, sortOrder: string, caseConfig?: CaseFormatConfig) => unknown);
 
   // Function to fetch specific items by their IDs
@@ -180,6 +298,7 @@ interface DataTableProps<TData extends ExportableData, TValue> {
 export function DataTable<TData extends ExportableData, TValue>({
   config = {},
   getColumns,
+  getSubRowColumns,
   fetchDataFn,
   fetchByIdsFn,
   exportConfig,
@@ -719,6 +838,20 @@ export function DataTable<TData extends ExportableData, TValue>({
     return getColumns(tableConfig.enableRowSelection ? handleRowDeselection : null);
   }, [getColumns, handleRowDeselection, tableConfig.enableRowSelection]);
 
+  // Get subrow columns if using custom-columns mode
+  const subRowColumns = useMemo(() => {
+    if (subRowsConfig?.enabled && subRowsConfig.mode === 'custom-columns' && getSubRowColumns) {
+      return getSubRowColumns(tableConfig.enableRowSelection ? handleRowDeselection : null);
+    }
+    return null;
+  }, [getSubRowColumns, handleRowDeselection, tableConfig.enableRowSelection, subRowsConfig]);
+
+  // Subrow table state management (per parent row)
+  const [subRowTableStates, setSubRowTableStates] = useState<Record<string, {
+    sorting: any[];
+    columnSizing: ColumnSizingState;
+  }>>({});
+
   // Create event handlers using utility functions
   const handleSortingChange = useCallback(
     (updaterOrValue: SortingUpdater | { id: string; desc: boolean }[]) => {
@@ -856,16 +989,16 @@ export function DataTable<TData extends ExportableData, TValue>({
     // SUBROW SELECTION: Disable automatic cascading
     // We handle parent-child selection manually in the checkbox handler
     enableSubRowSelection: false,
-    // SUBROW ID FIX: Use actual IDs instead of row indices
-    // This generates unique IDs for parent and subrow selection tracking
+    // SUBROW ID FIX: Generate unique composite IDs to avoid collisions
+    // Without this, parent ID=1 and subrow ID=1 would both be "1"
     getRowId: (row: TData, index: number, parent?: Row<TData>) => {
-      if (subRowsConfig?.enabled) {
-        // For subrows, use the id field from the row data
-        // Parent rows use their order/parent ID, subrows use their unique item ID
-        return String((row as any)[idField]);
+      const rowId = String((row as any)[idField]);
+      if (subRowsConfig?.enabled && parent) {
+        // Subrow: create composite ID like "438-sub-3706"
+        return `${parent.id}-sub-${rowId}`;
       }
-      // Default: use the idField value
-      return String((row as any)[idField]);
+      // Parent: use direct ID like "438"
+      return rowId;
     },
     manualPagination: true,
     manualSorting: true,
@@ -878,7 +1011,11 @@ export function DataTable<TData extends ExportableData, TValue>({
     ...(subRowsConfig?.enabled && {
       onExpandedChange: setExpanded,
       getExpandedRowModel: getExpandedRowModel(),
-      getSubRows: (row: TData) => (row as any)[subRowsConfig.subRowsField || 'subRows'],
+      getSubRows: (row: TData) => {
+        const subRows = (row as any)[subRowsConfig.subRowsField || 'subRows'];
+        // Only return if it's a valid array with items
+        return Array.isArray(subRows) && subRows.length > 0 ? subRows : undefined;
+      },
     }),
     getCoreRowModel: getCoreRowModel<TData>(),
     getFilteredRowModel: getFilteredRowModel<TData>(),
@@ -1143,36 +1280,31 @@ export function DataTable<TData extends ExportableData, TValue>({
                   }
                 }
 
-                // For custom-columns mode with subrows - render different columns
-                if (subRowsConfig?.enabled && subRowsConfig.mode === 'custom-columns' && isSubRow && subRowsConfig.subRowColumns) {
+                // For custom-columns mode with subrows - render with SubRowTable component
+                if (subRowsConfig?.enabled && subRowsConfig.mode === 'custom-columns' && isSubRow && subRowColumns) {
+                  const parentRow = row.getParentRow();
+                  if (!parentRow) return null;
+
+                  const parentId = parentRow.id;
+                  const subRowsData = (parentRow.original as any)?.[subRowsConfig.subRowsField || 'subRows'] || [];
+
+                  // Only render once for the first subrow of each parent
+                  const parentSubRows = parentRow.subRows || [];
+                  const isFirstSubRow = parentSubRows.length > 0 && parentSubRows[0].id === row.id;
+
+                  if (!isFirstSubRow) return null;
+
                   return (
-                    <TableRow
-                      key={row.id}
-                      id={`row-${rowIndex}`}
-                      data-row-index={rowIndex}
-                      data-depth={row.depth}
-                      data-state={row.getIsSelected() ? "selected" : undefined}
-                      tabIndex={0}
-                      aria-selected={row.getIsSelected()}
-                      className={cn(isSubRow && "bg-muted/30")}
-                      onClick={(event) => {
-                        if (tableConfig.enableClickRowSelect) {
-                          row.toggleSelected();
-                        }
-                        if (onRowClick) {
-                          handleRowClick(event, row.original, rowIndex);
-                        }
-                      }}
-                    >
-                      {row.getVisibleCells().map((cell, cellIndex) => (
-                        <TableCell
-                          key={cell.id}
-                          className="px-4 py-2 truncate max-w-0 text-left"
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
+                    <SubRowTable
+                      key={`subrow-table-${parentId}`}
+                      subRowsData={subRowsData}
+                      subRowColumns={subRowColumns}
+                      parentId={parentId}
+                      subRowTableStates={subRowTableStates}
+                      setSubRowTableStates={setSubRowTableStates}
+                      enableColumnResizing={tableConfig.enableColumnResizing}
+                      showHeaders={subRowsConfig.showSubRowHeaders}
+                    />
                   );
                 }
 

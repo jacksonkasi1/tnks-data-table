@@ -26,7 +26,7 @@ export interface Booking
 
 // ** Booking stop (subrow) interface
 export interface BookingStop
-  extends Record<string, string | number | boolean | null | undefined> {
+  extends Record<string, string | number | boolean | null | undefined | BookingStop[]> {
   id: number;
   booking_id: string;
   stop_number: number;
@@ -40,4 +40,7 @@ export interface BookingStop
   scheduled_time: string | null;
   status: string;
   distance_from_previous: string | null;
+  
+  // Nested subrows (for multi-level expansion)
+  subRows?: BookingStop[];
 }
