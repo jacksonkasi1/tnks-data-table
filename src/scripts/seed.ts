@@ -52,8 +52,8 @@ async function main() {
   await db.delete(users);
   console.log("✅ Existing data cleared");
 
-  // Generate 200 users
-  const userData: NewUser[] = Array.from({ length: 200 }).map(() => {
+  // Generate 10,000 users
+  const userData: NewUser[] = Array.from({ length: 10000 }).map(() => {
     // Create a random creation date within the past year
     const createdAt = getRandomDateInPastYear();
     
@@ -129,7 +129,7 @@ async function main() {
     .returning();
   console.log(`✅ Successfully inserted ${insertedExpenses.length} expenses`);
 
-  // Generate 200 orders with 1-25 items each
+  // Generate 10,000 orders with 1-25 items each
   const orderData: NewOrder[] = [];
   const orderItemData: NewOrderItem[] = [];
 
@@ -156,7 +156,7 @@ async function main() {
 
   console.log("🛒 Generating orders...");
 
-  for (let i = 1; i <= 200; i++) {
+  for (let i = 1; i <= 10000; i++) {
     const orderId = `ORD-${String(i).padStart(5, '0')}`;
     const orderDate = getRandomDateInPastYear();
     const itemCount = faker.number.int({ min: 1, max: 25 });

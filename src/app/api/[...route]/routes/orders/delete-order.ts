@@ -5,7 +5,10 @@ import { db } from "@/db";
 import { orders, orderItems } from "@/db/schema";
 
 // ** import drizzle
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
+
+// Minimum records constant
+const MINIMUM_RECORDS = 1000;
 
 const app = new Hono();
 
@@ -35,6 +38,23 @@ app.delete("/:id", async (c) => {
           error: "Order not found",
         },
         404
+      );
+    }
+
+    // Check total order count before deleting
+    const [{ count: totalOrders }] = await db
+      .select({ count: sql<number>`cast(count(*) as integer)` })
+      .from(orders);
+
+    // Prevent deletion if it would result in less than minimum records
+    if (totalOrders <= MINIMUM_RECORDS) {
+      return c.json(
+        {
+          success: false,
+          error: "Cannot delete order",
+          message: `Minimum ${MINIMUM_RECORDS} orders must be maintained. Current count: ${totalOrders}`,
+        },
+        400
       );
     }
 
