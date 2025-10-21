@@ -109,7 +109,7 @@ export function DataTableExport<TData extends ExportableData>({
 
       const success = type === "csv"
         ? exportToCSV(parentData, `${entityName}-parents-export-${Date.now()}`, headers, columnMapping, transformFunction)
-        : exportToExcel(parentData, `${entityName}-parents-export-${Date.now()}`, columnMapping, columnWidths, headers, transformFunction);
+        : await exportToExcel(parentData, `${entityName}-parents-export-${Date.now()}`, columnMapping, columnWidths, headers, transformFunction);
 
       if (success) {
         toast.success(`Exported ${parentData.length} parent rows`, { id: "export-parents-toast" });
@@ -150,7 +150,7 @@ export function DataTableExport<TData extends ExportableData>({
 
       const success = type === "csv"
         ? exportToCSV(subrowData, `${subRowExportConfig.entityName}-export-${Date.now()}`, subRowExportConfig.headers, subRowExportConfig.columnMapping, subRowExportConfig.transformFunction)
-        : exportToExcel(subrowData, `${subRowExportConfig.entityName}-export-${Date.now()}`, subRowExportConfig.columnMapping, subRowExportConfig.columnWidths, subRowExportConfig.headers, subRowExportConfig.transformFunction);
+        : await exportToExcel(subrowData, `${subRowExportConfig.entityName}-export-${Date.now()}`, subRowExportConfig.columnMapping, subRowExportConfig.columnWidths, subRowExportConfig.headers, subRowExportConfig.transformFunction);
 
       if (success) {
         toast.success(`Exported ${subrowData.length} subrows`, { id: "export-subrows-toast" });
@@ -453,10 +453,10 @@ export function DataTableExport<TData extends ExportableData>({
       if (type === "csv") {
         success = exportToCSV(allData, filename, exportHeaders, exportColumnMapping, transformFunction);
       } else {
-        success = exportToExcel(
-          allData, 
-          filename, 
-          exportColumnMapping, 
+        success = await exportToExcel(
+          allData,
+          filename,
+          exportColumnMapping,
           exportColumnWidths,
           exportHeaders,
           transformFunction
