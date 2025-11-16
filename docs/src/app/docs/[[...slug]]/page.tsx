@@ -15,10 +15,18 @@ export default async function Page(props: {
   const page = source.getPage(params.slug);
   if (!page) notFound();
 
-  const MDX = (page.data as any).body;
+  const pageData = page.data as {
+    body: React.ComponentType<{ components?: unknown }>;
+    toc?: Array<{ title: string; url: string; depth: number }>;
+    full?: boolean;
+    title: string;
+    description?: string;
+  };
+
+  const MDX = pageData.body;
 
   return (
-    <DocsPage toc={(page.data as any).toc} full={(page.data as any).full}>
+    <DocsPage toc={pageData.toc} full={pageData.full}>
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>

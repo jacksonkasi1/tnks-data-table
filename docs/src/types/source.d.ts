@@ -1,3 +1,7 @@
 declare module '@/../.source/server' {
-  export const docs: any;
+  import type { Source } from 'fumadocs-core/source';
+
+  export const docs: {
+    source: Source;
+  };
 }
