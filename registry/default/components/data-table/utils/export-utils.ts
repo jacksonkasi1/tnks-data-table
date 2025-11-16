@@ -1,9 +1,52 @@
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 
 // Generic type for exportable data - should have string keys and values that can be converted to string
-export type ExportableData = Record<string, string | number | boolean | null | undefined>;
+// Allow arrays for hierarchical data (subRows)
+export type ExportableData = Record<string, string | number | boolean | null | undefined | any[]>;
+
+/**
+ * Flatten hierarchical data for export
+ */
+export function flattenHierarchicalData<T extends ExportableData>(
+  data: T[],
+  subRowsField: string = 'subRows',
+  includeDepth: boolean = false
+): T[] {
+  const flattened: T[] = [];
+
+  const flatten = (items: T[], depth: number = 0) => {
+    items.forEach((item) => {
+      const { [subRowsField]: subRows, ...itemData } = item as any;
+      flattened.push(
+        includeDepth
+          ? ({ ...itemData, _depth: depth } as T)
+          : (itemData as T)
+      );
+
+      if (subRows && Array.isArray(subRows) && subRows.length > 0) {
+        flatten(subRows, depth + 1);
+      }
+    });
+  };
+
+  flatten(data);
+  return flattened;
+}
+
+/**
+ * Export only parent rows (remove subrows)
+ */
+export function exportParentRowsOnly<T extends ExportableData>(
+  data: T[],
+  subRowsField: string = 'subRows'
+): T[] {
+  return data.map((item) => {
+    const { [subRowsField]: _, ...parentData } = item as any;
+    return parentData as T;
+  });
+}
 
 // Type for transformation function that developers can provide
 export type DataTransformFunction<T extends ExportableData> = (row: T) => ExportableData;
@@ -122,16 +165,16 @@ export function exportToCSV<T extends ExportableData>(
 }
 
 /**
- * Export data to Excel file using xlsx package
+ * Export data to Excel file using ExcelJS (secure alternative to xlsx)
  */
-export function exportToExcel<T extends ExportableData>(
+export async function exportToExcel<T extends ExportableData>(
   data: T[],
   filename: string,
   columnMapping?: Record<string, string>,
   columnWidths?: Array<{ wch: number }>,
   headers?: string[],
   transformFunction?: DataTransformFunction<T>
-): boolean {
+): Promise<boolean> {
   if (data.length === 0) {
     console.error("No data to export");
     return false;
@@ -145,42 +188,46 @@ export function exportToExcel<T extends ExportableData>(
         return acc;
       }, {} as Record<string, string>);
 
-    // Apply transformation function first if provided, then map data to worksheet format
-    const worksheetData = data.map(item => {
-      // Apply transformation function if provided
+    // Create a new workbook and worksheet
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Data");
+
+    // Determine columns to export
+    const columnsToExport = headers || Object.keys(mapping);
+
+    // Set up columns with headers and widths
+    worksheet.columns = columnsToExport.map((key, index) => ({
+      header: mapping[key] || key,
+      key: key,
+      width: columnWidths?.[index]?.wch || 15, // Default width of 15 if not specified
+    }));
+
+    // Apply transformation function first if provided, then add data rows
+    data.forEach(item => {
       const transformedItem = transformFunction ? transformFunction(item) : item;
-      
-      const row: ExportableData = {};
-      // If headers are provided, only include those columns
-      const columnsToExport = headers || Object.keys(mapping);
+
+      const row: Record<string, any> = {};
       for (const key of columnsToExport) {
         if (key in transformedItem) {
-          row[mapping[key]] = transformedItem[key];
+          row[key] = transformedItem[key];
         }
       }
-      return row;
+      worksheet.addRow(row);
     });
 
-    // Create a worksheet
-    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+    // Style the header row
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    };
 
-    // Set column widths if provided
-    if (columnWidths) {
-      worksheet["!cols"] = columnWidths;
-    }
-
-    // Create a workbook
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
-
-    // Generate Excel file
-    const excelBuffer = XLSX.write(workbook, {
-      bookType: "xlsx",
-      type: "array"
-    });
+    // Generate Excel file buffer
+    const buffer = await workbook.xlsx.writeBuffer();
 
     // Create blob and download
-    const blob = new Blob([excelBuffer], {
+    const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     });
 
@@ -249,9 +296,9 @@ export async function exportData<T extends ExportableData>(
     let success = false;
     if (type === "csv") {
       success = exportToCSV(
-        exportData, 
-        filename, 
-        options?.headers, 
+        exportData,
+        filename,
+        options?.headers,
         options?.columnMapping,
         options?.transformFunction
       );
@@ -262,7 +309,7 @@ export async function exportData<T extends ExportableData>(
         });
       }
     } else {
-      success = exportToExcel(
+      success = await exportToExcel(
         exportData,
         filename,
         options?.columnMapping,
