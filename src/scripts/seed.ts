@@ -53,25 +53,43 @@ async function main() {
   console.log("✅ Existing data cleared");
 
   // Generate 10,000 users
-  const userData: NewUser[] = Array.from({ length: 10000 }).map(() => {
+  const userData: NewUser[] = [];
+  const usedEmails = new Set<string>();
+  
+  for (let i = 0; i < 10000; i++) {
     // Create a random creation date within the past year
     const createdAt = getRandomDateInPastYear();
     
     // Create a random update date that's after the creation date
     const updatedAt = getRandomFutureDate(createdAt);
     
-    return {
+    // Generate unique email
+    let email = faker.internet.email().toLowerCase();
+    while (usedEmails.has(email)) {
+      email = faker.internet.email().toLowerCase();
+    }
+    usedEmails.add(email);
+    
+    userData.push({
       name: faker.person.fullName(),
       age: faker.number.int({ min: 18, max: 80 }),
-      email: faker.internet.email().toLowerCase(),
+      email,
       phone: faker.phone.number(),
       created_at: createdAt,
       updated_at: updatedAt
-    };
-  });
+    });
+  }
 
   console.log("🧑‍🤝‍🧑 Inserting users...");
-  const insertedUsers = await db.insert(users).values(userData).returning();
+  const insertedUsers: typeof users.$inferSelect[] = [];
+  const batchSize = 500;
+  
+  for (let i = 0; i < userData.length; i += batchSize) {
+    const batch = userData.slice(i, i + batchSize);
+    const result = await db.insert(users).values(batch).returning();
+    insertedUsers.push(...result);
+    console.log(`   Inserted ${insertedUsers.length}/${userData.length} users`);
+  }
   console.log(`✅ Successfully inserted ${insertedUsers.length} users`);
 
   // Generate 3-8 expenses for each user
@@ -123,10 +141,15 @@ async function main() {
   }
 
   console.log("💰 Inserting expenses...");
-  const insertedExpenses = await db
-    .insert(expenses)
-    .values(expenseData)
-    .returning();
+  const insertedExpenses: typeof expenses.$inferSelect[] = [];
+  const expenseBatchSize = 1000;
+  
+  for (let i = 0; i < expenseData.length; i += expenseBatchSize) {
+    const batch = expenseData.slice(i, i + expenseBatchSize);
+    const result = await db.insert(expenses).values(batch).returning();
+    insertedExpenses.push(...result);
+    console.log(`   Inserted ${insertedExpenses.length}/${expenseData.length} expenses`);
+  }
   console.log(`✅ Successfully inserted ${insertedExpenses.length} expenses`);
 
   // Generate 10,000 orders with 1-25 items each
@@ -203,11 +226,27 @@ async function main() {
   }
 
   console.log("📦 Inserting orders...");
-  const insertedOrders = await db.insert(orders).values(orderData).returning();
+  const insertedOrders: typeof orders.$inferSelect[] = [];
+  const orderBatchSize = 500;
+  
+  for (let i = 0; i < orderData.length; i += orderBatchSize) {
+    const batch = orderData.slice(i, i + orderBatchSize);
+    const result = await db.insert(orders).values(batch).returning();
+    insertedOrders.push(...result);
+    console.log(`   Inserted ${insertedOrders.length}/${orderData.length} orders`);
+  }
   console.log(`✅ Successfully inserted ${insertedOrders.length} orders`);
 
   console.log("📋 Inserting order items...");
-  const insertedOrderItems = await db.insert(orderItems).values(orderItemData).returning();
+  const insertedOrderItems: typeof orderItems.$inferSelect[] = [];
+  const orderItemBatchSize = 2000;
+  
+  for (let i = 0; i < orderItemData.length; i += orderItemBatchSize) {
+    const batch = orderItemData.slice(i, i + orderItemBatchSize);
+    const result = await db.insert(orderItems).values(batch).returning();
+    insertedOrderItems.push(...result);
+    console.log(`   Inserted ${insertedOrderItems.length}/${orderItemData.length} order items`);
+  }
   console.log(`✅ Successfully inserted ${insertedOrderItems.length} order items`);
 
   // Seed bookings
