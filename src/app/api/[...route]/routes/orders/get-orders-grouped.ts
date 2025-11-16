@@ -218,18 +218,21 @@ router.get("/", async (c) => {
     const orderIds = ordersList.map((order) => order.order_id);
 
     // Fetch all items for these orders in a single batch query
-    const allItems = await db
-      .select({
-        id: orderItems.id,
-        order_id: orderItems.order_id,
-        product_name: orderItems.product_name,
-        quantity: orderItems.quantity,
-        price: orderItems.price,
-        subtotal: orderItems.subtotal,
-      })
-      .from(orderItems)
-      .where(sql`${orderItems.order_id} IN ${orderIds}`)
-      .orderBy(asc(orderItems.id)); // Consistent ordering for first item
+    // Guard against empty orderIds array to prevent SQL IN () errors
+    const allItems = orderIds.length > 0
+      ? await db
+          .select({
+            id: orderItems.id,
+            order_id: orderItems.order_id,
+            product_name: orderItems.product_name,
+            quantity: orderItems.quantity,
+            price: orderItems.price,
+            subtotal: orderItems.subtotal,
+          })
+          .from(orderItems)
+          .where(sql`${orderItems.order_id} IN ${orderIds}`)
+          .orderBy(asc(orderItems.id)) // Consistent ordering for first item
+      : []; // Return empty array if no orders
 
     // Group items by order_id in memory
     const itemsByOrderId = new Map<string, typeof allItems>();

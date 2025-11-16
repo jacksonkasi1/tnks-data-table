@@ -83,25 +83,28 @@ router.get("/", async (c) => {
     const bookingIds = bookingsList.map((booking) => booking.booking_id);
 
     // Fetch all stops for these bookings in a single batch query
-    const allStops = await db
-      .select({
-        id: bookingStops.id,
-        booking_id: bookingStops.booking_id,
-        stop_number: bookingStops.stop_number,
-        stop_type: bookingStops.stop_type,
-        location_name: bookingStops.location_name,
-        location_address: bookingStops.location_address,
-        location_city: bookingStops.location_city,
-        location_state: bookingStops.location_state,
-        contact_name: bookingStops.contact_name,
-        contact_phone: bookingStops.contact_phone,
-        scheduled_time: bookingStops.scheduled_time,
-        status: bookingStops.status,
-        distance_from_previous: bookingStops.distance_from_previous,
-      })
-      .from(bookingStops)
-      .where(sql`${bookingStops.booking_id} IN ${bookingIds}`)
-      .orderBy(asc(bookingStops.stop_number));
+    // Guard against empty bookingIds array to prevent SQL IN () errors
+    const allStops = bookingIds.length > 0
+      ? await db
+          .select({
+            id: bookingStops.id,
+            booking_id: bookingStops.booking_id,
+            stop_number: bookingStops.stop_number,
+            stop_type: bookingStops.stop_type,
+            location_name: bookingStops.location_name,
+            location_address: bookingStops.location_address,
+            location_city: bookingStops.location_city,
+            location_state: bookingStops.location_state,
+            contact_name: bookingStops.contact_name,
+            contact_phone: bookingStops.contact_phone,
+            scheduled_time: bookingStops.scheduled_time,
+            status: bookingStops.status,
+            distance_from_previous: bookingStops.distance_from_previous,
+          })
+          .from(bookingStops)
+          .where(sql`${bookingStops.booking_id} IN ${bookingIds}`)
+          .orderBy(asc(bookingStops.stop_number))
+      : []; // Return empty array if no bookings
 
     // Group stops by booking_id in memory
     const stopsByBookingId = new Map<string, typeof allStops>();
