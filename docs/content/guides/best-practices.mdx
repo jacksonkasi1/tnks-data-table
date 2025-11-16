@@ -3,6 +3,8 @@ title: Best Practices
 description: Recommended patterns and practices for optimal implementation
 ---
 
+import { File, Folder, Files } from 'fumadocs-ui/components/files';
+
 # Best Practices
 
 Follow these recommended practices to build maintainable, performant, and user-friendly data tables.
@@ -13,26 +15,35 @@ Follow these recommended practices to build maintainable, performant, and user-f
 
 Follow the recommended structure for consistency:
 
-```
-✅ Good:
-entity-table/
-  components/
-    columns.tsx
-    row-actions.tsx
-    toolbar-options.tsx
-    actions/
-  schema/
-    index.ts
-  utils/
-    config.ts
-    data-fetching.ts
+**✅ Good Structure:**
 
-❌ Bad:
-entity-table/
-  everything-in-one-file.tsx
-  helpers.ts
-  stuff.tsx
-```
+<Files>
+  <Folder name="entity-table" defaultOpen>
+    <Folder name="components" defaultOpen>
+      <File name="columns.tsx" />
+      <File name="row-actions.tsx" />
+      <File name="toolbar-options.tsx" />
+      <Folder name="actions" defaultOpen />
+    </Folder>
+    <Folder name="schema" defaultOpen>
+      <File name="index.ts" />
+    </Folder>
+    <Folder name="utils" defaultOpen>
+      <File name="config.ts" />
+      <File name="data-fetching.ts" />
+    </Folder>
+  </Folder>
+</Files>
+
+**❌ Bad Structure:**
+
+<Files>
+  <Folder name="entity-table" defaultOpen>
+    <File name="everything-in-one-file.tsx" />
+    <File name="helpers.ts" />
+    <File name="stuff.tsx" />
+  </Folder>
+</Files>
 
 ### Separation of Concerns
 
