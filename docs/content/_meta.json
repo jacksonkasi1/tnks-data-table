@@ -3,11 +3,11 @@
   "pages": [
     "index",
     "getting-started",
+   "guides", 
     "core-concepts",
     "configuration",
     "features",
     "examples",
-    "api",
-    "guides"
+    "api"
   ]
 }

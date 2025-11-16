@@ -2,7 +2,7 @@
   "title": "Getting Started",
   "pages": [
     "index",
-    "installation",
-    "file-structure"
+    "file-structure",
+    "installation"
   ]
 }
