@@ -1,9 +1,8 @@
+import { docs } from 'fumadocs-mdx:collections/server';
 import { loader } from 'fumadocs-core/source';
-import { docs } from '@/../.source/server';
 
 export const source = loader({
   baseUrl: '/docs',
   source: docs.toFumadocsSource(),
 });
 
-export const pageTree = source.pageTree;
