@@ -213,55 +213,73 @@ router.get("/", async (c) => {
       ordersList = await ordersQuery;
     }
 
-    // Get items for each order (limited to MAX_SUBROWS_PER_ORDER)
-    const ordersWithItems = await Promise.all(
-      ordersList.map(async (order) => {
-        const items = await db
-          .select({
-            id: orderItems.id,
-            order_id: orderItems.order_id,
-            product_name: orderItems.product_name,
-            quantity: orderItems.quantity,
-            price: orderItems.price,
-            subtotal: orderItems.subtotal,
-          })
-          .from(orderItems)
-          .where(eq(orderItems.order_id, order.order_id))
-          .limit(MAX_SUBROWS_PER_ORDER);
+    // PERFORMANCE FIX: Fetch all items in a single query instead of N+1 queries
+    // Get all order IDs from the current page
+    const orderIds = ordersList.map((order) => order.order_id);
 
-        // Return order summary with first item as parent data, rest as subRows
-        if (items.length === 0) {
-          return {
-            ...order,
-            product_name: null,
-            quantity: null,
-            price: null,
-            subtotal: null,
-            subRows: [],
-          };
-        }
+    // Fetch all items for these orders in a single batch query
+    const allItems = await db
+      .select({
+        id: orderItems.id,
+        order_id: orderItems.order_id,
+        product_name: orderItems.product_name,
+        quantity: orderItems.quantity,
+        price: orderItems.price,
+        subtotal: orderItems.subtotal,
+      })
+      .from(orderItems)
+      .where(sql`${orderItems.order_id} IN ${orderIds}`)
+      .orderBy(asc(orderItems.id)); // Consistent ordering for first item
 
-        // First item merged with parent
-        const [firstItem, ...restItems] = items;
+    // Group items by order_id in memory
+    const itemsByOrderId = new Map<string, typeof allItems>();
+    for (const item of allItems) {
+      if (!itemsByOrderId.has(item.order_id)) {
+        itemsByOrderId.set(item.order_id, []);
+      }
+      const orderItemsList = itemsByOrderId.get(item.order_id)!;
+      // Limit to MAX_SUBROWS_PER_ORDER per order
+      if (orderItemsList.length < MAX_SUBROWS_PER_ORDER) {
+        orderItemsList.push(item);
+      }
+    }
 
+    // Map items to their orders
+    const ordersWithItems = ordersList.map((order) => {
+      const items = itemsByOrderId.get(order.order_id) || [];
+
+      // Return order summary with first item as parent data, rest as subRows
+      if (items.length === 0) {
         return {
           ...order,
-          item_id: firstItem.id, // Include first item's ID in parent
-          product_name: firstItem.product_name,
-          quantity: firstItem.quantity,
-          price: firstItem.price,
-          subtotal: firstItem.subtotal,
-          subRows: restItems.map((item) => ({
-            id: item.id, // Unique subrow ID
-            order_id: item.order_id,
-            product_name: item.product_name,
-            quantity: item.quantity,
-            price: item.price,
-            subtotal: item.subtotal,
-          })),
+          product_name: null,
+          quantity: null,
+          price: null,
+          subtotal: null,
+          subRows: [],
         };
-      })
-    );
+      }
+
+      // First item merged with parent
+      const [firstItem, ...restItems] = items;
+
+      return {
+        ...order,
+        // Show first item's data in parent row (no item_id to avoid confusion)
+        product_name: firstItem.product_name,
+        quantity: firstItem.quantity,
+        price: firstItem.price,
+        subtotal: firstItem.subtotal,
+        subRows: restItems.map((item) => ({
+          id: item.id, // Unique subrow ID
+          order_id: item.order_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          price: item.price,
+          subtotal: item.subtotal,
+        })),
+      };
+    });
 
     return c.json({
       success: true,
