@@ -1,0 +1,368 @@
+---
+title: Case Format Configuration
+description: Configure the data table to work with different API naming conventions
+---
+
+# Case Format Configuration
+
+The DataTable component supports customizable case formatting for table keys, enabling seamless integration with different backend systems and naming conventions.
+
+## The Problem
+
+Previously, the table component only supported **snake_case** formatting for API keys, which caused integration issues when working with APIs expecting **camelCase** or other formats. This led to data mismatches and errors when interfacing with different naming conventions.
+
+## Solution
+
+The component now supports multiple case formats and custom key mappings:
+
+- **snake_case**: `sort_by`, `page_size`, `created_at`
+- **camelCase**: `sortBy`, `pageSize`, `createdAt`
+- **PascalCase**: `SortBy`, `PageSize`, `CreatedAt`
+- **kebab-case**: `sort-by`, `page-size`, `created-at`
+- **Custom mappings**: Define your own parameter names
+
+## Features
+
+<Cards>
+  <Card title="Built-in Formats" icon="code">
+    Support for snake_case, camelCase, PascalCase, and kebab-case out of the box
+  </Card>
+
+  <Card title="Custom Mappings" icon="settings">
+    Define your own parameter name mappings for non-standard APIs
+  </Card>
+
+  <Card title="Separate Formats" icon="split">
+    Use different formats for URL parameters and API requests independently
+  </Card>
+
+  <Card title="Backward Compatible" icon="check">
+    Existing implementations continue to work without changes
+  </Card>
+</Cards>
+
+## Basic Configuration
+
+### Full CamelCase API
+
+Perfect for Express.js, Node.js, or TypeScript backends:
+
+```typescript
+import { CaseFormatConfig } from "@/components/data-table/utils/case-utils";
+
+const camelCaseConfig: CaseFormatConfig = {
+  urlFormat: 'camelCase',  // URL: ?sortBy=name&pageSize=10
+  apiFormat: 'camelCase',  // API: sortBy=name&pageSize=10
+};
+```
+
+### Full Snake_case API
+
+Perfect for Python, Django, Ruby on Rails backends:
+
+```typescript
+const snakeCaseConfig: CaseFormatConfig = {
+  urlFormat: 'snake_case',  // URL: ?sort_by=name&page_size=10
+  apiFormat: 'snake_case',  // API: sort_by=name&page_size=10
+};
+```
+
+### Mixed Formats (Default)
+
+CamelCase in URLs, snake_case for API (default behavior):
+
+```typescript
+const mixedConfig: CaseFormatConfig = {
+  urlFormat: 'camelCase',  // URL: ?sortBy=name&pageSize=10
+  apiFormat: 'snake_case', // API: sort_by=name&page_size=10
+};
+```
+
+## Custom Key Mapping
+
+Map specific parameter names to match your API's requirements:
+
+### Laravel-Style API
+
+```typescript
+const laravelConfig: CaseFormatConfig = {
+  keyMapper: (key: string) => {
+    const mappings: Record<string, string> = {
+      'sortBy': 'sort',          // sortBy → sort
+      'sortOrder': 'order',       // sortOrder → order
+      'pageSize': 'per_page',     // pageSize → per_page
+      'page': 'page',             // page → page (unchanged)
+      'search': 'filter',         // search → filter
+    };
+    return mappings[key] || key;
+  }
+};
+
+// API request will use:
+// ?sort=name&order=asc&per_page=20&page=1&filter=john
+```
+
+### GraphQL-Style API
+
+```typescript
+const graphqlConfig: CaseFormatConfig = {
+  keyMapper: (key: string) => {
+    const mappings: Record<string, string> = {
+      'sortBy': 'orderBy',
+      'sortOrder': 'orderDirection',
+      'pageSize': 'first',
+      'page': 'offset',
+    };
+    return mappings[key] || key;
+  }
+};
+```
+
+### Custom Business Logic
+
+```typescript
+const customConfig: CaseFormatConfig = {
+  keyMapper: (key: string) => {
+    const mappings: Record<string, string> = {
+      'sortBy': 'orderColumn',
+      'sortOrder': 'direction',
+      'pageSize': 'limit',
+      'page': 'offset',
+      'search': 'query',
+      'from_date': 'startDate',
+      'to_date': 'endDate',
+    };
+    return mappings[key] || key;
+  }
+};
+```
+
+## Integration with DataTable
+
+### Step 1: Define Configuration
+
+```typescript title="src/app/(section)/users/utils/config.ts"
+import { CaseFormatConfig } from "@/components/data-table/utils/case-utils";
+
+export const tableCaseConfig: CaseFormatConfig = {
+  apiFormat: 'camelCase',  // Match your backend
+};
+```
+
+### Step 2: Update Data Fetching Hook
+
+```typescript title="src/app/(section)/users/utils/data-fetching.ts"
+import { DEFAULT_CASE_CONFIG } from "@/components/data-table/utils/case-utils";
+
+export function useUsersData(
+  page: number,
+  pageSize: number,
+  search: string,
+  dateRange: { from_date: string; to_date: string },
+  sortBy: string,
+  sortOrder: string,
+  caseConfig: CaseFormatConfig = DEFAULT_CASE_CONFIG
+) {
+  return useQuery({
+    queryKey: [
+      "users",
+      page,
+      pageSize,
+      search,
+      dateRange,
+      sortBy,
+      sortOrder,
+      caseConfig
+    ],
+    queryFn: () => fetchUsers({
+      page,
+      limit: pageSize,
+      search,
+      from_date: dateRange.from_date,
+      to_date: dateRange.to_date,
+      sort_by: sortBy,
+      sort_order: sortOrder,
+      caseConfig,  // Pass configuration
+    }),
+  });
+}
+
+useUsersData.isQueryHook = true;
+```
+
+### Step 3: Update API Function
+
+```typescript title="src/api/user/fetch-users.ts"
+import { applyKeyMapping } from "@/components/data-table/utils/case-utils";
+
+export async function fetchUsers(params, caseConfig = DEFAULT_CASE_CONFIG) {
+  const queryParams = new URLSearchParams();
+
+  // Apply case format to parameters
+  const mappedParams = applyKeyMapping(params, caseConfig);
+
+  Object.entries(mappedParams).forEach(([key, value]) => {
+    if (value) queryParams.append(key, value.toString());
+  });
+
+  const response = await fetch(`/api/users?${queryParams.toString()}`);
+  // ... rest of implementation
+}
+```
+
+## Complete Examples
+
+### Express.js / Node.js Backend
+
+```typescript
+// Both URL and API use camelCase
+const nodeConfig: CaseFormatConfig = {
+  urlFormat: 'camelCase',
+  apiFormat: 'camelCase',
+};
+
+// Results in:
+// URL: /users?sortBy=name&sortOrder=asc&pageSize=20
+// API: sortBy=name&sortOrder=asc&pageSize=20
+```
+
+### Django / Python Backend
+
+```typescript
+// URL uses camelCase, API uses snake_case
+const djangoConfig: CaseFormatConfig = {
+  urlFormat: 'camelCase',
+  apiFormat: 'snake_case',
+};
+
+// Results in:
+// URL: /users?sortBy=name&sortOrder=asc&pageSize=20
+// API: sort_by=name&sort_order=asc&page_size=20
+```
+
+### Laravel Backend
+
+```typescript
+// Custom mappings for Laravel conventions
+const laravelConfig: CaseFormatConfig = {
+  apiFormat: 'snake_case',
+  keyMapper: (key: string) => {
+    const mappings: Record<string, string> = {
+      'pageSize': 'per_page',
+      'sortBy': 'sort',
+      'sortOrder': 'order',
+    };
+    return mappings[key] || key;
+  }
+};
+
+// Results in:
+// API: sort=name&order=asc&per_page=20&page=1
+```
+
+## Default Configuration
+
+The default configuration maintains backward compatibility:
+
+```typescript
+export const DEFAULT_CASE_CONFIG: Required<CaseFormatConfig> = {
+  urlFormat: 'camelCase',
+  apiFormat: 'snake_case',
+  keyMapper: (key: string) => key, // No transformation
+};
+```
+
+## Live Example
+
+Check the camelCase users example:
+
+```bash
+# Visit this route to see it in action
+/example/users-camel-case
+```
+
+## Migration Guide
+
+### Existing Projects
+
+No changes required! The default configuration maintains current behavior.
+
+### New Projects with CamelCase API
+
+<Steps>
+### Create Case Configuration
+
+```typescript title="src/config/table-case-config.ts"
+import { CaseFormatConfig } from "@/components/data-table/utils/case-utils";
+
+export const tableCaseConfig: CaseFormatConfig = {
+  apiFormat: 'camelCase',
+};
+```
+
+### Update Data Fetching
+
+Pass the configuration to your fetch functions:
+
+```typescript
+export function useUsersData(...params) {
+  return useQuery({
+    queryKey: ["users", ...params, tableCaseConfig],
+    queryFn: () => fetchUsers({ ...params, caseConfig: tableCaseConfig }),
+  });
+}
+```
+
+### Update API Functions
+
+Apply the configuration when building query parameters:
+
+```typescript
+import { applyKeyMapping } from "@/components/data-table/utils/case-utils";
+
+export async function fetchUsers(params, caseConfig) {
+  const mapped = applyKeyMapping(params, caseConfig);
+  // Use mapped parameters in API call
+}
+```
+</Steps>
+
+## Type Definitions
+
+```typescript
+interface CaseFormatConfig {
+  // Format for URL parameters
+  urlFormat?: 'snake_case' | 'camelCase' | 'PascalCase' | 'kebab-case';
+
+  // Format for API requests
+  apiFormat?: 'snake_case' | 'camelCase' | 'PascalCase' | 'kebab-case';
+
+  // Custom key mapping function
+  keyMapper?: (key: string) => string;
+}
+```
+
+## Benefits
+
+- **Flexible Integration**: Works with any backend naming convention
+- **No UI Changes**: Interface remains identical
+- **Type Safety**: Full TypeScript support
+- **Backward Compatible**: Existing code continues working
+- **Developer Experience**: Aligns with project conventions
+
+## Common API Patterns
+
+| Backend | URL Format | API Format | Custom Mapping |
+|---------|------------|------------|----------------|
+| **Express.js** | camelCase | camelCase | None |
+| **Django** | camelCase | snake_case | None |
+| **Laravel** | camelCase | snake_case | `pageSize` → `per_page` |
+| **Ruby on Rails** | snake_case | snake_case | None |
+| **ASP.NET** | PascalCase | PascalCase | None |
+| **GraphQL** | camelCase | camelCase | Custom resolvers |
+
+## Next Steps
+
+- [URL State Management](/docs/configuration/url-state) - Learn about URL state persistence
+- [Server Implementation](/docs/guides/server-implementation) - Build compatible APIs
+- [Examples](/docs/examples) - See case formats in action
