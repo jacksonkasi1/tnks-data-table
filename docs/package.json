@@ -9,12 +9,17 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@radix-ui/react-collapsible": "^1.1.12",
+    "@types/mdx": "^2.0.13",
+    "class-variance-authority": "^0.7.1",
     "fumadocs-core": "^16.0.12",
     "fumadocs-mdx": "^14.0.0",
     "fumadocs-ui": "^16.0.12",
+    "lucide-react": "^0.553.0",
     "next": "16.0.3",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
