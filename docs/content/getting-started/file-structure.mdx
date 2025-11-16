@@ -3,71 +3,85 @@ title: File Structure
 description: Understanding the recommended file structure for implementing the data table
 ---
 
+import { File, Folder, Files } from 'fumadocs-ui/components/files';
+
 # File Structure
 
 The data table follows a modular architecture that separates concerns and improves maintainability. This guide explains the recommended file organization.
 
 ## Recommended Project Structure
 
-```
-src/
-├── api/                       # API integration layer
-│   └── entity/                # Entity-specific API functions
-│       ├── add-entity.ts      # Create operation
-│       ├── delete-entity.ts   # Delete operation
-│       ├── fetch-entities.ts  # List operation with filters
-│       └── fetch-entity-by-ids.ts # Fetch specific entities
-│
-├── components/                # Shared UI components
-│   ├── data-table/            # Core data table components
-│   │   ├── hooks/             # Custom React hooks
-│   │   │   └── use-table-column-resize.ts
-│   │   ├── utils/             # Utility functions
-│   │   │   ├── column-sizing.ts
-│   │   │   ├── conditional-state.ts
-│   │   │   ├── date-format.ts
-│   │   │   ├── deep-utils.ts
-│   │   │   ├── export-utils.ts
-│   │   │   ├── keyboard-navigation.ts
-│   │   │   ├── search.ts
-│   │   │   ├── table-config.ts
-│   │   │   ├── table-state-handlers.ts
-│   │   │   └── url-state.ts
-│   │   ├── column-header.tsx
-│   │   ├── data-export.tsx
-│   │   ├── data-table-resizer.tsx
-│   │   ├── data-table.tsx
-│   │   ├── expand-icon.tsx
-│   │   ├── pagination.tsx
-│   │   ├── subrow-columns.tsx
-│   │   ├── toolbar.tsx
-│   │   └── view-options.tsx
-│   ├── ui/                    # Shadcn UI components
-│   └── calendar-date-picker.tsx
-│
-├── app/                       # Application routes and pages
-│   └── (section)/             # Section grouping
-│       └── entity-table/      # Entity-specific implementation
-│           ├── components/    # Entity table components
-│           │   ├── columns.tsx
-│           │   ├── row-actions.tsx
-│           │   ├── toolbar-options.tsx
-│           │   └── actions/
-│           │       ├── add-entity-popup.tsx
-│           │       ├── delete-entity-popup.tsx
-│           │       └── bulk-delete-popup.tsx
-│           ├── schema/        # Data schemas
-│           │   └── index.ts
-│           ├── utils/         # Utility functions
-│           │   ├── config.ts
-│           │   └── data-fetching.ts
-│           ├── index.tsx      # Table component entry
-│           └── page.tsx       # Next.js page
-│
-└── lib/                       # Shared utilities
-    ├── utils.ts               # Common utility functions
-    └── providers.tsx          # React Query and other providers
-```
+<Files>
+  <Folder name="src" defaultOpen>
+    <Folder name="api" defaultOpen>
+      <Folder name="entity" defaultOpen>
+        <File name="add-entity.ts" />
+        <File name="delete-entity.ts" />
+        <File name="fetch-entities.ts" />
+        <File name="fetch-entity-by-ids.ts" />
+      </Folder>
+    </Folder>
+    <Folder name="components" defaultOpen>
+      <Folder name="data-table" defaultOpen>
+        <Folder name="hooks" defaultOpen>
+          <File name="use-table-column-resize.ts" />
+        </Folder>
+        <Folder name="utils" defaultOpen>
+          <File name="column-sizing.ts" />
+          <File name="conditional-state.ts" />
+          <File name="date-format.ts" />
+          <File name="deep-utils.ts" />
+          <File name="export-utils.ts" />
+          <File name="keyboard-navigation.ts" />
+          <File name="search.ts" />
+          <File name="table-config.ts" />
+          <File name="table-state-handlers.ts" />
+          <File name="url-state.ts" />
+        </Folder>
+        <File name="column-header.tsx" />
+        <File name="data-export.tsx" />
+        <File name="data-table-resizer.tsx" />
+        <File name="data-table.tsx" />
+        <File name="expand-icon.tsx" />
+        <File name="pagination.tsx" />
+        <File name="subrow-columns.tsx" />
+        <File name="toolbar.tsx" />
+        <File name="view-options.tsx" />
+      </Folder>
+      <Folder name="ui" defaultOpen />
+      <File name="calendar-date-picker.tsx" />
+    </Folder>
+    <Folder name="app" defaultOpen>
+      <Folder name="(section)" defaultOpen>
+        <Folder name="entity-table" defaultOpen>
+          <Folder name="components" defaultOpen>
+            <File name="columns.tsx" />
+            <File name="row-actions.tsx" />
+            <File name="toolbar-options.tsx" />
+            <Folder name="actions" defaultOpen>
+              <File name="add-entity-popup.tsx" />
+              <File name="delete-entity-popup.tsx" />
+              <File name="bulk-delete-popup.tsx" />
+            </Folder>
+          </Folder>
+          <Folder name="schema" defaultOpen>
+            <File name="index.ts" />
+          </Folder>
+          <Folder name="utils" defaultOpen>
+            <File name="config.ts" />
+            <File name="data-fetching.ts" />
+          </Folder>
+          <File name="index.tsx" />
+          <File name="page.tsx" />
+        </Folder>
+      </Folder>
+    </Folder>
+    <Folder name="lib" defaultOpen>
+      <File name="utils.ts" />
+      <File name="providers.tsx" />
+    </Folder>
+  </Folder>
+</Files>
 
 ## Layer Breakdown
 
@@ -132,16 +146,18 @@ Entity-specific table implementations. This is where you customize the table for
 
 #### Components Directory
 
-```
-components/
-├── columns.tsx                # Column definitions
-├── row-actions.tsx            # Row-level actions menu
-├── toolbar-options.tsx        # Toolbar customizations
-└── actions/                   # Modal/popup components
-    ├── add-entity-popup.tsx
-    ├── delete-entity-popup.tsx
-    └── bulk-delete-popup.tsx
-```
+<Files>
+  <Folder name="components" defaultOpen>
+    <File name="columns.tsx" />
+    <File name="row-actions.tsx" />
+    <File name="toolbar-options.tsx" />
+    <Folder name="actions" defaultOpen>
+      <File name="add-entity-popup.tsx" />
+      <File name="delete-entity-popup.tsx" />
+      <File name="bulk-delete-popup.tsx" />
+    </Folder>
+  </Folder>
+</Files>
 
 **columns.tsx** - Define your table columns:
 ```typescript
@@ -258,24 +274,33 @@ import { CustomDataTableWithEverything } from "./monster-component";
 
 Files are named clearly and organized logically:
 
-```
-✅ Good Structure:
-users/
-  components/
-    columns.tsx
-    row-actions.tsx
-  schema/
-    index.ts
-  utils/
-    config.ts
-    data-fetching.ts
+**✅ Good Structure:**
 
-❌ Poor Structure:
-users/
-  stuff.tsx
-  helpers.ts
-  things.ts
-```
+<Files>
+  <Folder name="users" defaultOpen>
+    <Folder name="components" defaultOpen>
+      <File name="columns.tsx" />
+      <File name="row-actions.tsx" />
+    </Folder>
+    <Folder name="schema" defaultOpen>
+      <File name="index.ts" />
+    </Folder>
+    <Folder name="utils" defaultOpen>
+      <File name="config.ts" />
+      <File name="data-fetching.ts" />
+    </Folder>
+  </Folder>
+</Files>
+
+**❌ Poor Structure:**
+
+<Files>
+  <Folder name="users" defaultOpen>
+    <File name="stuff.tsx" />
+    <File name="helpers.ts" />
+    <File name="things.ts" />
+  </Folder>
+</Files>
 
 ## Creating a New Table
 
