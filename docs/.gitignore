@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# fumadocs
+/.source/
+
 # production
 /build
 
@@ -39,12 +42,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-package-lock.json
-
-code.sh
-out
-
-.claude
-
-DUMMY
