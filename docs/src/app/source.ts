@@ -3,7 +3,7 @@ import { docs } from '@/../.source/server';
 
 export const source = loader({
   baseUrl: '/docs',
-  source: docs.source,
+  source: docs,
 });
 
 export const pageTree = source.pageTree;
