@@ -1,4 +1,4 @@
-import { source } from '@/app/source';
+import { source } from '@/lib/source';
 import {
   DocsPage,
   DocsBody,
@@ -6,10 +6,9 @@ import {
   DocsTitle,
 } from 'fumadocs-ui/page';
 import { notFound } from 'next/navigation';
-import defaultMdxComponents from 'fumadocs-ui/mdx';
-import { Steps, Step } from 'fumadocs-ui/components/steps';
-import { Cards, Card } from 'fumadocs-ui/components/card';
-import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
+import { getMDXComponents } from '@/mdx-components';
+import type { Metadata } from 'next';
+import { createRelativeLink } from 'fumadocs-ui/mdx';
 
 export default async function Page(props: {
   params: Promise<{ slug?: string[] }>;
@@ -18,22 +17,19 @@ export default async function Page(props: {
   const page = source.getPage(params.slug);
   if (!page) notFound();
 
-  const pageData = page.data as {
-    body: React.ComponentType<{ components?: unknown }>;
-    toc?: Array<{ title: string; url: string; depth: number }>;
-    full?: boolean;
-    title: string;
-    description?: string;
-  };
-
-  const MDX = pageData.body;
+  const MDX = page.data.body;
 
   return (
-    <DocsPage toc={pageData.toc} full={pageData.full}>
+    <DocsPage toc={page.data.toc} full={page.data.full}>
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>
-        <MDX components={{ ...defaultMdxComponents, Steps, Step, Cards, Card, Tabs, Tab }} />
+        <MDX
+          components={getMDXComponents({
+            // this allows you to link to other pages with relative file paths
+            a: createRelativeLink(source, page),
+          })}
+        />
       </DocsBody>
     </DocsPage>
   );
@@ -43,9 +39,11 @@ export async function generateStaticParams() {
   return source.generateParams();
 }
 
-export async function generateMetadata(props: {
-  params: Promise<{ slug?: string[] }>;
-}) {
+export async function generateMetadata(
+  props: {
+    params: Promise<{ slug?: string[] }>;
+  },
+): Promise<Metadata> {
   const params = await props.params;
   const page = source.getPage(params.slug);
   if (!page) notFound();
