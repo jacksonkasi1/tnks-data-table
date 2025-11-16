@@ -1,0 +1,235 @@
+---
+title: Configuration
+description: Complete guide to configuring the Advanced Data Table Component
+---
+
+# Configuration Overview
+
+The DataTable component is highly configurable through the `config` prop. This guide covers all available configuration options and their use cases.
+
+## Basic Configuration
+
+```tsx
+<DataTable
+  getColumns={getColumns}
+  fetchDataFn={useUsersData}
+  idField="id"
+  config={{
+    enableRowSelection: true,
+    enableSearch: true,
+    enableDateFilter: true,
+    enableColumnVisibility: true,
+    enableUrlState: true,
+    defaultSortBy: "created_at",
+    defaultSortOrder: "desc",
+  }}
+/>
+```
+
+## Configuration Options Reference
+
+### Feature Toggles
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enableRowSelection` | `boolean` | `false` | Enable row selection with checkboxes |
+| `enableClickRowSelect` | `boolean` | `false` | Allow clicking anywhere on row to select it |
+| `enableKeyboardNavigation` | `boolean` | `true` | Enable keyboard navigation (arrows, enter, etc.) |
+| `enableSearch` | `boolean` | `true` | Show search input in toolbar |
+| `enableDateFilter` | `boolean` | `false` | Show date range filter |
+| `enableColumnVisibility` | `boolean` | `true` | Allow toggling column visibility |
+| `enableUrlState` | `boolean` | `true` | Persist table state in URL parameters |
+
+### Sorting Configuration
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `defaultSortBy` | `string \| undefined` | `undefined` | Default column to sort by (must match column accessorKey) |
+| `defaultSortOrder` | `'asc' \| 'desc'` | `'desc'` | Default sort direction |
+
+#### Sorting Example
+
+```tsx
+config={{
+  defaultSortBy: "created_at",   // Sort by creation date
+  defaultSortOrder: "desc",      // Newest first
+}}
+```
+
+**Important**: The `defaultSortBy` value must exactly match a column's `accessorKey`:
+
+```tsx
+// Column definition
+{
+  accessorKey: "created_at",  // ✅ Use this value
+  header: "Created Date",
+}
+
+// Configuration
+config={{
+  defaultSortBy: "created_at",  // ✅ Matches accessorKey
+}}
+```
+
+### Search Configuration
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `searchPlaceholder` | `string \| undefined` | `"Search {entityName}..."` | Custom placeholder text for search input |
+
+```tsx
+config={{
+  enableSearch: true,
+  searchPlaceholder: "Search by name, email, or ID...",
+}}
+```
+
+### Column Resizing
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `columnResizingTableId` | `string \| undefined` | `undefined` | Unique ID for persisting column sizes in localStorage |
+
+```tsx
+config={{
+  columnResizingTableId: "users-table",  // Saves column widths
+}}
+```
+
+When provided, column sizes are automatically saved and restored.
+
+### Export Configuration
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `allowExportNewColumns` | `boolean` | `true` | Include calculated columns from transform function in exports |
+
+```tsx
+config={{
+  allowExportNewColumns: true,  // Export includes transformed data
+}}
+```
+
+**When `true`**: Exports visible columns + new columns from transform function
+**When `false`**: Exports only visible table columns (strict mode)
+
+### UI Size
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `size` | `'sm' \| 'default' \| 'lg'` | `'default'` | Size for buttons and inputs |
+
+```tsx
+config={{
+  size: 'sm',  // Compact table UI
+}}
+```
+
+Affects:
+- Pagination buttons
+- Page size selector
+- Toolbar buttons
+- Navigation controls
+
+## Complete Configuration Example
+
+```tsx
+<DataTable<User, any>
+  getColumns={getColumns}
+  fetchDataFn={useUsersData}
+  fetchByIdsFn={fetchUsersByIds}
+  idField="id"
+  pageSizeOptions={[10, 20, 50, 100]}
+  exportConfig={useExportConfig()}
+  onRowClick={handleRowClick}
+  renderToolbarContent={({ selectedRows, resetSelection }) => (
+    <ToolbarOptions
+      selectedRows={selectedRows}
+      resetSelection={resetSelection}
+    />
+  )}
+  config={{
+    // Features
+    enableRowSelection: true,
+    enableClickRowSelect: false,
+    enableKeyboardNavigation: true,
+    enableSearch: true,
+    enableDateFilter: true,
+    enableColumnVisibility: true,
+    enableUrlState: true,
+
+    // Sorting
+    defaultSortBy: "created_at",
+    defaultSortOrder: "desc",
+
+    // Search
+    searchPlaceholder: "Search users by name or email...",
+
+    // Column Resizing
+    columnResizingTableId: "users-table",
+
+    // Export
+    allowExportNewColumns: true,
+
+    // UI
+    size: 'default',
+  }}
+/>
+```
+
+## Configuration Patterns
+
+### Read-Only Table
+
+For display-only tables without editing:
+
+```tsx
+config={{
+  enableRowSelection: false,  // No checkboxes
+  enableSearch: true,
+  enableColumnVisibility: true,
+  enableUrlState: true,
+}}
+```
+
+### Minimal Table
+
+Simplest configuration for basic use:
+
+```tsx
+config={{
+  enableRowSelection: false,
+  enableSearch: false,
+  enableDateFilter: false,
+  enableColumnVisibility: false,
+  enableUrlState: false,
+}}
+```
+
+### Admin Table
+
+Full-featured configuration for admin interfaces:
+
+```tsx
+config={{
+  enableRowSelection: true,
+  enableClickRowSelect: true,
+  enableKeyboardNavigation: true,
+  enableSearch: true,
+  enableDateFilter: true,
+  enableColumnVisibility: true,
+  enableUrlState: true,
+  defaultSortBy: "created_at",
+  defaultSortOrder: "desc",
+  searchPlaceholder: "Search across all fields...",
+  columnResizingTableId: "admin-users-table",
+  size: 'sm',  // Compact for dense data
+}}
+```
+
+## Next Steps
+
+- [Column Configuration](/docs/configuration/columns) - Define and customize columns
+- [Export Configuration](/docs/configuration/export) - Configure data export options
+- [URL State](/docs/configuration/url-state) - Manage URL state persistence
+- [Subrows Configuration](/docs/features/subrows) - Enable hierarchical data

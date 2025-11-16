@@ -1,0 +1,493 @@
+---
+title: Subrows (Hierarchical Data)
+description: Display hierarchical data with expandable parent-child rows
+---
+
+# Subrows - Hierarchical Data
+
+Subrows allow you to display hierarchical data with expandable parent-child relationships. This feature is perfect for orders with items, bookings with stops, tickets with comments, and more.
+
+## What Are Subrows?
+
+Subrows enable a parent row to expand and show related child rows beneath it. For example:
+
+- **Orders** → Order Items
+- **Bookings** → Booking Stops
+- **Tickets** → Comments
+- **Projects** → Tasks
+
+## Three Rendering Modes
+
+The DataTable supports three modes for rendering subrows:
+
+<Cards>
+  <Card title="same-columns" icon="table">
+    **Same Column Structure**
+
+    Parent and children use identical columns. Best for homogeneous data like orders with items.
+  </Card>
+
+  <Card title="custom-columns" icon="columns">
+    **Different Columns**
+
+    Parent has different columns than children. Best for logistics/bookings where parent shows summary, children show details.
+  </Card>
+
+  <Card title="custom-component" icon="component">
+    **Custom Component**
+
+    Fully custom React component for rendering subrows. Maximum flexibility for complex UIs.
+  </Card>
+</Cards>
+
+## Mode 1: Same Columns
+
+Use when parent and child rows share the same structure.
+
+### Example: Orders with Items
+
+<Steps>
+### Configure Subrows
+
+```tsx title="src/app/(home)/example/orders/data-table/index.tsx"
+<DataTable
+  getColumns={getColumns}
+  fetchDataFn={useOrdersData}
+  idField="id"
+  subRowsConfig={{
+    enabled: true,
+    mode: 'same-columns',
+    expandIconPosition: 'first',  // or 'last', 'custom'
+  }}
+  config={{
+    enableRowSelection: true,
+    enableSearch: true,
+  }}
+/>
+```
+
+### Server-Side Grouping
+
+Your API should return data with a `subRows` array:
+
+```typescript title="src/app/api/[...route]/routes/orders/get-orders-grouped.ts"
+// Group order items under parent order
+const ordersWithSubrows = orders.map(order => {
+  const items = orderItems.filter(item => item.order_id === order.id);
+  const [firstItem, ...restItems] = items;
+
+  return {
+    ...order,
+    // Show first item in parent row
+    product_name: firstItem.product_name,
+    quantity: firstItem.quantity,
+    price: firstItem.price,
+    // Rest as subrows
+    subRows: restItems.map(item => ({
+      id: `${order.id}-${item.id}`,
+      order_id: order.id,
+      product_name: item.product_name,
+      quantity: item.quantity,
+      price: item.price,
+      isSubRow: true,  // Mark as subrow
+    })),
+  };
+});
+```
+
+### Add Expand Icon to Columns
+
+```typescript title="src/app/(home)/example/orders/data-table/components/columns.tsx"
+import { ExpandIcon } from "@/components/data-table/expand-icon";
+
+export const getColumns = (): ColumnDef<Order>[] => [
+  {
+    accessorKey: "order_number",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Order #" />
+    ),
+    cell: ({ row }) => (
+      <div className="flex items-center gap-2">
+        {/* Add expand icon for rows with subrows */}
+        <ExpandIcon row={row} />
+        <span>{row.getValue("order_number")}</span>
+      </div>
+    ),
+    size: 150,
+  },
+  {
+    accessorKey: "product_name",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Product" />
+    ),
+    // Indent subrow cells for visual hierarchy
+    cell: ({ row }) => (
+      <div className={row.depth > 0 ? "pl-8" : ""}>
+        {row.getValue("product_name")}
+      </div>
+    ),
+    size: 200,
+  },
+  {
+    accessorKey: "quantity",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Qty" />
+    ),
+    cell: ({ row }) => (
+      <div className={row.depth > 0 ? "pl-8" : ""}>
+        {row.getValue("quantity")}
+      </div>
+    ),
+    size: 100,
+  },
+  {
+    accessorKey: "price",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Price" />
+    ),
+    cell: ({ row }) => {
+      const price = parseFloat(row.getValue("price"));
+      return (
+        <div className={row.depth > 0 ? "pl-8" : ""}>
+          ${price.toFixed(2)}
+        </div>
+      );
+    },
+    size: 120,
+  },
+];
+```
+
+### Result
+
+✅ Click expand icon to show/hide order items
+✅ First item shown in parent, rest as subrows
+✅ Visual indentation for hierarchy
+✅ Same columns for parent and children
+</Steps>
+
+## Mode 2: Custom Columns
+
+Use when parent and child rows need different columns.
+
+### Example: Bookings with Stops
+
+<Steps>
+### Configure Different Columns
+
+```tsx title="src/app/(home)/example/bookings/data-table/index.tsx"
+import { getParentColumns } from "./components/parent-columns";
+import { getSubrowColumns } from "./components/subrow-columns";
+
+<DataTable
+  getColumns={getParentColumns}
+  fetchDataFn={useBookingsData}
+  idField="id"
+  subRowsConfig={{
+    enabled: true,
+    mode: 'custom-columns',
+    getSubRowColumns: getSubrowColumns,  // Different columns for children
+    expandIconPosition: 'first',
+  }}
+/>
+```
+
+### Parent Columns
+
+```typescript title="components/parent-columns.tsx"
+export const getParentColumns = (): ColumnDef<Booking>[] => [
+  {
+    accessorKey: "booking_id",
+    header: "Booking #",
+    cell: ({ row }) => (
+      <div className="flex items-center gap-2">
+        <ExpandIcon row={row} />
+        <span>{row.getValue("booking_id")}</span>
+      </div>
+    ),
+  },
+  {
+    accessorKey: "customer_name",
+    header: "Customer",
+  },
+  {
+    accessorKey: "total_stops",
+    header: "Stops",
+    cell: ({ row }) => {
+      const subRows = row.original.subRows || [];
+      return <span>{subRows.length + 1} stops</span>;
+    },
+  },
+  {
+    accessorKey: "status",
+    header: "Status",
+  },
+];
+```
+
+### Subrow Columns
+
+```typescript title="components/subrow-columns.tsx"
+export const getSubrowColumns = (): ColumnDef<BookingStop>[] => [
+  {
+    accessorKey: "stop_number",
+    header: "Stop #",
+    cell: ({ row }) => (
+      <div className="pl-12">  {/* More indentation */}
+        Stop {row.getValue("stop_number")}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "location",
+    header: "Location",
+    cell: ({ row }) => (
+      <div className="pl-8">
+        {row.getValue("location")}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "arrival_time",
+    header: "Arrival",
+    cell: ({ row }) => (
+      <div className="pl-8">
+        {format(new Date(row.getValue("arrival_time")), "MMM d, h:mm a")}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "notes",
+    header: "Notes",
+    cell: ({ row }) => (
+      <div className="pl-8 text-muted-foreground">
+        {row.getValue("notes")}
+      </div>
+    ),
+  },
+];
+```
+
+### Result
+
+✅ Parent shows: Booking #, Customer, Total Stops, Status
+✅ Children show: Stop #, Location, Arrival Time, Notes
+✅ Completely different column structures
+</Steps>
+
+## Mode 3: Custom Component
+
+Use for maximum flexibility with complex UI needs.
+
+### Example: Tickets with Comments
+
+<Steps>
+### Configure Custom Component
+
+```tsx title="src/app/(home)/example/tickets/data-table/index.tsx"
+import { CommentComponent } from "./components/comment-component";
+
+<DataTable
+  getColumns={getColumns}
+  fetchDataFn={useTicketsData}
+  idField="id"
+  subRowsConfig={{
+    enabled: true,
+    mode: 'custom-component',
+    CustomSubRowComponent: CommentComponent,  // Custom React component
+    expandIconPosition: 'first',
+  }}
+/>
+```
+
+### Custom Subrow Component
+
+```tsx title="components/comment-component.tsx"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { format } from "date-fns";
+
+interface CommentComponentProps {
+  subRows: TicketComment[];
+  parentRow: Ticket;
+}
+
+export function CommentComponent({ subRows, parentRow }: CommentComponentProps) {
+  if (!subRows || subRows.length === 0) {
+    return (
+      <div className="px-4 py-3 text-sm text-muted-foreground">
+        No comments yet
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 bg-muted/30 px-4 py-3">
+      {subRows.map((comment, index) => (
+        <div key={comment.id} className="flex gap-3">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback>
+              {comment.author_name.charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <div className="flex items-baseline gap-2">
+              <span className="font-medium text-sm">
+                {comment.author_name}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {format(new Date(comment.created_at), "MMM d, h:mm a")}
+              </span>
+            </div>
+            <p className="text-sm mt-1">{comment.comment_text}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+### Result
+
+✅ Fully custom UI for comments
+✅ Avatars, timestamps, formatted text
+✅ Complete control over rendering
+</Steps>
+
+## Expand Icon Position
+
+Control where the expand icon appears:
+
+```tsx
+subRowsConfig={{
+  enabled: true,
+  mode: 'same-columns',
+  expandIconPosition: 'first',   // First column (default)
+  // or
+  expandIconPosition: 'last',    // Last column
+  // or
+  expandIconPosition: 'custom',  // Add ExpandIcon manually to any column
+}}
+```
+
+**Custom positioning**:
+
+```tsx
+{
+  accessorKey: "name",
+  cell: ({ row }) => (
+    <div className="flex items-center gap-2">
+      <ExpandIcon row={row} />  {/* Add anywhere you want */}
+      <span>{row.getValue("name")}</span>
+    </div>
+  ),
+}
+```
+
+## Data Export with Subrows
+
+The table automatically handles subrow export:
+
+```tsx
+exportConfig={{
+  flatten: true,  // Flatten hierarchical data for export
+  // or
+  flatten: false, // Export only parent rows
+}}
+```
+
+**Flattened export** (default):
+```
+Order #,Product,Qty,Price
+ORD-001,Widget A,2,$19.99
+ORD-001,Widget B,1,$29.99
+ORD-002,Gadget C,3,$39.99
+```
+
+**Parent-only export**:
+```
+Order #,Product,Qty,Price
+ORD-001,Widget A,2,$19.99
+ORD-002,Gadget C,3,$39.99
+```
+
+## Row Selection with Subrows
+
+Row selection works independently for parent and child rows:
+
+```tsx
+config={{
+  enableRowSelection: true,  // Enable checkboxes
+}}
+```
+
+- Select parent → Only parent selected
+- Select child → Only child selected
+- Select all → All visible rows selected
+
+## Server-Side Implementation
+
+### API Response Format
+
+```typescript
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "order_number": "ORD-001",
+      "product_name": "Widget A",  // First item
+      "quantity": 2,
+      "subRows": [  // Rest of items
+        {
+          "id": "1-2",
+          "product_name": "Widget B",
+          "quantity": 1,
+          "isSubRow": true
+        }
+      ]
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total_pages": 5,
+    "total_items": 48
+  }
+}
+```
+
+### Limit Subrows Per Parent
+
+Prevent performance issues by limiting subrows:
+
+```typescript
+// Return max 20 subrows per parent
+const [firstItem, ...restItems] = items;
+return {
+  ...order,
+  product_name: firstItem.product_name,
+  subRows: restItems.slice(0, 20),  // Limit to 20
+};
+```
+
+## Performance Tips
+
+1. **Limit subrows per parent** (max 20-50 recommended)
+2. **Use virtualization** for tables with many expanded rows
+3. **Lazy load subrows** on expand (future feature)
+4. **Index properly** on database for grouped queries
+
+## Complete Example
+
+See the working examples:
+
+- [Orders Example](/docs/examples/orders-with-subrows) - Same columns mode
+- [Bookings Example](/docs/examples/bookings-with-stops) - Custom columns mode
+- [Tickets Example](/docs/examples/tickets-with-comments) - Custom component mode
+
+## Next Steps
+
+- [Row Selection](/docs/features/row-selection) - Select rows with checkboxes
+- [Data Export](/docs/features/data-export) - Export with subrow handling
+- [Server Implementation](/docs/guides/server-implementation) - Build the API

@@ -1,0 +1,354 @@
+---
+title: API Reference
+description: Complete API documentation for the DataTable component
+---
+
+# API Reference
+
+Complete reference for all props, types, and configuration options.
+
+## DataTable Component
+
+### Props
+
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `getColumns` | `(handleRowDeselection?: (rowId: string) => void) => ColumnDef<T>[]` | ✅ | Function that returns column definitions |
+| `fetchDataFn` | `QueryHook` | ✅ | React Query hook for fetching data |
+| `idField` | `keyof T` | ✅ | Field to use as unique row identifier |
+| `fetchByIdsFn` | `(ids: number[]) => Promise<T[]>` | ❌ | Function to fetch multiple rows by IDs (required for cross-page selection) |
+| `pageSizeOptions` | `number[]` | ❌ | Available page size options. Default: `[10, 20, 30, 50, 100]` |
+| `exportConfig` | `ExportConfig` | ❌ | Configuration for data export |
+| `onRowClick` | `(rowData: T, rowIndex: number) => void` | ❌ | Callback when row is clicked |
+| `renderToolbarContent` | `(options: ToolbarOptions<T>) => React.ReactNode` | ❌ | Custom toolbar content renderer |
+| `subRowsConfig` | `SubRowsConfig` | ❌ | Configuration for hierarchical data |
+| `config` | `DataTableConfig` | ❌ | Table feature configuration |
+| `className` | `string` | ❌ | Additional CSS class for table container |
+
+### Example
+
+```tsx
+<DataTable<User, any>
+  getColumns={getColumns}
+  fetchDataFn={useUsersData}
+  idField="id"
+  fetchByIdsFn={fetchUsersByIds}
+  pageSizeOptions={[10, 20, 50, 100]}
+  exportConfig={useExportConfig()}
+  onRowClick={handleRowClick}
+  renderToolbarContent={({ selectedRows }) => (
+    <ToolbarOptions selectedRows={selectedRows} />
+  )}
+  config={{
+    enableRowSelection: true,
+    enableSearch: true,
+  }}
+/>
+```
+
+## DataTableConfig
+
+Configuration object for table features.
+
+### Type Definition
+
+```typescript
+interface DataTableConfig {
+  // Features
+  enableRowSelection?: boolean;
+  enableClickRowSelect?: boolean;
+  enableKeyboardNavigation?: boolean;
+  enableSearch?: boolean;
+  enableDateFilter?: boolean;
+  enableColumnVisibility?: boolean;
+  enableUrlState?: boolean;
+
+  // Sorting
+  defaultSortBy?: string;
+  defaultSortOrder?: 'asc' | 'desc';
+
+  // Search
+  searchPlaceholder?: string;
+
+  // Column Resizing
+  columnResizingTableId?: string;
+
+  // Export
+  allowExportNewColumns?: boolean;
+
+  // UI
+  size?: 'sm' | 'default' | 'lg';
+}
+```
+
+### Properties
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `enableRowSelection` | `boolean` | `false` | Enable row selection with checkboxes |
+| `enableClickRowSelect` | `boolean` | `false` | Allow clicking row to select it |
+| `enableKeyboardNavigation` | `boolean` | `true` | Enable keyboard navigation |
+| `enableSearch` | `boolean` | `true` | Show search input |
+| `enableDateFilter` | `boolean` | `false` | Show date range filter |
+| `enableColumnVisibility` | `boolean` | `true` | Allow toggling column visibility |
+| `enableUrlState` | `boolean` | `true` | Persist state in URL |
+| `defaultSortBy` | `string` | `undefined` | Initial sort column (must match `accessorKey`) |
+| `defaultSortOrder` | `'asc' \| 'desc'` | `'desc'` | Initial sort direction |
+| `searchPlaceholder` | `string` | `"Search {entityName}..."` | Custom search placeholder |
+| `columnResizingTableId` | `string` | `undefined` | ID for persisting column sizes |
+| `allowExportNewColumns` | `boolean` | `true` | Include transform function columns in export |
+| `size` | `'sm' \| 'default' \| 'lg'` | `'default'` | UI component size |
+
+## SubRowsConfig
+
+Configuration for hierarchical data (subrows).
+
+### Type Definition
+
+```typescript
+interface SubRowsConfig {
+  enabled: boolean;
+  mode: 'same-columns' | 'custom-columns' | 'custom-component';
+  expandIconPosition?: 'first' | 'last' | 'custom';
+  getSubRowColumns?: () => ColumnDef<any>[];
+  CustomSubRowComponent?: React.ComponentType<{
+    subRows: any[];
+    parentRow: any;
+  }>;
+}
+```
+
+### Properties
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `enabled` | `boolean` | ✅ | Enable subrows feature |
+| `mode` | `'same-columns' \| 'custom-columns' \| 'custom-component'` | ✅ | Rendering mode for subrows |
+| `expandIconPosition` | `'first' \| 'last' \| 'custom'` | ❌ | Where to show expand icon. Default: `'first'` |
+| `getSubRowColumns` | `() => ColumnDef<any>[]` | ❌ | Required for `custom-columns` mode |
+| `CustomSubRowComponent` | `React.ComponentType` | ❌ | Required for `custom-component` mode |
+
+### Example
+
+```tsx
+subRowsConfig={{
+  enabled: true,
+  mode: 'same-columns',
+  expandIconPosition: 'first',
+}}
+```
+
+## ExportConfig
+
+Configuration for data export.
+
+### Type Definition
+
+```typescript
+interface ExportConfig {
+  headers: string[];
+  columnMapping: Record<string, string>;
+  columnWidths?: { wch: number }[];
+  transformFunction?: DataTransformFunction<T>;
+  entityName: string;
+  flatten?: boolean;
+}
+```
+
+### Properties
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `headers` | `string[]` | ✅ | Array of field names to export (in order) |
+| `columnMapping` | `Record<string, string>` | ✅ | Maps field names to export headers |
+| `columnWidths` | `{ wch: number }[]` | ❌ | Column widths for Excel (in characters) |
+| `transformFunction` | `DataTransformFunction<T>` | ❌ | Function to transform data before export |
+| `entityName` | `string` | ✅ | Used in filename: `{entityName}_2024-01-15.xlsx` |
+| `flatten` | `boolean` | ❌ | Flatten subrows for export. Default: `true` |
+
+### Example
+
+```tsx
+{
+  headers: ["id", "name", "email", "created_at"],
+  columnMapping: {
+    id: "User ID",
+    name: "Full Name",
+    email: "Email Address",
+    created_at: "Registration Date",
+  },
+  columnWidths: [
+    { wch: 10 },
+    { wch: 25 },
+    { wch: 30 },
+    { wch: 20 },
+  ],
+  transformFunction: (row) => ({
+    ...row,
+    created_at: formatDate(row.created_at),
+  }),
+  entityName: "users",
+}
+```
+
+## DataTransformFunction
+
+Type for export transformation functions.
+
+### Type Definition
+
+```typescript
+type DataTransformFunction<T> = (row: T) => Record<string, any>;
+```
+
+### Example
+
+```typescript
+const transformData: DataTransformFunction<User> = (row: User) => ({
+  ...row,
+  created_at: formatTimestampToReadable(row.created_at),
+  total_spent: formatCurrency(row.total_spent),
+  customer_tier: calculateTier(row.total_spent),
+});
+```
+
+## ToolbarOptions
+
+Passed to `renderToolbarContent` for custom toolbar.
+
+### Type Definition
+
+```typescript
+interface ToolbarOptions<T> {
+  selectedRows: T[];
+  allSelectedIds: number[];
+  totalSelectedCount: number;
+  resetSelection: () => void;
+}
+```
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `selectedRows` | `T[]` | Currently selected rows (visible on current page) |
+| `allSelectedIds` | `number[]` | All selected row IDs across all pages |
+| `totalSelectedCount` | `number` | Total number of selected rows |
+| `resetSelection` | `() => void` | Function to clear all selections |
+
+### Example
+
+```tsx
+renderToolbarContent={({
+  selectedRows,
+  allSelectedIds,
+  totalSelectedCount,
+  resetSelection
+}) => (
+  <div>
+    {totalSelectedCount > 0 && (
+      <Button onClick={resetSelection}>
+        Clear {totalSelectedCount} selected
+      </Button>
+    )}
+  </div>
+)}
+```
+
+## ColumnDef
+
+Column definition from TanStack Table with common patterns.
+
+### Essential Properties
+
+```typescript
+interface ColumnDef<T> {
+  accessorKey: keyof T;
+  header: string | ((props: HeaderContext<T>) => React.ReactNode);
+  cell?: (props: CellContext<T>) => React.ReactNode;
+  size?: number;
+  enableSorting?: boolean;
+  enableHiding?: boolean;
+  enableResizing?: boolean;
+}
+```
+
+### Example
+
+```tsx
+{
+  accessorKey: "name",
+  header: ({ column }) => (
+    <DataTableColumnHeader column={column} title="Name" />
+  ),
+  cell: ({ row }) => (
+    <div className="font-medium">{row.getValue("name")}</div>
+  ),
+  size: 200,
+  enableSorting: true,
+  enableHiding: true,
+}
+```
+
+## QueryHook
+
+Type for data fetching hooks (React Query).
+
+### Type Definition
+
+```typescript
+type QueryHook = (
+  page: number,
+  pageSize: number,
+  search: string,
+  dateRange: { from_date: string; to_date: string },
+  sortBy: string,
+  sortOrder: string
+) => UseQueryResult<QueryResponse>;
+
+interface QueryResponse {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total_pages: number;
+    total_items: number;
+  };
+}
+```
+
+### Example
+
+```typescript
+export function useUsersData(
+  page: number,
+  pageSize: number,
+  search: string,
+  dateRange: { from_date: string; to_date: string },
+  sortBy: string,
+  sortOrder: string
+) {
+  return useQuery({
+    queryKey: ["users", page, pageSize, search, dateRange, sortBy, sortOrder],
+    queryFn: () => fetchUsers({
+      page,
+      limit: pageSize,
+      search,
+      from_date: dateRange.from_date,
+      to_date: dateRange.to_date,
+      sort_by: sortBy,
+      sort_order: sortOrder,
+    }),
+    placeholderData: keepPreviousData,
+  });
+}
+
+// Required property
+useUsersData.isQueryHook = true;
+```
+
+## Next Steps
+
+- [Configuration Guide](/docs/configuration) - Detailed config options
+- [Features](/docs/features) - Feature documentation
+- [Examples](/docs/examples) - Real-world implementations
