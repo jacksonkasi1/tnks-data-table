@@ -1,0 +1,308 @@
+---
+title: URL State Management
+description: Persist table state in the URL for bookmarking, sharing, and browser history support
+---
+
+# URL State Management
+
+The DataTable component includes built-in URL state management that persists table state in the URL, enabling users to bookmark specific views, share links with colleagues, and use browser navigation.
+
+## Why URL State?
+
+URL state management provides several key benefits:
+
+<Cards>
+  <Card title="Shareable URLs" icon="share">
+    Users can share links that preserve their exact view of the data - filters, sorting, pagination, and all.
+  </Card>
+
+  <Card title="Bookmarkable" icon="bookmark">
+    Save specific data views as browser bookmarks for quick access to frequently used filters.
+  </Card>
+
+  <Card title="Browser History" icon="history">
+    Forward and back navigation works naturally - each table state change is a history entry.
+  </Card>
+
+  <Card title="SEO Benefits" icon="search">
+    Search engines can index different filtered views of your data.
+  </Card>
+</Cards>
+
+## How It Works
+
+The component uses a custom `useUrlState` hook that leverages Next.js App Router's built-in search params utilities. All table state is automatically synced with the URL.
+
+### Implementation
+
+```typescript
+// Example URL with state
+/users?page=2&pageSize=20&sortBy=created_at&sortOrder=desc&search=john
+```
+
+When a user changes any table state (sorts, filters, searches), the URL updates automatically. When they reload the page or share the link, the table restores to that exact state.
+
+## Managed URL Parameters
+
+The following table states are persisted in the URL:
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `page` | Current page number | `page=2` |
+| `pageSize` | Number of rows per page | `pageSize=20` |
+| `search` | Global search query | `search=john` |
+| `sortBy` | Column being sorted | `sortBy=created_at` |
+| `sortOrder` | Sort direction | `sortOrder=desc` |
+| `dateRange` | Date filter range | `dateRange={"from_date":"2024-01-01","to_date":"2024-12-31"}` |
+| `columnVisibility` | Visible/hidden columns | `columnVisibility={"id":false,"email":true}` |
+| `columnFilters` | Column-specific filters | `columnFilters=[...]` |
+
+## Configuration
+
+### Enable URL State (Default)
+
+URL state is enabled by default:
+
+```tsx
+config={{
+  enableUrlState: true,  // Default value
+}}
+```
+
+### Disable URL State
+
+For tables where state persistence isn't needed:
+
+```tsx
+config={{
+  enableUrlState: false,  // State won't sync to URL
+}}
+```
+
+## Usage Examples
+
+### Simple Example
+
+```typescript title="src/app/(section)/users/page.tsx"
+import { Suspense } from "react";
+import UsersTable from "./users-table";
+
+export default function UsersPage() {
+  return (
+    // Suspense is required for URL state
+    <Suspense fallback={<div>Loading...</div>}>
+      <UsersTable />
+    </Suspense>
+  );
+}
+```
+
+### URL Examples
+
+**Paginated View**
+```
+/users?page=3&pageSize=50
+```
+
+**Sorted View**
+```
+/users?sortBy=name&sortOrder=asc
+```
+
+**Filtered View**
+```
+/users?search=john&dateRange={"from_date":"2024-01-01","to_date":"2024-12-31"}
+```
+
+**Complete View**
+```
+/users?page=2&pageSize=20&sortBy=created_at&sortOrder=desc&search=active&dateRange={"from_date":"2024-01-01","to_date":"2024-12-31"}&columnVisibility={"id":false}
+```
+
+## Custom useUrlState Hook
+
+The component uses a custom hook that provides type-safe URL state management:
+
+```typescript
+const [page, setPage] = useUrlState("page", 1);
+const [search, setSearch] = useUrlState("search", "");
+const [dateRange, setDateRange] = useUrlState<DateRange>(
+  "dateRange",
+  { from_date: "", to_date: "" }
+);
+```
+
+### Features
+
+- **Type Safety**: Full TypeScript support with generics
+- **Auto Serialization**: Automatically handles strings, numbers, booleans, objects, and arrays
+- **No Dependencies**: Uses only Next.js built-in utilities
+- **Automatic Sync**: URL updates when state changes, state updates when URL changes
+
+### Serialization
+
+The hook automatically serializes different types:
+
+| Type | URL Representation |
+|------|-------------------|
+| **Number** | `page=2` |
+| **String** | `search=john` |
+| **Boolean** | `active=true` |
+| **Object** | `dateRange={"from_date":"2024-01-01","to_date":"2024-12-31"}` |
+| **Array** | `filters=["active","verified"]` |
+
+## Real-World Scenarios
+
+### Scenario 1: Customer Support
+
+Support agent finds a bug in filtered data and shares the exact view with engineering:
+
+```
+/users?search=error&dateRange={"from_date":"2024-11-01","to_date":"2024-11-16"}&sortBy=created_at&sortOrder=desc
+```
+
+Engineering team opens the link and sees the exact same filtered view.
+
+### Scenario 2: Bookmarked Reports
+
+Marketing team bookmarks frequently used views:
+
+```
+# Active customers from last month
+/users?dateRange={"from_date":"2024-10-01","to_date":"2024-10-31"}&columnVisibility={"internal_notes":false}
+
+# High-value customers
+/users?sortBy=total_spent&sortOrder=desc&pageSize=50
+```
+
+### Scenario 3: Dashboard Sharing
+
+Manager shares specific data views with team members:
+
+```
+# Team performance view
+/users?sortBy=performance_score&sortOrder=desc&dateRange={"from_date":"2024-01-01","to_date":"2024-12-31"}
+```
+
+## Important Considerations
+
+### Suspense Requirement
+
+URL state requires wrapping the table in a `Suspense` boundary:
+
+```tsx
+// ✅ Correct
+<Suspense fallback={<div>Loading...</div>}>
+  <UsersTable />
+</Suspense>
+
+// ❌ Wrong
+<UsersTable />  // Will cause errors
+```
+
+### Client Component
+
+Tables using URL state must be client components:
+
+```tsx
+"use client";  // ✅ Required
+
+import { DataTable } from "@/components/data-table/data-table";
+```
+
+### URL Length Limits
+
+Be aware of URL length limitations (~2000 characters in most browsers):
+
+```typescript
+// ✅ Good: Simple state
+?page=2&search=john
+
+// ⚠️ Caution: Large complex objects
+?columnVisibility={"field1":true,"field2":false,...100 more}
+```
+
+For very complex state, consider using localStorage or database-backed presets instead.
+
+## Performance Optimizations
+
+### Debouncing (Future)
+
+Currently, URL updates immediately on state changes. For frequently changing values like search, debouncing is recommended:
+
+```typescript
+// Future enhancement
+const [debouncedSearch, setDebouncedSearch] = useUrlState(
+  "search",
+  "",
+  { debounce: 300 }  // 300ms delay
+);
+```
+
+### Default Value Cleanup
+
+The hook doesn't add parameters that match default values:
+
+```typescript
+// If default page is 1 and current page is 1:
+// URL: /users (no page parameter)
+
+// If current page is 2:
+// URL: /users?page=2
+```
+
+This keeps URLs clean and readable.
+
+## Comparison with Other State Management
+
+| Approach | Shareable | Bookmarkable | History | Persistence |
+|----------|-----------|--------------|---------|-------------|
+| **URL State** | ✅ Yes | ✅ Yes | ✅ Yes | Browser only |
+| **Local State** | ❌ No | ❌ No | ❌ No | None |
+| **localStorage** | ❌ No | ✅ Yes | ❌ No | Browser only |
+| **Database** | ✅ Yes | ✅ Yes | ❌ No | Server |
+
+URL state is ideal for:
+- Tables where users share specific views
+- Dashboards with bookmarkable reports
+- Admin panels with frequently used filters
+
+Other approaches may be better for:
+- Temporary UI state (use local state)
+- Persistent user preferences across devices (use database)
+- Large complex state (use localStorage or database)
+
+## Troubleshooting
+
+### Issue: State not persisting
+
+**Check:**
+- Is the table wrapped in `Suspense`?
+- Is `enableUrlState` set to `true`?
+- Is the component a client component?
+
+### Issue: URL not updating
+
+**Check:**
+- Ensure you're using Next.js 13+ with App Router
+- Verify the hook is called at component top level
+- Check browser console for errors
+
+### Issue: Page refresh loses state
+
+**This is expected if:**
+- `enableUrlState` is `false`
+- The component isn't using the URL state system
+
+### Issue: URL too long error
+
+**Solution:**
+- Reduce number of URL parameters
+- Use localStorage for complex state
+- Implement server-side saved views
+
+## Next Steps
+
+- [Case Format Configuration](/docs/configuration/case-format) - Handle different API conventions
+- [Configuration Overview](/docs/configuration) - All configuration options
+- [Best Practices](/docs/guides/best-practices) - Performance and optimization tips

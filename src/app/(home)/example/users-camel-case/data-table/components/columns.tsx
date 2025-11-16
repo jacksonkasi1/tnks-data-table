@@ -1,15 +1,17 @@
 "use client";
 
 // ** Import 3rd Party Libs
-import { format } from "date-fns";
 import { ColumnDef } from "@tanstack/react-table";
 
 // ** Import Components
 import { DataTableColumnHeader } from "@/components/data-table/column-header";
+import { CountBadge } from "@/components/table/status-badge";
+
+// ** Import Utils
+import { formatCurrency, formatShortDate } from "@/lib/table-utils";
 
 // ** Import UI Components
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 
 // ** Import Schema
 import { UserCamelCase } from "../schema";
@@ -97,9 +99,7 @@ export const getColumns = (
         const count = row.getValue("expenseCount") as number;
         return (
           <div className="max-w-full text-left">
-            <Badge variant="outline" className="truncate">
-              {count}
-            </Badge>
+            <CountBadge count={count} />
           </div>
         );
       },
@@ -112,11 +112,7 @@ export const getColumns = (
       ),
       cell: ({ row }) => {
         const amount = row.getValue("totalExpenses") as string;
-        // Format as currency
-        const formatted = new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-        }).format(parseFloat(amount || "0"));
+        const formatted = formatCurrency(amount);
 
         return (
           <div className="max-w-full text-left font-medium truncate">
@@ -132,9 +128,8 @@ export const getColumns = (
         <DataTableColumnHeader column={column} title="Joined" />
       ),
       cell: ({ row }) => {
-        const date = new Date(row.getValue("createdAt"));
-        // Format date as "MMM d, yyyy" (e.g., "Mar 16, 2025")
-        const formattedDate = format(date, "MMM d, yyyy");
+        const date = row.getValue("createdAt") as string;
+        const formattedDate = formatShortDate(date);
         return (
           <div className="max-w-full text-left truncate">{formattedDate}</div>
         );

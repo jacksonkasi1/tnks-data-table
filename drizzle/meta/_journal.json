@@ -15,6 +15,13 @@
       "when": 1744100978664,
       "tag": "0001_gigantic_goliath",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1759542736207,
+      "tag": "0002_deep_mole_man",
+      "breakpoints": true
     }
   ]
 }
