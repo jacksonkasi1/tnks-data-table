@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
 };
 
-const withMDX = createMDX();
+const withMDX = createMDX({
+});
 
 export default withMDX(nextConfig);
