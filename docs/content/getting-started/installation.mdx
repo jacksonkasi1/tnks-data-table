@@ -3,6 +3,8 @@ title: Installation
 description: Complete installation guide for the Advanced Data Table Component
 ---
 
+import { File, Folder, Files } from 'fumadocs-ui/components/files';
+
 # Installation
 
 Learn how to install and set up the Advanced Data Table Component in your Next.js application.
@@ -134,33 +136,36 @@ You can install the data table component in two ways:
 
     Clone the repository and copy these directories to your project:
 
-    ```
-    /components/data-table/
-    ├── column-header.tsx
-    ├── data-export.tsx
-    ├── data-table-resizer.tsx
-    ├── data-table.tsx
-    ├── expand-icon.tsx
-    ├── pagination.tsx
-    ├── subrow-columns.tsx
-    ├── toolbar.tsx
-    ├── view-options.tsx
-    ├── hooks/
-    │   └── use-table-column-resize.ts
-    └── utils/
-        ├── case-utils.ts
-        ├── column-sizing.ts
-        ├── conditional-state.ts
-        ├── date-format.ts
-        ├── deep-utils.ts
-        ├── export-utils.ts
-        ├── index.ts
-        ├── keyboard-navigation.ts
-        ├── search.ts
-        ├── table-config.ts
-        ├── table-state-handlers.ts
-        └── url-state.ts
-    ```
+    <Files>
+      <Folder name="components/data-table" defaultOpen>
+        <File name="column-header.tsx" />
+        <File name="data-export.tsx" />
+        <File name="data-table-resizer.tsx" />
+        <File name="data-table.tsx" />
+        <File name="expand-icon.tsx" />
+        <File name="pagination.tsx" />
+        <File name="subrow-columns.tsx" />
+        <File name="toolbar.tsx" />
+        <File name="view-options.tsx" />
+        <Folder name="hooks" defaultOpen>
+          <File name="use-table-column-resize.ts" />
+        </Folder>
+        <Folder name="utils" defaultOpen>
+          <File name="case-utils.ts" />
+          <File name="column-sizing.ts" />
+          <File name="conditional-state.ts" />
+          <File name="date-format.ts" />
+          <File name="deep-utils.ts" />
+          <File name="export-utils.ts" />
+          <File name="index.ts" />
+          <File name="keyboard-navigation.ts" />
+          <File name="search.ts" />
+          <File name="table-config.ts" />
+          <File name="table-state-handlers.ts" />
+          <File name="url-state.ts" />
+        </Folder>
+      </Folder>
+    </Files>
 
     ### Step 5: Install Shadcn UI Components
 
