@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# fumadocs
+/.source/
+
 # production
 /build
 
