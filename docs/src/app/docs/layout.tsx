@@ -1,11 +1,11 @@
 import { DocsLayout } from 'fumadocs-ui/layouts/docs';
 import type { ReactNode } from 'react';
-import { pageTree } from '@/app/source';
+import { source } from '@/lib/source';
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
     <DocsLayout
-      tree={pageTree}
+      tree={source.pageTree}
       nav={{
         title: 'TNKS Data Table',
         url: '/',
