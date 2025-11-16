@@ -329,18 +329,25 @@ export async function fetchUsers(params, caseConfig) {
 
 ## Type Definitions
 
-```typescript
-interface CaseFormatConfig {
-  // Format for URL parameters
-  urlFormat?: 'snake_case' | 'camelCase' | 'PascalCase' | 'kebab-case';
-
-  // Format for API requests
-  apiFormat?: 'snake_case' | 'camelCase' | 'PascalCase' | 'kebab-case';
-
-  // Custom key mapping function
-  keyMapper?: (key: string) => string;
-}
-```
+<TypeTable
+  type={{
+    urlFormat: {
+      description: 'Format for URL parameters',
+      type: "'snake_case' | 'camelCase' | 'PascalCase' | 'kebab-case'",
+      required: false,
+    },
+    apiFormat: {
+      description: 'Format for API requests',
+      type: "'snake_case' | 'camelCase' | 'PascalCase' | 'kebab-case'",
+      required: false,
+    },
+    keyMapper: {
+      description: 'Custom key mapping function',
+      type: '(key: string) => string',
+      required: false,
+    },
+  }}
+/>
 
 ## Benefits
 

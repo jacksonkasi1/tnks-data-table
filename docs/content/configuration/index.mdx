@@ -30,22 +30,71 @@ The DataTable component is highly configurable through the `config` prop. This g
 
 ### Feature Toggles
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `enableRowSelection` | `boolean` | `false` | Enable row selection with checkboxes |
-| `enableClickRowSelect` | `boolean` | `false` | Allow clicking anywhere on row to select it |
-| `enableKeyboardNavigation` | `boolean` | `true` | Enable keyboard navigation (arrows, enter, etc.) |
-| `enableSearch` | `boolean` | `true` | Show search input in toolbar |
-| `enableDateFilter` | `boolean` | `false` | Show date range filter |
-| `enableColumnVisibility` | `boolean` | `true` | Allow toggling column visibility |
-| `enableUrlState` | `boolean` | `true` | Persist table state in URL parameters |
+<TypeTable
+  type={{
+    enableRowSelection: {
+      description: 'Enable row selection with checkboxes',
+      type: 'boolean',
+      default: 'false',
+      required: false,
+    },
+    enableClickRowSelect: {
+      description: 'Allow clicking anywhere on row to select it',
+      type: 'boolean',
+      default: 'false',
+      required: false,
+    },
+    enableKeyboardNavigation: {
+      description: 'Enable keyboard navigation (arrows, enter, etc.)',
+      type: 'boolean',
+      default: 'true',
+      required: false,
+    },
+    enableSearch: {
+      description: 'Show search input in toolbar',
+      type: 'boolean',
+      default: 'true',
+      required: false,
+    },
+    enableDateFilter: {
+      description: 'Show date range filter',
+      type: 'boolean',
+      default: 'false',
+      required: false,
+    },
+    enableColumnVisibility: {
+      description: 'Allow toggling column visibility',
+      type: 'boolean',
+      default: 'true',
+      required: false,
+    },
+    enableUrlState: {
+      description: 'Persist table state in URL parameters',
+      type: 'boolean',
+      default: 'true',
+      required: false,
+    },
+  }}
+/>
 
 ### Sorting Configuration
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `defaultSortBy` | `string \| undefined` | `undefined` | Default column to sort by (must match column accessorKey) |
-| `defaultSortOrder` | `'asc' \| 'desc'` | `'desc'` | Default sort direction |
+<TypeTable
+  type={{
+    defaultSortBy: {
+      description: 'Default column to sort by (must match column accessorKey)',
+      type: 'string | undefined',
+      default: 'undefined',
+      required: false,
+    },
+    defaultSortOrder: {
+      description: 'Default sort direction',
+      type: "'asc' | 'desc'",
+      default: "'desc'",
+      required: false,
+    },
+  }}
+/>
 
 #### Sorting Example
 
@@ -73,9 +122,16 @@ config={{
 
 ### Search Configuration
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `searchPlaceholder` | `string \| undefined` | `"Search {entityName}..."` | Custom placeholder text for search input |
+<TypeTable
+  type={{
+    searchPlaceholder: {
+      description: 'Custom placeholder text for search input',
+      type: 'string | undefined',
+      default: '"Search {entityName}..."',
+      required: false,
+    },
+  }}
+/>
 
 ```tsx
 config={{
@@ -86,9 +142,16 @@ config={{
 
 ### Column Resizing
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `columnResizingTableId` | `string \| undefined` | `undefined` | Unique ID for persisting column sizes in localStorage |
+<TypeTable
+  type={{
+    columnResizingTableId: {
+      description: 'Unique ID for persisting column sizes in localStorage',
+      type: 'string | undefined',
+      default: 'undefined',
+      required: false,
+    },
+  }}
+/>
 
 ```tsx
 config={{
@@ -100,9 +163,16 @@ When provided, column sizes are automatically saved and restored.
 
 ### Export Configuration
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `allowExportNewColumns` | `boolean` | `true` | Include calculated columns from transform function in exports |
+<TypeTable
+  type={{
+    allowExportNewColumns: {
+      description: 'Include calculated columns from transform function in exports',
+      type: 'boolean',
+      default: 'true',
+      required: false,
+    },
+  }}
+/>
 
 ```tsx
 config={{
@@ -115,9 +185,16 @@ config={{
 
 ### UI Size
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `size` | `'sm' \| 'default' \| 'lg'` | `'default'` | Size for buttons and inputs |
+<TypeTable
+  type={{
+    size: {
+      description: 'Size for buttons and inputs',
+      type: "'sm' | 'default' | 'lg'",
+      default: "'default'",
+      required: false,
+    },
+  }}
+/>
 
 ```tsx
 config={{

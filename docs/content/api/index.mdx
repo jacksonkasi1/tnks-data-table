@@ -11,19 +11,66 @@ Complete reference for all props, types, and configuration options.
 
 ### Props
 
-| Prop | Type | Required | Description |
-|------|------|----------|-------------|
-| `getColumns` | `(handleRowDeselection?: (rowId: string) => void) => ColumnDef<T>[]` | ✅ | Function that returns column definitions |
-| `fetchDataFn` | `QueryHook` | ✅ | React Query hook for fetching data |
-| `idField` | `keyof T` | ✅ | Field to use as unique row identifier |
-| `fetchByIdsFn` | `(ids: number[]) => Promise<T[]>` | ❌ | Function to fetch multiple rows by IDs (required for cross-page selection) |
-| `pageSizeOptions` | `number[]` | ❌ | Available page size options. Default: `[10, 20, 30, 50, 100]` |
-| `exportConfig` | `ExportConfig` | ❌ | Configuration for data export |
-| `onRowClick` | `(rowData: T, rowIndex: number) => void` | ❌ | Callback when row is clicked |
-| `renderToolbarContent` | `(options: ToolbarOptions<T>) => React.ReactNode` | ❌ | Custom toolbar content renderer |
-| `subRowsConfig` | `SubRowsConfig` | ❌ | Configuration for hierarchical data |
-| `config` | `DataTableConfig` | ❌ | Table feature configuration |
-| `className` | `string` | ❌ | Additional CSS class for table container |
+<TypeTable
+  type={{
+    getColumns: {
+      description: 'Function that returns column definitions',
+      type: '(handleRowDeselection?: (rowId: string) => void) => ColumnDef<T>[]',
+      required: true,
+    },
+    fetchDataFn: {
+      description: 'React Query hook for fetching data',
+      type: 'QueryHook',
+      required: true,
+    },
+    idField: {
+      description: 'Field to use as unique row identifier',
+      type: 'keyof T',
+      required: true,
+    },
+    fetchByIdsFn: {
+      description: 'Function to fetch multiple rows by IDs (required for cross-page selection)',
+      type: '(ids: number[]) => Promise<T[]>',
+      required: false,
+    },
+    pageSizeOptions: {
+      description: 'Available page size options',
+      type: 'number[]',
+      default: '[10, 20, 30, 50, 100]',
+      required: false,
+    },
+    exportConfig: {
+      description: 'Configuration for data export',
+      type: 'ExportConfig',
+      required: false,
+    },
+    onRowClick: {
+      description: 'Callback when row is clicked',
+      type: '(rowData: T, rowIndex: number) => void',
+      required: false,
+    },
+    renderToolbarContent: {
+      description: 'Custom toolbar content renderer',
+      type: '(options: ToolbarOptions<T>) => React.ReactNode',
+      required: false,
+    },
+    subRowsConfig: {
+      description: 'Configuration for hierarchical data',
+      type: 'SubRowsConfig',
+      required: false,
+    },
+    config: {
+      description: 'Table feature configuration',
+      type: 'DataTableConfig',
+      required: false,
+    },
+    className: {
+      description: 'Additional CSS class for table container',
+      type: 'string',
+      required: false,
+    },
+  }}
+/>
 
 ### Example
 
@@ -83,21 +130,88 @@ interface DataTableConfig {
 
 ### Properties
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `enableRowSelection` | `boolean` | `false` | Enable row selection with checkboxes |
-| `enableClickRowSelect` | `boolean` | `false` | Allow clicking row to select it |
-| `enableKeyboardNavigation` | `boolean` | `true` | Enable keyboard navigation |
-| `enableSearch` | `boolean` | `true` | Show search input |
-| `enableDateFilter` | `boolean` | `false` | Show date range filter |
-| `enableColumnVisibility` | `boolean` | `true` | Allow toggling column visibility |
-| `enableUrlState` | `boolean` | `true` | Persist state in URL |
-| `defaultSortBy` | `string` | `undefined` | Initial sort column (must match `accessorKey`) |
-| `defaultSortOrder` | `'asc' \| 'desc'` | `'desc'` | Initial sort direction |
-| `searchPlaceholder` | `string` | `"Search {entityName}..."` | Custom search placeholder |
-| `columnResizingTableId` | `string` | `undefined` | ID for persisting column sizes |
-| `allowExportNewColumns` | `boolean` | `true` | Include transform function columns in export |
-| `size` | `'sm' \| 'default' \| 'lg'` | `'default'` | UI component size |
+<TypeTable
+  type={{
+    enableRowSelection: {
+      description: 'Enable row selection with checkboxes',
+      type: 'boolean',
+      default: 'false',
+      required: false,
+    },
+    enableClickRowSelect: {
+      description: 'Allow clicking row to select it',
+      type: 'boolean',
+      default: 'false',
+      required: false,
+    },
+    enableKeyboardNavigation: {
+      description: 'Enable keyboard navigation',
+      type: 'boolean',
+      default: 'true',
+      required: false,
+    },
+    enableSearch: {
+      description: 'Show search input',
+      type: 'boolean',
+      default: 'true',
+      required: false,
+    },
+    enableDateFilter: {
+      description: 'Show date range filter',
+      type: 'boolean',
+      default: 'false',
+      required: false,
+    },
+    enableColumnVisibility: {
+      description: 'Allow toggling column visibility',
+      type: 'boolean',
+      default: 'true',
+      required: false,
+    },
+    enableUrlState: {
+      description: 'Persist state in URL',
+      type: 'boolean',
+      default: 'true',
+      required: false,
+    },
+    defaultSortBy: {
+      description: 'Initial sort column (must match accessorKey)',
+      type: 'string | undefined',
+      default: 'undefined',
+      required: false,
+    },
+    defaultSortOrder: {
+      description: 'Initial sort direction',
+      type: "'asc' | 'desc'",
+      default: "'desc'",
+      required: false,
+    },
+    searchPlaceholder: {
+      description: 'Custom search placeholder',
+      type: 'string',
+      default: '"Search {entityName}..."',
+      required: false,
+    },
+    columnResizingTableId: {
+      description: 'ID for persisting column sizes',
+      type: 'string | undefined',
+      default: 'undefined',
+      required: false,
+    },
+    allowExportNewColumns: {
+      description: 'Include transform function columns in export',
+      type: 'boolean',
+      default: 'true',
+      required: false,
+    },
+    size: {
+      description: 'UI component size',
+      type: "'sm' | 'default' | 'lg'",
+      default: "'default'",
+      required: false,
+    },
+  }}
+/>
 
 ## SubRowsConfig
 
@@ -120,13 +234,36 @@ interface SubRowsConfig {
 
 ### Properties
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | `boolean` | ✅ | Enable subrows feature |
-| `mode` | `'same-columns' \| 'custom-columns' \| 'custom-component'` | ✅ | Rendering mode for subrows |
-| `expandIconPosition` | `'first' \| 'last' \| 'custom'` | ❌ | Where to show expand icon. Default: `'first'` |
-| `getSubRowColumns` | `() => ColumnDef<any>[]` | ❌ | Required for `custom-columns` mode |
-| `CustomSubRowComponent` | `React.ComponentType` | ❌ | Required for `custom-component` mode |
+<TypeTable
+  type={{
+    enabled: {
+      description: 'Enable subrows feature',
+      type: 'boolean',
+      required: true,
+    },
+    mode: {
+      description: 'Rendering mode for subrows',
+      type: "'same-columns' | 'custom-columns' | 'custom-component'",
+      required: true,
+    },
+    expandIconPosition: {
+      description: 'Where to show expand icon',
+      type: "'first' | 'last' | 'custom'",
+      default: "'first'",
+      required: false,
+    },
+    getSubRowColumns: {
+      description: 'Required for custom-columns mode',
+      type: '() => ColumnDef<any>[]',
+      required: false,
+    },
+    CustomSubRowComponent: {
+      description: 'Required for custom-component mode',
+      type: 'React.ComponentType<{ subRows: any[]; parentRow: any }>',
+      required: false,
+    },
+  }}
+/>
 
 ### Example
 
@@ -157,14 +294,41 @@ interface ExportConfig {
 
 ### Properties
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `headers` | `string[]` | ✅ | Array of field names to export (in order) |
-| `columnMapping` | `Record<string, string>` | ✅ | Maps field names to export headers |
-| `columnWidths` | `{ wch: number }[]` | ❌ | Column widths for Excel (in characters) |
-| `transformFunction` | `DataTransformFunction<T>` | ❌ | Function to transform data before export |
-| `entityName` | `string` | ✅ | Used in filename: `{entityName}_2024-01-15.xlsx` |
-| `flatten` | `boolean` | ❌ | Flatten subrows for export. Default: `true` |
+<TypeTable
+  type={{
+    headers: {
+      description: 'Array of field names to export (in order)',
+      type: 'string[]',
+      required: true,
+    },
+    columnMapping: {
+      description: 'Maps field names to export headers',
+      type: 'Record<string, string>',
+      required: true,
+    },
+    columnWidths: {
+      description: 'Column widths for Excel (in characters)',
+      type: '{ wch: number }[]',
+      required: false,
+    },
+    transformFunction: {
+      description: 'Function to transform data before export',
+      type: 'DataTransformFunction<T>',
+      required: false,
+    },
+    entityName: {
+      description: 'Used in filename: {entityName}_2024-01-15.xlsx',
+      type: 'string',
+      required: true,
+    },
+    flatten: {
+      description: 'Flatten subrows for export',
+      type: 'boolean',
+      default: 'true',
+      required: false,
+    },
+  }}
+/>
 
 ### Example
 
@@ -229,12 +393,30 @@ interface ToolbarOptions<T> {
 
 ### Properties
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `selectedRows` | `T[]` | Currently selected rows (visible on current page) |
-| `allSelectedIds` | `number[]` | All selected row IDs across all pages |
-| `totalSelectedCount` | `number` | Total number of selected rows |
-| `resetSelection` | `() => void` | Function to clear all selections |
+<TypeTable
+  type={{
+    selectedRows: {
+      description: 'Currently selected rows (visible on current page)',
+      type: 'T[]',
+      required: false,
+    },
+    allSelectedIds: {
+      description: 'All selected row IDs across all pages',
+      type: 'number[]',
+      required: false,
+    },
+    totalSelectedCount: {
+      description: 'Total number of selected rows',
+      type: 'number',
+      required: false,
+    },
+    resetSelection: {
+      description: 'Function to clear all selections',
+      type: '() => void',
+      required: false,
+    },
+  }}
+/>
 
 ### Example
 
@@ -261,17 +443,45 @@ Column definition from TanStack Table with common patterns.
 
 ### Essential Properties
 
-```typescript
-interface ColumnDef<T> {
-  accessorKey: keyof T;
-  header: string | ((props: HeaderContext<T>) => React.ReactNode);
-  cell?: (props: CellContext<T>) => React.ReactNode;
-  size?: number;
-  enableSorting?: boolean;
-  enableHiding?: boolean;
-  enableResizing?: boolean;
-}
-```
+<TypeTable
+  type={{
+    accessorKey: {
+      description: 'Key to access the data in the row object',
+      type: 'keyof T',
+      required: true,
+    },
+    header: {
+      description: 'Header content or render function',
+      type: 'string | ((props: HeaderContext<T>) => React.ReactNode)',
+      required: false,
+    },
+    cell: {
+      description: 'Custom cell renderer',
+      type: '(props: CellContext<T>) => React.ReactNode',
+      required: false,
+    },
+    size: {
+      description: 'Column width in pixels',
+      type: 'number',
+      required: false,
+    },
+    enableSorting: {
+      description: 'Enable sorting for this column',
+      type: 'boolean',
+      required: false,
+    },
+    enableHiding: {
+      description: 'Allow hiding this column',
+      type: 'boolean',
+      required: false,
+    },
+    enableResizing: {
+      description: 'Allow resizing this column',
+      type: 'boolean',
+      required: false,
+    },
+  }}
+/>
 
 ### Example
 

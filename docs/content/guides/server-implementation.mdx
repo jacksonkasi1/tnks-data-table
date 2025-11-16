@@ -26,15 +26,52 @@ Your backend must support these operations:
 GET /api/users?page=1&limit=10&search=john&sort_by=created_at&sort_order=desc&from_date=2024-01-01&to_date=2024-12-31
 ```
 
-| Parameter | Type | Required | Default | Example |
-|-----------|------|----------|---------|---------|
-| `page` | `number` | ❌ | `1` | `1` |
-| `limit` | `number` | ❌ | `10` | `20` |
-| `search` | `string` | ❌ | `""` | `"john"` |
-| `sort_by` | `string` | ❌ | `"created_at"` | `"name"` |
-| `sort_order` | `string` | ❌ | `"desc"` | `"asc"` |
-| `from_date` | `string` | ❌ | `""` | `"2024-01-01"` |
-| `to_date` | `string` | ❌ | `""` | `"2024-12-31"` |
+<TypeTable
+  type={{
+    page: {
+      description: 'Current page number',
+      type: 'number',
+      default: '1',
+      required: false,
+    },
+    limit: {
+      description: 'Number of records per page',
+      type: 'number',
+      default: '10',
+      required: false,
+    },
+    search: {
+      description: 'Search query string',
+      type: 'string',
+      default: '""',
+      required: false,
+    },
+    sort_by: {
+      description: 'Column to sort by',
+      type: 'string',
+      default: '"created_at"',
+      required: false,
+    },
+    sort_order: {
+      description: 'Sort direction',
+      type: "'asc' | 'desc'",
+      default: '"desc"',
+      required: false,
+    },
+    from_date: {
+      description: 'Start date for date range filter',
+      type: 'string',
+      default: '""',
+      required: false,
+    },
+    to_date: {
+      description: 'End date for date range filter',
+      type: 'string',
+      default: '""',
+      required: false,
+    },
+  }}
+/>
 
 ## Response Format
 
