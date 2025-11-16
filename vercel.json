@@ -1,4 +1,5 @@
 {
+  "ignoreCommand": "git diff HEAD^ HEAD --quiet ./docs",
   "headers": [
     {
       "source": "/r/(.*)",
