@@ -19,6 +19,100 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.4.0] - 2025-11-18
+
+### Added
+- **Hierarchical Subrows Feature**: Complete implementation with three rendering modes
+  - `same-columns` mode: Parent and child rows share the same column structure
+  - `custom-columns` mode: Different columns for parent rows and subrows
+  - `custom-component` mode: Custom React components for rendering subrows
+  - Expand/collapse functionality with animated expand icon component
+  - Support for nested data structures with `getSubRows` and `getExpandedRowModel`
+  - Configurable subrow indentation and display options
+  - Cross-page selection support for hierarchical data structures
+  - Export functionality with flatten and parent-only options
+
+- **Three Complete Example Implementations**:
+  - **Orders Example**: Hierarchical order management with order items (same-columns mode)
+    - Parent-child relationships demonstrating nested data structures
+    - CRUD operations (add, delete orders and order items)
+    - Row actions and bulk operations
+  - **Bookings Example**: Logistics bookings with booking stops (custom-columns mode)
+    - Different columns for parent bookings vs. child stops
+    - Demonstrates custom column structures for hierarchical data
+  - **Tickets Example**: Ticket management with comments (custom-component mode)
+    - Custom comment component for rendering ticket discussions
+    - Shows flexibility of component-based subrow rendering
+
+- **Comprehensive Fumadocs Documentation Site**:
+  - Getting Started guides (installation, file structure)
+  - API documentation with interactive examples
+  - Configuration guides (case format, URL state management)
+  - Core concepts and feature documentation
+  - Subrows feature documentation with all three modes
+  - Data export customization guide
+  - Best practices and troubleshooting guides
+  - Multi-language support and advanced search
+
+- **New Database Tables & API Endpoints**:
+  - Orders and Order Items tables with full CRUD operations
+  - Bookings and Booking Stops tables for logistics management
+  - Tickets and Ticket Comments tables for support tracking
+  - Comprehensive seed data (200 orders with 2,714 items, 150 bookings, 100 tickets)
+  - Batch fetch endpoints (`get-orders-by-ids`, `get-bookings-by-ids`, `get-tickets-by-ids`)
+  - Server-side grouping endpoints with N+1 query optimization
+
+- **Data Table Enhancements**:
+  - `expand-icon.tsx` component with smooth animations
+  - `subrow-columns.tsx` helper for creating subrow-specific columns
+  - Status badge component with predefined status styles
+  - Currency formatting utilities
+  - Date formatting helpers
+  - Reusable column helper functions
+
+- **Shadcn Registry Updates**:
+  - Added `expand-icon.tsx` to component registry
+  - Updated dependencies: replaced `xlsx` with `exceljs` for better Excel support
+  - Updated component descriptions to mention hierarchical subrows
+  - Regenerated all registry JSON files with latest component changes
+
+### Changed
+- **Export Functionality**: Enhanced to support hierarchical data structures
+  - Flatten option to export all parent and child rows
+  - Parent-only option to export only top-level data
+  - Cross-page selection for exporting selected items across multiple pages
+  - Updated `export-utils.ts` with subrow handling logic
+
+- **Performance Optimizations**:
+  - Optimized subrow rendering and sorting performance
+  - Reduced N+1 queries in API endpoints with batch fetching
+  - Improved checkbox state logic for parent-child relationships
+  - Better handling of expanded state management
+
+- **Documentation Structure**:
+  - Moved legacy docs to `legacy_docs/` directory
+  - Created new comprehensive documentation site in `docs/` directory
+  - Updated README.md with subrows feature overview
+  - Added progress reports and quality reports
+
+### Fixed
+- **Selection Issues**: Resolved selection conflicts with hierarchical data
+  - Fixed checkbox state management for parent and child rows
+  - Proper row ID generation for nested structures
+  - Cross-page selection now works correctly with subrows
+
+- **Data Table Styling**:
+  - Removed background color classes from table rows for better theming
+  - Increased expand icon size for better visibility
+  - Fixed modal behavior for dropdown menus in subrows
+
+### Technical Details
+- **Files Changed**: 186 files modified/created
+- **Code Changes**: +26,151 insertions, -3,444 deletions
+- **Performance**: Server-side grouping with configurable row limits
+- **Type Safety**: Full TypeScript support for all subrow configurations
+- **Testing**: All examples pass typecheck, lint, and build processes
+
 ## [0.3.2] - 2025-10-02
 
 ### Added
