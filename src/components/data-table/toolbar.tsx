@@ -70,6 +70,22 @@ interface DataTableToolbarProps<TData extends ExportableData> {
   headers?: string[];
   transformFunction?: DataTransformFunction<TData>;
   customToolbarComponent?: React.ReactNode;
+  // Subrow props
+  subRowsConfig?: any;
+  getSelectedParentsAndSubrows?: () => { parents: TData[]; subrows: any[]; parentIds: any[]; subrowIds: any[] };
+  getSelectedParentRows?: () => Promise<TData[]>;
+  getSelectedSubRows?: () => Promise<TData[]>;
+  totalParentCount?: number;
+  totalSubrowCount?: number;
+  enableCsv?: boolean;
+  enableExcel?: boolean;
+  subRowExportConfig?: {
+    entityName: string;
+    columnMapping: Record<string, string>;
+    columnWidths: Array<{ wch: number }>;
+    headers: string[];
+    transformFunction?: DataTransformFunction<TData>;
+  };
 }
 
 export function DataTableToolbar<TData extends ExportableData>({
@@ -89,6 +105,15 @@ export function DataTableToolbar<TData extends ExportableData>({
   headers,
   transformFunction,
   customToolbarComponent,
+  subRowsConfig,
+  getSelectedParentsAndSubrows,
+  getSelectedParentRows,
+  getSelectedSubRows,
+  totalParentCount: totalParentCountProp,
+  totalSubrowCount: totalSubrowCountProp,
+  enableCsv = true,
+  enableExcel = true,
+  subRowExportConfig,
 }: DataTableToolbarProps<TData>) {
   // Get router and pathname for URL state reset
   const router = useRouter();
@@ -96,6 +121,15 @@ export function DataTableToolbar<TData extends ExportableData>({
   const searchParams = useSearchParams();
 
   const tableFiltered = table.getState().columnFilters.length > 0;
+
+  // Calculate parent and subrow selections
+  const { parents = [], subrows = [] } = subRowsConfig?.enabled && getSelectedParentsAndSubrows
+    ? getSelectedParentsAndSubrows()
+    : { parents: [], subrows: [] };
+
+  // Use prop counts if available (cross-page), otherwise use current page counts
+  const parentCount = totalParentCountProp !== undefined ? totalParentCountProp : parents.length;
+  const subrowCount = totalSubrowCountProp !== undefined ? totalSubrowCountProp : subrows.length;
 
   // Get search value directly from URL query parameter
   const searchParamFromUrl = searchParams.get("search") || "";
@@ -407,6 +441,15 @@ export function DataTableToolbar<TData extends ExportableData>({
             transformFunction={transformFunction}
             size={config.size}
             config={config}
+            // Subrow props
+            subRowsConfig={subRowsConfig}
+            getSelectedParentRows={getSelectedParentRows}
+            getSelectedSubRows={getSelectedSubRows}
+            parentCount={parentCount}
+            subrowCount={subrowCount}
+            enableCsv={enableCsv}
+            enableExcel={enableExcel}
+            subRowExportConfig={subRowExportConfig}
           />
         )}
 

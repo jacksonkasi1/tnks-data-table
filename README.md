@@ -48,6 +48,7 @@ That's it! See [Installation & Setup](#installation--setup) for detailed install
    - [Export Options](#export-options)
    - [Case Format Support](#case-format-support)
    - [Export Data Transformation](#export-data-transformation)
+   - [Subrows Feature (Hierarchical Data)](#subrows-feature-hierarchical-data)
 9. [Server Implementation](#server-implementation)
    - [API Endpoints](#api-endpoints)
    - [Request & Response Formats](#request--response-formats)
@@ -96,6 +97,8 @@ The Data Table includes the following features:
 - ✅ Single & multi-row selection
 - ✅ Row click callbacks for navigation
 - ✅ Optimistic UI updates
+- ✅ **Hierarchical data with subrows** (expandable nested rows)
+- ✅ **Cross-page subrow selection** and export
 
 ### UI Features
 
@@ -107,6 +110,8 @@ The Data Table includes the following features:
 - ✅ Customizable toolbar
 - ✅ Row actions menu
 - ✅ Bulk action support
+- ✅ **Expand/collapse rows** with smooth animations
+- ✅ **Three subrow rendering modes** (same-columns, custom-columns, custom-component)
 
 ### Operations
 
@@ -1931,6 +1936,401 @@ config={{
 - **Enhanced Mode (`true`)**: When you want to provide additional calculated data in exports that doesn't need to be displayed in the table UI
 
 **Note:** Hidden columns are always excluded from exports regardless of this setting. This option only controls whether new columns from the transform function are included.
+
+---
+
+### Subrows Feature (Hierarchical Data)
+
+The data table supports hierarchical data with expandable subrows, perfect for displaying parent-child relationships like orders with items, bookings with stops, or tickets with comments. This feature includes **three rendering modes**, **cross-page selection**, and **export support**.
+
+#### Quick Example
+
+```typescript
+<DataTable<Order, unknown>
+  getColumns={getColumns}
+  fetchDataFn={fetchOrders}
+  fetchByIdsFn={fetchOrdersByIds}
+  exportConfig={exportConfig}
+  subRowsConfig={{
+    enabled: true,
+    mode: "same-columns", // or "custom-columns" or "custom-component"
+  }}
+/>
+```
+
+#### Three Rendering Modes
+
+**1. Same-Columns Mode** - Parent and subrows share the same column structure:
+
+```typescript
+// Example: Orders with product items
+subRowsConfig={{
+  enabled: true,
+  mode: "same-columns",
+  hideExpandIconWhenSingle: true, // Hide expand icon when only 1 subrow
+  autoExpandSingle: false,
+}}
+```
+
+API Response Structure:
+```typescript
+{
+  success: true,
+  data: [
+    {
+      id: 1,
+      order_id: "ORD-00001",
+      customer_name: "John Doe",
+      product_name: "Laptop",    // First product shown in parent row
+      quantity: 1,
+      price: "999.99",
+      total_amount: "2499.97",
+      subRows: [
+        {
+          id: 2,
+          order_id: "ORD-00001",
+          product_name: "Mouse",  // Additional products as subrows
+          quantity: 2,
+          price: "25.00"
+        },
+        // ... more items
+      ]
+    }
+  ]
+}
+```
+
+**2. Custom-Columns Mode** - Different columns for parent and subrows:
+
+```typescript
+// Example: Logistics bookings with stops
+<DataTable<Booking, unknown>
+  getColumns={getParentColumns}          // Columns for parent booking
+  getSubRowColumns={getStopColumns}      // Different columns for stops
+  fetchDataFn={fetchBookings}
+  subRowsConfig={{
+    enabled: true,
+    mode: "custom-columns",
+    showSubRowHeaders: true,  // Show column headers for subrows
+  }}
+/>
+```
+
+Parent Columns (10 columns):
+```typescript
+const getParentColumns = () => [
+  { id: "booking_id", header: "Booking ID" },
+  { id: "customer_name", header: "Customer" },
+  { id: "pickup_location", header: "From" },
+  { id: "delivery_location", header: "To" },
+  { id: "total_stops", header: "Stops" },
+  { id: "total_amount", header: "Amount" },
+  // ... more parent columns
+];
+```
+
+Subrow Columns (8 different columns):
+```typescript
+const getStopColumns = () => [
+  { id: "stop_number", header: "#" },
+  { id: "stop_type", header: "Type" },
+  { id: "location_name", header: "Location" },
+  { id: "scheduled_time", header: "Scheduled" },
+  { id: "status", header: "Status" },
+  // ... more stop columns
+];
+```
+
+**3. Custom-Component Mode** - Full control with a custom React component:
+
+```typescript
+// Example: Tickets with comment component
+<DataTable<Ticket, unknown>
+  getColumns={getColumns}
+  fetchDataFn={fetchTickets}
+  subRowsConfig={{
+    enabled: true,
+    mode: "custom-component",
+    SubRowComponent: CommentComponent,
+  }}
+/>
+```
+
+Custom Component:
+```typescript
+interface CommentComponentProps {
+  row: Row<Ticket>;
+  data: any; // Individual comment data
+}
+
+export function CommentComponent({ data }: CommentComponentProps) {
+  return (
+    <div className="flex gap-3 py-3 px-4 border-l-2 border-blue-200">
+      <div className="text-xs text-muted-foreground w-8">#{data.comment_number}</div>
+      <div className="flex-1">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="font-medium text-sm">{data.author_name}</span>
+          <Badge variant={data.author_role === "admin" ? "default" : "secondary"}>
+            {data.author_role}
+          </Badge>
+          <span className="text-xs text-muted-foreground">
+            {formatDate(data.created_at)}
+          </span>
+        </div>
+        <p className="text-sm">{data.comment_text}</p>
+      </div>
+    </div>
+  );
+}
+```
+
+#### Server-Side Implementation
+
+**API Endpoint** (`/api/orders/grouped`):
+
+```typescript
+import { Hono } from "hono";
+import { db } from "@/db";
+import { orders, orderItems } from "@/db/schema";
+
+const router = new Hono();
+const MAX_SUBROWS_PER_ORDER = 20;
+
+router.get("/", async (c) => {
+  const { page, limit, search, sort_by, sort_order } = c.req.query();
+
+  // Fetch orders with pagination
+  const ordersList = await db
+    .select()
+    .from(orders)
+    .where(/* filters */)
+    .orderBy(/* sorting */)
+    .limit(limit)
+    .offset((page - 1) * limit);
+
+  // PERFORMANCE: Fetch all items in single batch query (not N+1)
+  const orderIds = ordersList.map(o => o.order_id);
+  const allItems = await db
+    .select()
+    .from(orderItems)
+    .where(sql`${orderItems.order_id} IN ${orderIds}`)
+    .orderBy(asc(orderItems.id));
+
+  // Group items by order_id in memory
+  const itemsByOrderId = new Map();
+  for (const item of allItems) {
+    if (!itemsByOrderId.has(item.order_id)) {
+      itemsByOrderId.set(item.order_id, []);
+    }
+    const items = itemsByOrderId.get(item.order_id);
+    if (items.length < MAX_SUBROWS_PER_ORDER) {
+      items.push(item);
+    }
+  }
+
+  // Attach subRows to each order
+  const ordersWithItems = ordersList.map(order => ({
+    ...order,
+    subRows: itemsByOrderId.get(order.order_id) || []
+  }));
+
+  return c.json({
+    success: true,
+    data: ordersWithItems,
+    pagination: { page, limit, total_pages, total_items }
+  });
+});
+```
+
+**Client Data Fetching**:
+
+```typescript
+import { useQuery } from "@tanstack/react-query";
+
+export function useOrdersData(params: DataFetchParams) {
+  return useQuery({
+    queryKey: ["orders", params],
+    queryFn: async () => {
+      const response = await fetch(`/api/orders/grouped?${new URLSearchParams(params)}`);
+      const result = await response.json();
+      return {
+        data: result.data,
+        pagination: result.pagination,
+        isError: !result.success,
+        error: result.error
+      };
+    }
+  });
+}
+```
+
+#### Cross-Page Selection & Export
+
+For selecting and exporting items across multiple pages, implement a `fetchByIdsFn`:
+
+**API Endpoint** (`/api/orders/by-ids`):
+
+```typescript
+router.get("/by-ids", async (c) => {
+  const { ids } = c.req.query(); // "1,2,3,4,5"
+  const idArray = ids.split(",").map(id => parseInt(id));
+
+  const ordersList = await db
+    .select()
+    .from(orders)
+    .where(inArray(orders.id, idArray));
+
+  // Batch fetch items (avoid N+1)
+  const orderIds = ordersList.map(o => o.order_id);
+  const allItems = await db
+    .select()
+    .from(orderItems)
+    .where(sql`${orderItems.order_id} IN ${orderIds}`);
+
+  const itemsByOrderId = groupByOrderId(allItems);
+
+  const ordersWithItems = ordersList.map(order => ({
+    ...order,
+    subRows: itemsByOrderId.get(order.order_id) || []
+  }));
+
+  return c.json({ success: true, data: ordersWithItems });
+});
+```
+
+**Client Function**:
+
+```typescript
+import { fetchOrdersByIds } from "@/api/order/fetch-orders-by-ids";
+
+<DataTable
+  fetchDataFn={useOrdersData}
+  fetchByIdsFn={fetchOrdersByIds}  // Enable cross-page selection
+  subRowsConfig={{ enabled: true, mode: "same-columns" }}
+/>
+```
+
+#### Export Configuration for Subrows
+
+Configure separate exports for parents and subrows:
+
+```typescript
+export function useExportConfig() {
+  return {
+    entityName: "orders",
+    // Parent columns
+    headers: ["order_id", "customer_name", "total_items", "total_amount"],
+    columnMapping: {
+      order_id: "Order ID",
+      customer_name: "Customer",
+      total_items: "Items",
+      total_amount: "Total"
+    },
+    // Subrow export configuration
+    subRowExportConfig: {
+      entityName: "order_items",
+      headers: ["order_id", "product_name", "quantity", "price", "subtotal"],
+      columnMapping: {
+        order_id: "Order ID",
+        product_name: "Product",
+        quantity: "Qty",
+        price: "Price",
+        subtotal: "Subtotal"
+      }
+    }
+  };
+}
+```
+
+The export toolbar will show:
+- **Export Parents** - Exports only parent rows (orders)
+- **Export Subrows** - Exports only subrows (items)
+
+#### Complete SubRowsConfig API
+
+```typescript
+interface SubRowsConfig<TData> {
+  // Enable subrows feature
+  enabled: boolean;
+
+  // Rendering mode
+  mode: 'same-columns' | 'custom-columns' | 'custom-component';
+
+  // Field name for accessing subrows in data (default: 'subRows')
+  subRowsField?: string;
+
+  // For custom-columns mode: different columns for subrows
+  subRowColumns?: ColumnDef<any, unknown>[];
+  showSubRowHeaders?: boolean;
+
+  // For custom-component mode: custom component for subrows
+  SubRowComponent?: React.ComponentType<{
+    row: Row<TData>;
+    data: TData;
+  }>;
+
+  // UI options
+  hideExpandIconWhenSingle?: boolean;  // Hide expand icon when only 1 subrow
+  autoExpandSingle?: boolean;          // Auto-expand rows with single subrow
+  indentSize?: number;                 // Indentation size in pixels (default: 24)
+
+  // Default expanded state
+  defaultExpanded?: boolean | ExpandedState;
+}
+```
+
+#### Real-World Examples
+
+This repository includes three complete examples:
+
+1. **Orders Example** (`/example/orders`) - `same-columns` mode
+   - 10,000 orders with 1-25 items each
+   - First item shown in parent, rest as subrows
+   - Same column structure for parent and children
+
+2. **Bookings Example** (`/example/bookings`) - `custom-columns` mode
+   - 150 logistics bookings with 2-20 stops each
+   - Parent: booking info (10 columns)
+   - Subrows: stop details (8 different columns)
+   - Sortable subrow columns
+
+3. **Tickets Example** (`/example/tickets`) - `custom-component` mode
+   - 100 support tickets with 1-15 comments each
+   - Parent: ticket details
+   - Subrows: custom comment component with author, role, timestamp
+
+Navigate to these routes to see them in action:
+- `http://localhost:3000/example/orders`
+- `http://localhost:3000/example/bookings`
+- `http://localhost:3000/example/tickets`
+
+#### Performance Considerations
+
+**✅ DO**: Use batch queries to fetch subrows
+```typescript
+// Single query to fetch all items for multiple orders
+const allItems = await db
+  .select()
+  .from(orderItems)
+  .where(sql`${orderItems.order_id} IN ${orderIds}`);
+```
+
+**❌ DON'T**: Use N+1 queries
+```typescript
+// Bad: One query per order (N+1 problem)
+await Promise.all(
+  orders.map(order =>
+    db.select().from(orderItems).where(eq(orderItems.order_id, order.order_id))
+  )
+);
+```
+
+**Best Practices**:
+- Limit subrows per parent (e.g., 20 max)
+- Use indexed foreign keys for fast joins
+- Implement server-side grouping
+- Use `fetchByIdsFn` for cross-page operations
+- Consider pagination for very deep hierarchies
 
 ---
 

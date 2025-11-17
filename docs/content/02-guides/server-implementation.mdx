@@ -1,0 +1,457 @@
+---
+title: Server Implementation
+description: How to build the backend API for server-side data operations
+---
+
+# Server Implementation
+
+The DataTable requires a backend API that handles server-side operations including pagination, sorting, filtering, and searching.
+
+## API Requirements
+
+Your backend must support these operations:
+
+| Operation | Parameters | Description |
+|-----------|------------|-------------|
+| **Pagination** | `page`, `limit` | Return subset of data for current page |
+| **Sorting** | `sort_by`, `sort_order` | Sort by column in ascending/descending order |
+| **Filtering** | `search` | Filter records by search term |
+| **Date Range** | `from_date`, `to_date` | Filter by date range |
+
+## Request Format
+
+### Query Parameters
+
+```
+GET /api/users?page=1&limit=10&search=john&sort_by=created_at&sort_order=desc&from_date=2024-01-01&to_date=2024-12-31
+```
+
+<TypeTable
+  type={{
+    page: {
+      description: 'Current page number',
+      type: 'number',
+      default: '1',
+      required: false,
+    },
+    limit: {
+      description: 'Number of records per page',
+      type: 'number',
+      default: '10',
+      required: false,
+    },
+    search: {
+      description: 'Search query string',
+      type: 'string',
+      default: '""',
+      required: false,
+    },
+    sort_by: {
+      description: 'Column to sort by',
+      type: 'string',
+      default: '"created_at"',
+      required: false,
+    },
+    sort_order: {
+      description: 'Sort direction',
+      type: "'asc' | 'desc'",
+      default: '"desc"',
+      required: false,
+    },
+    from_date: {
+      description: 'Start date for date range filter',
+      type: 'string',
+      default: '""',
+      required: false,
+    },
+    to_date: {
+      description: 'End date for date range filter',
+      type: 'string',
+      default: '""',
+      required: false,
+    },
+  }}
+/>
+
+## Response Format
+
+### Successful Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john@example.com",
+      "age": 30,
+      "created_at": "2024-01-15T10:30:00Z"
+    },
+    // ... more records
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total_pages": 5,
+    "total_items": 48
+  }
+}
+```
+
+### Error Response
+
+```json
+{
+  "success": false,
+  "error": "Error message here",
+  "details": []  // Optional
+}
+```
+
+## Implementation Examples
+
+### Node.js with Express
+
+```typescript
+import express from 'express';
+import { db } from './database';
+
+const router = express.Router();
+
+router.get('/api/users', async (req, res) => {
+  try {
+    // Parse query parameters
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = (req.query.search as string) || '';
+    const sortBy = (req.query.sort_by as string) || 'created_at';
+    const sortOrder = (req.query.sort_order as string) || 'desc';
+    const fromDate = (req.query.from_date as string) || '';
+    const toDate = (req.query.to_date as string) || '';
+
+    // Build query
+    let query = db('users').select('*');
+
+    // Apply search filter
+    if (search) {
+      query = query.where((builder) => {
+        builder
+          .where('name', 'ilike', `%${search}%`)
+          .orWhere('email', 'ilike', `%${search}%`);
+      });
+    }
+
+    // Apply date range filter
+    if (fromDate) {
+      query = query.where('created_at', '>=', fromDate);
+    }
+    if (toDate) {
+      query = query.where('created_at', '<=', toDate);
+    }
+
+    // Get total count (before pagination)
+    const [{ count }] = await query.clone().count();
+    const totalItems = parseInt(count as string);
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // Apply sorting
+    query = query.orderBy(sortBy, sortOrder);
+
+    // Apply pagination
+    const offset = (page - 1) * limit;
+    query = query.limit(limit).offset(offset);
+
+    // Execute query
+    const data = await query;
+
+    // Return response
+    res.json({
+      success: true,
+      data,
+      pagination: {
+        page,
+        limit,
+        total_pages: totalPages,
+        total_items: totalItems,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch users',
+      details: [error.message],
+    });
+  }
+});
+
+export default router;
+```
+
+### Next.js API Route (Hono)
+
+```typescript
+import { Hono } from 'hono';
+import { db, tblUsers } from '@/db/schema';
+import { eq, or, ilike, and, gte, lte, asc, desc, sql } from 'drizzle-orm';
+
+const app = new Hono();
+
+app.get('/api/users', async (c) => {
+  try {
+    // Parse query parameters
+    const page = parseInt(c.req.query('page') || '1');
+    const limit = parseInt(c.req.query('limit') || '10');
+    const search = c.req.query('search') || '';
+    const sortBy = c.req.query('sort_by') || 'created_at';
+    const sortOrder = c.req.query('sort_order') || 'desc';
+    const fromDate = c.req.query('from_date') || '';
+    const toDate = c.req.query('to_date') || '';
+
+    // Build where conditions
+    const conditions = [];
+
+    // Search filter
+    if (search) {
+      conditions.push(
+        or(
+          ilike(tblUsers.name, `%${search}%`),
+          ilike(tblUsers.email, `%${search}%`)
+        )
+      );
+    }
+
+    // Date range filter
+    if (fromDate) {
+      conditions.push(gte(tblUsers.created_at, fromDate));
+    }
+    if (toDate) {
+      conditions.push(lte(tblUsers.created_at, toDate));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Get total count
+    const [{ count }] = await db
+      .select({ count: sql`count(*)` })
+      .from(tblUsers)
+      .where(whereClause);
+
+    const totalItems = Number(count);
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // Get data with pagination and sorting
+    const data = await db
+      .select()
+      .from(tblUsers)
+      .where(whereClause)
+      .orderBy(sortOrder === 'asc' ? asc(tblUsers[sortBy]) : desc(tblUsers[sortBy]))
+      .limit(limit)
+      .offset((page - 1) * limit);
+
+    return c.json({
+      success: true,
+      data,
+      pagination: {
+        page,
+        limit,
+        total_pages: totalPages,
+        total_items: totalItems,
+      },
+    });
+  } catch (error) {
+    return c.json(
+      {
+        success: false,
+        error: 'Failed to fetch users',
+      },
+      500
+    );
+  }
+});
+
+export default app;
+```
+
+### Python with FastAPI
+
+```python
+from fastapi import APIRouter, Query
+from sqlalchemy import select, func, or_
+from database import SessionLocal, User
+
+router = APIRouter()
+
+@router.get("/api/users")
+async def get_users(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    search: str = Query(""),
+    sort_by: str = Query("created_at"),
+    sort_order: str = Query("desc"),
+    from_date: str = Query(""),
+    to_date: str = Query(""),
+):
+    try:
+        db = SessionLocal()
+
+        # Build query
+        query = select(User)
+
+        # Apply search filter
+        if search:
+            query = query.where(
+                or_(
+                    User.name.ilike(f"%{search}%"),
+                    User.email.ilike(f"%{search}%")
+                )
+            )
+
+        # Apply date range filter
+        if from_date:
+            query = query.where(User.created_at >= from_date)
+        if to_date:
+            query = query.where(User.created_at <= to_date)
+
+        # Get total count
+        count_query = select(func.count()).select_from(query.subquery())
+        total_items = db.execute(count_query).scalar()
+        total_pages = (total_items + limit - 1) // limit
+
+        # Apply sorting
+        sort_column = getattr(User, sort_by)
+        if sort_order == "desc":
+            query = query.order_by(sort_column.desc())
+        else:
+            query = query.order_by(sort_column.asc())
+
+        # Apply pagination
+        offset = (page - 1) * limit
+        query = query.offset(offset).limit(limit)
+
+        # Execute query
+        result = db.execute(query)
+        data = [dict(row) for row in result]
+
+        return {
+            "success": True,
+            "data": data,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total_pages": total_pages,
+                "total_items": total_items,
+            },
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": "Failed to fetch users",
+        }
+    finally:
+        db.close()
+```
+
+## Database Optimization
+
+### Add Indexes
+
+For better performance, add indexes on commonly searched/sorted columns:
+
+```sql
+-- PostgreSQL
+CREATE INDEX idx_users_name ON users(name);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_created_at ON users(created_at);
+
+-- For case-insensitive search
+CREATE INDEX idx_users_name_lower ON users(LOWER(name));
+CREATE INDEX idx_users_email_lower ON users(LOWER(email));
+```
+
+### Optimize Queries
+
+- Use `ILIKE` for case-insensitive search (PostgreSQL)
+- Use `LIKE` with lowercase conversion for other databases
+- Limit columns returned with `SELECT` specific fields
+- Use query result caching for frequently accessed data
+
+## Subrows Implementation
+
+For hierarchical data, group child records under parents:
+
+```typescript
+app.get('/api/orders/grouped', async (c) => {
+  // Fetch orders and order items
+  const orders = await db.select().from(tblOrders);
+  const orderItems = await db.select().from(tblOrderItems);
+
+  // Group items under orders
+  const ordersWithSubrows = orders.map(order => {
+    const items = orderItems.filter(item => item.order_id === order.id);
+    const [firstItem, ...restItems] = items;
+
+    return {
+      ...order,
+      // Show first item in parent
+      product_name: firstItem.product_name,
+      quantity: firstItem.quantity,
+      price: firstItem.price,
+      // Rest as subrows (limit to 20 for performance)
+      subRows: restItems.slice(0, 20).map(item => ({
+        id: `${order.id}-${item.id}`,
+        order_id: order.id,
+        product_name: item.product_name,
+        quantity: item.quantity,
+        price: item.price,
+        isSubRow: true,
+      })),
+    };
+  });
+
+  return c.json({
+    success: true,
+    data: ordersWithSubrows,
+    pagination: { /* ... */ },
+  });
+});
+```
+
+## Error Handling
+
+Return appropriate HTTP status codes:
+
+| Status | Use Case |
+|--------|----------|
+| `200` | Success |
+| `400` | Bad request (validation error) |
+| `401` | Unauthorized |
+| `403` | Forbidden |
+| `404` | Not found |
+| `500` | Server error |
+
+```typescript
+try {
+  // ... query logic
+} catch (error) {
+  if (error.code === 'INVALID_PARAM') {
+    return c.json({ success: false, error: 'Invalid parameters' }, 400);
+  }
+  return c.json({ success: false, error: 'Internal server error' }, 500);
+}
+```
+
+## Performance Tips
+
+1. **Pagination**: Always use `LIMIT` and `OFFSET`
+2. **Indexes**: Add indexes on searchable/sortable columns
+3. **Caching**: Cache frequently accessed data
+4. **Query Optimization**: Use `EXPLAIN` to analyze queries
+5. **Connection Pooling**: Reuse database connections
+6. **Batch Operations**: Handle bulk deletes efficiently
+
+## Next Steps
+
+- [API Reference](/docs/api) - Client-side API documentation
+- [Troubleshooting](/docs/guides/troubleshooting) - Common issues and solutions
+- [Best Practices](/docs/guides/best-practices) - Performance and code quality

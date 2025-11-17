@@ -1,0 +1,495 @@
+---
+title: Best Practices
+description: Recommended patterns and practices for optimal implementation
+---
+
+import { File, Folder, Files } from 'fumadocs-ui/components/files';
+
+# Best Practices
+
+Follow these recommended practices to build maintainable, performant, and user-friendly data tables.
+
+## Code Organization
+
+### File Structure
+
+Follow the recommended structure for consistency:
+
+**✅ Good Structure:**
+
+<Files>
+  <Folder name="entity-table" defaultOpen>
+    <Folder name="components" defaultOpen>
+      <File name="columns.tsx" />
+      <File name="row-actions.tsx" />
+      <File name="toolbar-options.tsx" />
+      <Folder name="actions" defaultOpen />
+    </Folder>
+    <Folder name="schema" defaultOpen>
+      <File name="index.ts" />
+    </Folder>
+    <Folder name="utils" defaultOpen>
+      <File name="config.ts" />
+      <File name="data-fetching.ts" />
+    </Folder>
+  </Folder>
+</Files>
+
+**❌ Bad Structure:**
+
+<Files>
+  <Folder name="entity-table" defaultOpen>
+    <File name="everything-in-one-file.tsx" />
+    <File name="helpers.ts" />
+    <File name="stuff.tsx" />
+  </Folder>
+</Files>
+
+### Separation of Concerns
+
+Keep each file focused on a single responsibility:
+
+```typescript
+// ✅ Good: Separate files
+// columns.tsx - Column definitions only
+// row-actions.tsx - Row-level actions only
+// toolbar-options.tsx - Toolbar content only
+
+// ❌ Bad: Everything in one file
+// components.tsx - columns + actions + toolbar + forms
+```
+
+## Performance Optimization
+
+### Server-Side Operations
+
+Always process data on the server:
+
+```typescript
+// ✅ Good: Server-side
+fetchUsers({
+  page: 1,
+  limit: 10,
+  sort_by: "created_at",
+  sort_order: "desc",
+  search: "john"
+})
+// Returns: 10 filtered, sorted records
+
+// ❌ Bad: Client-side
+const allUsers = await fetchAllUsers()  // 10,000 records
+const filtered = allUsers.filter(...)    // Client filters
+const sorted = filtered.sort(...)        // Client sorts
+const paginated = sorted.slice(0, 10)   // Client paginates
+```
+
+### Memoization
+
+Memoize expensive computations:
+
+```typescript
+// ✅ Good: Memoized
+const columns = useMemo(() => getColumns(), []);
+const exportConfig = useMemo(() => useExportConfig(), []);
+
+// ❌ Bad: Recreated on every render
+const columns = getColumns();
+const exportConfig = useExportConfig();
+```
+
+### Limit Subrows
+
+Prevent performance degradation:
+
+```typescript
+// ✅ Good: Limited subrows
+subRows: items.slice(0, 20)  // Max 20 children
+
+// ❌ Bad: Unlimited subrows
+subRows: items  // Could be hundreds
+```
+
+### Database Indexing
+
+Add indexes on frequently queried columns:
+
+```sql
+-- ✅ Good: Indexed columns
+CREATE INDEX idx_users_name ON users(name);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_created_at ON users(created_at);
+
+-- For case-insensitive search
+CREATE INDEX idx_users_name_lower ON users(LOWER(name));
+```
+
+## State Management
+
+### URL State for Sharing
+
+Enable URL state for important filters:
+
+```tsx
+// ✅ Good: Shareable state
+config={{
+  enableUrlState: true,  // State in URL
+}}
+// URL: /users?page=2&search=john&sort=name
+// Users can bookmark and share this exact view
+
+// ❌ Bad: Local state only
+config={{
+  enableUrlState: false,
+}}
+// State lost on page reload
+```
+
+### React Query for Server State
+
+Let React Query handle server state:
+
+```typescript
+// ✅ Good: React Query manages caching
+const { data, isLoading } = useQuery({
+  queryKey: ["users", page, search],
+  queryFn: () => fetchUsers({ page, search }),
+  placeholderData: keepPreviousData,
+  staleTime: 60000,  // Cache for 1 minute
+});
+
+// ❌ Bad: Manual state management
+const [data, setData] = useState([]);
+const [loading, setLoading] = useState(false);
+useEffect(() => {
+  setLoading(true);
+  fetchUsers().then(setData).finally(() => setLoading(false));
+}, [page, search]);
+```
+
+## Error Handling
+
+### Graceful Degradation
+
+Handle errors without breaking the UI:
+
+```typescript
+// ✅ Good: Error handling
+try {
+  const response = await deleteUser(id);
+  if (response.success) {
+    toast.success("User deleted");
+    await queryClient.invalidateQueries({ queryKey: ["users"] });
+  } else {
+    toast.error(response.error || "Failed to delete user");
+  }
+} catch (error) {
+  console.error("Delete error:", error);
+  toast.error("An unexpected error occurred");
+}
+
+// ❌ Bad: No error handling
+const response = await deleteUser(id);
+toast.success("User deleted");
+queryClient.invalidateQueries({ queryKey: ["users"] });
+```
+
+### API Error Messages
+
+Provide helpful error messages:
+
+```typescript
+// ✅ Good: Specific errors
+return {
+  success: false,
+  error: "Email already exists",
+  details: ["Please use a different email address"]
+};
+
+// ❌ Bad: Generic errors
+return {
+  success: false,
+  error: "Error occurred"
+};
+```
+
+## User Experience
+
+### Loading States
+
+Show appropriate loading indicators:
+
+```typescript
+// ✅ Good: Preserve previous data while loading
+useQuery({
+  queryKey: ["users", page],
+  queryFn: () => fetchUsers({ page }),
+  placeholderData: keepPreviousData,  // Show old data while loading new
+});
+
+// ❌ Bad: Empty table while loading
+useQuery({
+  queryKey: ["users", page],
+  queryFn: () => fetchUsers({ page }),
+  // No placeholderData - table goes blank on page change
+});
+```
+
+### Optimistic Updates
+
+Provide instant feedback:
+
+```typescript
+// ✅ Good: Optimistic update
+const handleDelete = async (id: number) => {
+  // Immediately remove from UI
+  queryClient.setQueryData(["users"], (old) =>
+    old.filter((user) => user.id !== id)
+  );
+
+  try {
+    await deleteUser(id);
+    toast.success("Deleted");
+  } catch (error) {
+    // Revert on error
+    queryClient.invalidateQueries({ queryKey: ["users"] });
+    toast.error("Failed to delete");
+  }
+};
+
+// ❌ Bad: Wait for server
+const handleDelete = async (id: number) => {
+  await deleteUser(id);  // User waits...
+  queryClient.invalidateQueries({ queryKey: ["users"] });
+};
+```
+
+### Debounced Search
+
+Prevent excessive API calls:
+
+```typescript
+// ✅ Good: Debounced search (built-in)
+// User types: "j" -> "jo" -> "joh" -> "john"
+// API called: Only for "john" (after 300ms delay)
+
+// ❌ Bad: Immediate search
+// API called: 4 times ("j", "jo", "joh", "john")
+```
+
+## Type Safety
+
+### Strict Schemas
+
+Use Zod for runtime validation:
+
+```typescript
+// ✅ Good: Strict schema
+export const userSchema = z.object({
+  id: z.number(),
+  name: z.string().min(1),
+  email: z.string().email(),
+  age: z.number().min(0).max(150),
+  created_at: z.string().datetime(),
+});
+
+// ❌ Bad: Loose schema
+export const userSchema = z.object({
+  id: z.any(),
+  name: z.any(),
+  email: z.any(),
+});
+```
+
+### Type Inference
+
+Let TypeScript infer types from schemas:
+
+```typescript
+// ✅ Good: Type inference
+export const userSchema = z.object({ /* ... */ });
+export type User = z.infer<typeof userSchema>;
+
+// ❌ Bad: Manual types
+export interface User {
+  id: number;
+  name: string;
+  // ... must manually sync with schema
+}
+```
+
+## Security
+
+### Input Validation
+
+Validate on both client and server:
+
+```typescript
+// Client validation (immediate feedback)
+const formSchema = z.object({
+  email: z.string().email(),
+  age: z.number().min(18),
+});
+
+// Server validation (security)
+app.post('/users', async (req, res) => {
+  try {
+    const validated = userSchema.parse(req.body);  // ✅ Validate
+    await createUser(validated);
+  } catch (error) {
+    return res.status(400).json({ error: "Invalid input" });
+  }
+});
+```
+
+### SQL Injection Prevention
+
+Use parameterized queries:
+
+```typescript
+// ✅ Good: Parameterized
+query = query.where('name', 'ilike', `%${search}%`);
+
+// ❌ Bad: String concatenation
+query = `SELECT * FROM users WHERE name ILIKE '%${search}%'`;
+// Vulnerable to SQL injection!
+```
+
+### XSS Prevention
+
+Sanitize user input in exports:
+
+```typescript
+// ✅ Good: Escape HTML
+transformFunction: (row) => ({
+  ...row,
+  notes: escapeHtml(row.notes),  // Escape user content
+});
+
+// ❌ Bad: Raw user content
+transformFunction: (row) => ({
+  ...row,
+  notes: row.notes,  // Could contain malicious HTML
+});
+```
+
+## Accessibility
+
+### Keyboard Navigation
+
+Enable keyboard controls:
+
+```tsx
+// ✅ Good: Keyboard enabled (default)
+config={{
+  enableKeyboardNavigation: true,
+}}
+// Users can: Arrow keys to navigate, Enter to select, etc.
+
+// ❌ Bad: Disabled keyboard
+config={{
+  enableKeyboardNavigation: false,
+}}
+```
+
+### ARIA Labels
+
+Provide descriptive labels:
+
+```tsx
+// ✅ Good: ARIA labels
+<Checkbox
+  checked={row.getIsSelected()}
+  onCheckedChange={(value) => row.toggleSelected(!!value)}
+  aria-label={`Select ${row.original.name}`}  // Descriptive
+/>
+
+// ❌ Bad: Generic label
+<Checkbox
+  checked={row.getIsSelected()}
+  onCheckedChange={(value) => row.toggleSelected(!!value)}
+  aria-label="Select row"  // Not specific
+/>
+```
+
+## Testing
+
+### Test Critical Paths
+
+Focus on user-facing functionality:
+
+```typescript
+// ✅ Test these
+- Data fetching and display
+- Sorting and filtering
+- Row selection
+- CRUD operations
+- Export functionality
+
+// Less critical
+- Internal utility functions
+- Styling variations
+```
+
+### Test Edge Cases
+
+```typescript
+// ✅ Test these scenarios
+- Empty data (0 results)
+- Single item
+- Maximum page size
+- Very long text in cells
+- Special characters in search
+- Network errors
+- Validation errors
+```
+
+## Documentation
+
+### Inline Comments
+
+Comment complex logic:
+
+```typescript
+// ✅ Good: Explain "why"
+// Group items under orders, showing first item in parent
+// and remaining items as subrows (max 20 for performance)
+const ordersWithSubrows = orders.map(order => {
+  const [firstItem, ...restItems] = items;
+  return {
+    ...order,
+    subRows: restItems.slice(0, 20),
+  };
+});
+
+// ❌ Bad: Explain "what"
+// Loop through orders
+const ordersWithSubrows = orders.map(order => {
+  // Get first item
+  const [firstItem, ...restItems] = items;
+  // Return object
+  return { ...order, subRows: restItems.slice(0, 20) };
+});
+```
+
+### JSDoc for Public APIs
+
+Document exported functions:
+
+```typescript
+/**
+ * Fetches users with server-side filtering and pagination
+ * @param {number} page - Page number (1-based)
+ * @param {number} limit - Items per page
+ * @param {string} search - Search term for name/email
+ * @returns {Promise<UsersResponse>} Paginated users data
+ */
+export async function fetchUsers(params: FetchUsersParams) {
+  // ...
+}
+```
+
+## Next Steps
+
+- [Troubleshooting](/docs/guides/troubleshooting) - Solve common issues
+- [Server Implementation](/docs/guides/server-implementation) - Build robust APIs
+- [Examples](/docs/examples) - See best practices in action

@@ -1,0 +1,350 @@
+---
+title: Core Concepts
+description: Understanding the fundamental concepts behind the Advanced Data Table Component
+---
+
+# Core Concepts
+
+This guide covers the fundamental concepts you need to understand to effectively use the Advanced Data Table Component.
+
+## Architecture Overview
+
+The data table is built on a layered architecture that separates concerns:
+
+<Cards>
+  <Card title="Presentation Layer" icon="layout">
+    React components that render the UI and handle user interactions
+  </Card>
+
+  <Card title="State Management" icon="database">
+    React Query for server state, React hooks for local UI state
+  </Card>
+
+  <Card title="Table Logic" icon="table">
+    TanStack Table for sorting, filtering, pagination, and selection
+  </Card>
+
+  <Card title="Data Layer" icon="server">
+    API functions that communicate with your backend
+  </Card>
+</Cards>
+
+## Server-Side Processing
+
+All data operations happen on the server to handle large datasets efficiently.
+
+### Why Server-Side?
+
+**Performance**: Only fetch the data you need for the current page
+
+```typescript
+// Client requests page 1 with 10 items
+fetchUsers({
+  page: 1,
+  limit: 10,
+  sort_by: "created_at",
+  sort_order: "desc"
+})
+
+// Server returns only 10 items + pagination metadata
+{
+  data: [...10 items],
+  pagination: {
+    page: 1,
+    limit: 10,
+    total_pages: 50,
+    total_items: 500
+  }
+}
+```
+
+**Scalability**: Performance doesn't degrade with dataset size
+
+### Server Operations
+
+The backend must handle these operations:
+
+| Operation | Parameter | Example |
+|-----------|-----------|---------|
+| **Pagination** | `page`, `limit` | `page=1&limit=20` |
+| **Sorting** | `sort_by`, `sort_order` | `sort_by=name&sort_order=asc` |
+| **Filtering** | `search` | `search=john` |
+| **Date Range** | `from_date`, `to_date` | `from_date=2024-01-01&to_date=2024-12-31` |
+
+## Data Flow
+
+Understanding how data flows through the component:
+
+<Steps>
+### User Interaction
+
+User changes page, sorts, filters, or searches.
+
+### State Update
+
+React state updates (page number, sort column, etc.).
+
+### URL Sync (Optional)
+
+State is persisted to URL for bookmarking and sharing.
+
+### API Request
+
+React Query triggers fetch with new parameters.
+
+### Server Processing
+
+Backend queries database with filters, sorts, and pagination.
+
+### Response & Caching
+
+React Query receives response and caches it.
+
+### UI Update
+
+Table re-renders with new data.
+</Steps>
+
+## Type Safety with Zod
+
+The component uses Zod for runtime validation and TypeScript type generation.
+
+### Defining Schemas
+
+```typescript
+import { z } from "zod";
+
+// Define the schema
+export const userSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  email: z.string().email(),
+  age: z.number().min(0),
+  created_at: z.string(),
+});
+
+// Extract TypeScript type
+export type User = z.infer<typeof userSchema>;
+
+// Define response schema
+export const usersResponseSchema = z.object({
+  success: z.boolean(),
+  data: z.array(userSchema),
+  pagination: z.object({
+    page: z.number(),
+    limit: z.number(),
+    total_pages: z.number(),
+    total_items: z.number(),
+  }),
+});
+```
+
+### Benefits
+
+- **Runtime Validation**: Catch API response errors early
+- **Type Inference**: Automatic TypeScript types from schemas
+- **Documentation**: Schemas serve as documentation
+- **Consistency**: Same validation on client and server
+
+## React Query Integration
+
+React Query handles data fetching, caching, and synchronization.
+
+### Creating a Query Hook
+
+```typescript
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+
+export function useUsersData(
+  page: number,
+  pageSize: number,
+  search: string,
+  dateRange: { from_date: string; to_date: string },
+  sortBy: string,
+  sortOrder: string
+) {
+  return useQuery({
+    // Unique key for caching
+    queryKey: ["users", page, pageSize, search, dateRange, sortBy, sortOrder],
+
+    // Function to fetch data
+    queryFn: () => fetchUsers({
+      page,
+      limit: pageSize,
+      search,
+      from_date: dateRange.from_date,
+      to_date: dateRange.to_date,
+      sort_by: sortBy,
+      sort_order: sortOrder,
+    }),
+
+    // Keep previous data while fetching new data
+    placeholderData: keepPreviousData,
+  });
+}
+
+// Required for DataTable compatibility
+useUsersData.isQueryHook = true;
+```
+
+### Query Key Structure
+
+The query key determines when data is refetched:
+
+```typescript
+["users", page, pageSize, search, dateRange, sortBy, sortOrder]
+//   ^      ^     ^         ^       ^          ^       ^
+//   |      |     |         |       |          |       └─ Sort direction
+//   |      |     |         |       |          └─ Sort column
+//   |      |     |         |       └─ Date range filter
+//   |      |     |         └─ Search term
+//   |      |     └─ Items per page
+//   |      └─ Current page
+//   └─ Entity type
+```
+
+When any parameter changes, React Query automatically refetches.
+
+## TanStack Table
+
+The component uses TanStack Table for table logic.
+
+### Column Configuration
+
+```typescript
+import { ColumnDef } from "@tanstack/react-table";
+
+export const columns: ColumnDef<User>[] = [
+  {
+    accessorKey: "name",              // Data field
+    header: "Name",                   // Column title
+    cell: ({ row }) => {              // Custom rendering
+      return <div>{row.getValue("name")}</div>;
+    },
+    enableSorting: true,              // Enable sorting
+    enableHiding: true,               // Can be hidden
+    size: 200,                        // Default width
+  },
+];
+```
+
+### Table Instance
+
+The DataTable component creates a table instance with features:
+
+```typescript
+const table = useReactTable({
+  data,
+  columns,
+  // Features
+  getCoreRowModel: getCoreRowModel(),
+  getPaginationRowModel: getPaginationRowModel(),
+  getSortedRowModel: getSortedRowModel(),
+  getFilteredRowModel: getFilteredRowModel(),
+  getExpandedRowModel: getExpandedRowModel(), // For subrows
+  // ... state and config
+});
+```
+
+## State Management
+
+The component manages multiple types of state:
+
+### Server State (React Query)
+
+- Table data
+- Pagination metadata
+- Loading and error states
+
+```typescript
+const { data, isLoading, error } = useQuery(/* ... */);
+```
+
+### URL State (Optional)
+
+- Current page
+- Page size
+- Sort column and direction
+- Search term
+- Date range
+
+```typescript
+// State persisted in URL:
+// /users?page=2&limit=20&sort=name&order=asc&search=john
+```
+
+### Local UI State
+
+- Selected rows
+- Column visibility
+- Column sizes
+- Expanded rows
+
+```typescript
+const [rowSelection, setRowSelection] = useState({});
+const [columnVisibility, setColumnVisibility] = useState({});
+```
+
+## Component Composition
+
+The DataTable uses composition to allow customization:
+
+```typescript
+<DataTable
+  getColumns={getColumns}          // Column definitions
+  fetchDataFn={useUsersData}       // Data fetching
+  fetchByIdsFn={fetchUsersByIds}   // Batch fetching
+  exportConfig={useExportConfig()} // Export settings
+  renderToolbarContent={({ selectedRows }) => (
+    <ToolbarOptions selectedRows={selectedRows} />
+  )}                               // Custom toolbar
+  onRowClick={handleRowClick}      // Row click handler
+  config={{                        // Feature toggles
+    enableRowSelection: true,
+    enableSearch: true,
+    // ...
+  }}
+/>
+```
+
+## Performance Considerations
+
+### Memoization
+
+Column definitions should be memoized:
+
+```typescript
+const columns = useMemo(() => getColumns(), []);
+```
+
+### Virtualization (Optional)
+
+For very large page sizes, consider adding virtualization:
+
+```typescript
+import { useVirtualizer } from "@tanstack/react-virtual";
+
+const rowVirtualizer = useVirtualizer({
+  count: rows.length,
+  getScrollElement: () => tableContainerRef.current,
+  estimateSize: () => 35,
+  overscan: 10,
+});
+```
+
+### Debounced Search
+
+Search input is debounced to avoid excessive API calls:
+
+```typescript
+// User types: "j" -> "jo" -> "joh" -> "john"
+// API called only for: "john" (after 300ms delay)
+```
+
+## Next Steps
+
+Explore specific concepts in depth:
+
+- [Columns Configuration](/docs/core-concepts/columns) - Define and customize columns
+- [Server-Side Operations](/docs/core-concepts/server-side-operations) - Backend integration
+- [Subrows](/docs/core-concepts/subrows) - Hierarchical data support
