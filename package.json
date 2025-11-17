@@ -2,6 +2,34 @@
   "name": "data-table",
   "version": "0.4.0",
   "private": true,
+  "description": "A highly configurable and feature-rich data table component built on top of Shadcn UI and TanStack Table with server-side processing, hierarchical subrows support, row selection, export functionality, and more.",
+  "author": "Jackson Kasi",
+  "license": "MIT",
+  "homepage": "https://tnks-data-table.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jacksonkasi1/tnks-data-table.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jacksonkasi1/tnks-data-table/issues"
+  },
+  "keywords": [
+    "react",
+    "table",
+    "data-table",
+    "tanstack-table",
+    "shadcn-ui",
+    "nextjs",
+    "typescript",
+    "server-side",
+    "pagination",
+    "sorting",
+    "filtering",
+    "export",
+    "subrows",
+    "hierarchical-data"
+  ],
+  "documentation": "https://github.com/jacksonkasi1/tnks-docs",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
