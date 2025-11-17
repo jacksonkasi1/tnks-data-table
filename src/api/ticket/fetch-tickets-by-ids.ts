@@ -3,10 +3,10 @@ import { Ticket } from "@/app/(home)/example/tickets/data-table/schema";
 
 /**
  * Fetch tickets by their IDs (for cross-page selection and export)
- * @param ids - Array of ticket IDs
+ * @param ids - Array of ticket IDs (can be strings or numbers)
  * @returns Promise with tickets data
  */
-export async function fetchTicketsByIds(ids: number[]): Promise<Ticket[]> {
+export async function fetchTicketsByIds(ids: string[] | number[]): Promise<Ticket[]> {
   try {
     if (ids.length === 0) {
       return [];

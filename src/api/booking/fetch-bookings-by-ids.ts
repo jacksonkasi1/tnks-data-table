@@ -3,10 +3,10 @@ import { Booking } from "@/app/(home)/example/bookings/data-table/schema";
 
 /**
  * Fetch bookings by their IDs (for cross-page selection and export)
- * @param ids - Array of booking IDs
+ * @param ids - Array of booking IDs (can be strings or numbers)
  * @returns Promise with bookings data
  */
-export async function fetchBookingsByIds(ids: number[]): Promise<Booking[]> {
+export async function fetchBookingsByIds(ids: string[] | number[]): Promise<Booking[]> {
   try {
     if (ids.length === 0) {
       return [];
