@@ -1,5 +1,5 @@
 {
-  "ignoreCommand": "git diff HEAD^ HEAD --quiet ./docs",
+  "ignoreCommand": "bash -c 'git diff --quiet HEAD^ HEAD -- . \":(exclude)docs\" || exit 1'",
   "headers": [
     {
       "source": "/r/(.*)",
