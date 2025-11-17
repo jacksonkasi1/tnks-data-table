@@ -165,10 +165,14 @@ router.get("/", async (c) => {
 
     const bookingsList = await bookingsQuery;
 
-    // Get stops for each booking (limited to MAX_STOPS_PER_BOOKING)
-    const bookingsWithStops = await Promise.all(
-      bookingsList.map(async (booking) => {
-        const stops = await db
+    // PERFORMANCE FIX: Fetch all stops in a single query instead of N+1 queries
+    // Get all booking IDs from the current page
+    const bookingIds = bookingsList.map((booking) => booking.booking_id);
+
+    // Fetch all stops for these bookings in a single batch query
+    // Guard against empty bookingIds array to prevent SQL IN () errors
+    const allStops = bookingIds.length > 0
+      ? await db
           .select({
             id: bookingStops.id,
             booking_id: bookingStops.booking_id,
@@ -185,17 +189,32 @@ router.get("/", async (c) => {
             distance_from_previous: bookingStops.distance_from_previous,
           })
           .from(bookingStops)
-          .where(eq(bookingStops.booking_id, booking.booking_id))
+          .where(sql`${bookingStops.booking_id} IN ${bookingIds}`)
           .orderBy(asc(bookingStops.stop_number))
-          .limit(MAX_STOPS_PER_BOOKING);
+      : []; // Return empty array if no bookings
 
-        // Return booking with all stops as subRows
-        return {
-          ...booking,
-          subRows: stops,
-        };
-      })
-    );
+    // Group stops by booking_id in memory
+    const stopsByBookingId = new Map<string, typeof allStops>();
+    for (const stop of allStops) {
+      if (!stopsByBookingId.has(stop.booking_id)) {
+        stopsByBookingId.set(stop.booking_id, []);
+      }
+      const bookingStopsList = stopsByBookingId.get(stop.booking_id)!;
+      // Limit to MAX_STOPS_PER_BOOKING per booking
+      if (bookingStopsList.length < MAX_STOPS_PER_BOOKING) {
+        bookingStopsList.push(stop);
+      }
+    }
+
+    // Map stops to their bookings
+    const bookingsWithStops = bookingsList.map((booking) => {
+      const stops = stopsByBookingId.get(booking.booking_id) || [];
+
+      return {
+        ...booking,
+        subRows: stops,
+      };
+    });
 
     return c.json({
       success: true,
