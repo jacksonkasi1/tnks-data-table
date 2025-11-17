@@ -2,9 +2,13 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jacksonkasi1/tnks-data-table)
 
-**Version:** 0.3.2
-**Updated:** 2025-10-02
+**Version:** 0.4.0
+**Updated:** 2025-11-18
 **Author:** Jackson Kasi
+
+## 📚 Documentation
+
+**📖 Full Documentation:** [tnks-docs](https://github.com/jacksonkasi1/tnks-docs) - Comprehensive Fumadocs documentation with interactive examples, guides, and API reference.
 
 ## Quick Start
 
