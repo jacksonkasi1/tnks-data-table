@@ -7,7 +7,7 @@
       "name": "data-table",
       "type": "registry:ui",
       "title": "Advanced Data Table",
-      "description": "A highly configurable and feature-rich data table component built on top of Shadcn UI and TanStack Table with server-side processing, row selection, export functionality, and more.",
+      "description": "A highly configurable and feature-rich data table component built on top of Shadcn UI and TanStack Table with server-side processing, hierarchical subrows support, row selection, export functionality, and more.",
       "dependencies": [
         "@tanstack/react-table",
         "@tanstack/react-query",
@@ -17,7 +17,7 @@
         "sonner",
         "date-fns",
         "date-fns-tz",
-        "xlsx",
+        "exceljs",
         "class-variance-authority",
         "clsx",
         "tailwind-merge",
@@ -57,6 +57,11 @@
           "path": "registry/default/components/data-table/data-table-resizer.tsx",
           "type": "registry:component",
           "target": "components/data-table/data-table-resizer.tsx"
+        },
+        {
+          "path": "registry/default/components/data-table/expand-icon.tsx",
+          "type": "registry:component",
+          "target": "components/data-table/expand-icon.tsx"
         },
         {
           "path": "registry/default/components/data-table/pagination.tsx",
