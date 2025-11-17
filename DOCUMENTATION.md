@@ -2,9 +2,11 @@
 
 The complete documentation for **tnks-data-table** has been moved to a dedicated repository for better organization and independent deployment.
 
-## 🔗 Documentation Repository
+## 🔗 Live Documentation
 
-**Repository:** [github.com/jacksonkasi1/tnks-docs](https://github.com/jacksonkasi1/tnks-docs)
+**📖 Browse Now:** [tnks-docs.vercel.app/docs](https://tnks-docs.vercel.app/docs)
+
+**📂 Source Repository:** [github.com/jacksonkasi1/tnks-docs](https://github.com/jacksonkasi1/tnks-docs)
 
 ## 📖 What's Included
 
@@ -60,6 +62,7 @@ The documentation is built with **Fumadocs** and includes:
 
 | Resource | Link |
 |----------|------|
+| 📖 **Live Documentation** | **[tnks-docs.vercel.app/docs](https://tnks-docs.vercel.app/docs)** |
 | 📚 Documentation Repo | [github.com/jacksonkasi1/tnks-docs](https://github.com/jacksonkasi1/tnks-docs) |
 | 🏠 Main Repo | [github.com/jacksonkasi1/tnks-data-table](https://github.com/jacksonkasi1/tnks-data-table) |
 | 🚀 Live Demo | [tnks-data-table.vercel.app](https://tnks-data-table.vercel.app) |

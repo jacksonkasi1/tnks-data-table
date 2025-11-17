@@ -2,7 +2,7 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jacksonkasi1/tnks-data-table)
 
-> **📖 Complete Documentation:** Visit **[tnks-docs](https://github.com/jacksonkasi1/tnks-docs)** for comprehensive guides, API reference, and interactive examples built with Fumadocs.
+> **📖 Complete Documentation:** **[tnks-docs.vercel.app/docs](https://tnks-docs.vercel.app/docs)** - Comprehensive guides, API reference, and interactive examples built with Fumadocs.
 
 **Version:** 0.4.0
 **Updated:** 2025-11-18
@@ -12,7 +12,8 @@
 
 ## 🔗 Quick Links
 
-- **📚 Documentation Repository:** [github.com/jacksonkasi1/tnks-docs](https://github.com/jacksonkasi1/tnks-docs)
+- **📚 Live Documentation:** [tnks-docs.vercel.app/docs](https://tnks-docs.vercel.app/docs)
+- **📂 Documentation Repo:** [github.com/jacksonkasi1/tnks-docs](https://github.com/jacksonkasi1/tnks-docs)
 - **🚀 Live Demo:** [tnks-data-table.vercel.app](https://tnks-data-table.vercel.app)
 - **📦 NPM Package:** Coming soon
 - **💬 Discussions:** [GitHub Discussions](https://github.com/jacksonkasi1/tnks-data-table/discussions)
