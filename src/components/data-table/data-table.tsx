@@ -769,7 +769,13 @@ export function DataTable<TData extends ExportableData, TValue>({
         setError(queryResult.error instanceof Error ? queryResult.error : new Error("Unknown error"));
       }
     }
-  }, [queryResult]);
+  }, [
+    queryResult?.data,
+    queryResult?.isLoading,
+    queryResult?.isSuccess,
+    queryResult?.isError,
+    queryResult?.error,
+  ]);
 
   // Memoized pagination state
   const pagination = useMemo(
@@ -1025,11 +1031,22 @@ export function DataTable<TData extends ExportableData, TValue>({
   useEffect(() => {
     // This effect ensures page is valid after page size changes
     const totalPages = data?.pagination.total_pages || 0;
-    
+
     if (totalPages > 0 && page > totalPages) {
       setPage(1);
     }
   }, [data?.pagination?.total_pages, page, setPage]);
+
+  // Reset to page 1 when column filters change (not on every render)
+  const prevColumnFiltersRef = useRef<typeof columnFilters>(columnFilters);
+  useEffect(() => {
+    // Check if columnFilters actually changed (not just page navigation)
+    const filtersChanged = JSON.stringify(prevColumnFiltersRef.current) !== JSON.stringify(columnFilters);
+    if (filtersChanged && page !== 1) {
+      setPage(1);
+    }
+    prevColumnFiltersRef.current = columnFilters;
+  }, [columnFilters, page, setPage]);
 
   // Initialize default column sizes when columns are available and no saved sizes exist
   useEffect(() => {
