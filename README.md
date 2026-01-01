@@ -18,6 +18,18 @@
 - **📦 NPM Package:** Coming soon
 - **💬 Discussions:** [GitHub Discussions](https://github.com/jacksonkasi1/tnks-data-table/discussions)
 
+---
+
+## ❤️ Support This Project
+
+If you find this project helpful, consider supporting its development!
+
+[![GitHub Sponsors](https://img.shields.io/badge/sponsor-jacksonkasi1-blue?style=flat-square&logo=github)](https://github.com/sponsors/jacksonkasi1)
+
+Your support helps maintain and improve this component. Every contribution matters! 🚀
+
+---
+
 ## Quick Start
 
 Install the data table component with a single command using Shadcn CLI:
