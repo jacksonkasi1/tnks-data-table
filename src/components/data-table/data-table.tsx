@@ -769,13 +769,7 @@ export function DataTable<TData extends ExportableData, TValue>({
         setError(queryResult.error instanceof Error ? queryResult.error : new Error("Unknown error"));
       }
     }
-  }, [
-    queryResult?.data,
-    queryResult?.isLoading,
-    queryResult?.isSuccess,
-    queryResult?.isError,
-    queryResult?.error,
-  ]);
+  }, [queryResult]);
 
   // Memoized pagination state
   const pagination = useMemo(
