@@ -580,38 +580,16 @@ export function cn(...inputs: ClassValue[]) {
 }
 ```
 
-#### 4. Copy Required UI Components
+#### 4. Install Required UI Components
 
-You need to have the following Shadcn UI components in your `src/components/ui/` directory:
-
-**Required UI Components:**
-- `alert.tsx` - For error states
-- `avatar.tsx` - For user avatars (optional)
-- `badge.tsx` - For status indicators
-- `button.tsx` - For buttons and actions
-- `calendar.tsx` - For date picker
-- `checkbox.tsx` - For row selection
-- `command.tsx` - For command palette functionality
-- `dialog.tsx` - For modal dialogs
-- `dropdown-menu.tsx` - For action menus
-- `form.tsx` - For form handling
-- `input.tsx` - For text inputs
-- `label.tsx` - For form labels
-- `popover.tsx` - For popover components
-- `select.tsx` - For select dropdowns
-- `separator.tsx` - For visual separators
-- `skeleton.tsx` - For loading states
-- `sonner.tsx` - For toast notifications
-- `table.tsx` - For table structure
-
-You can install these using Shadcn CLI:
+Use the Shadcn CLI to automatically install all required base components (do not copy these manually):
 
 ```bash
-# Install Shadcn UI CLI
-npx shadcn-ui@latest init
+# Initialize Shadcn UI (if you haven't already)
+npx shadcn@latest init
 
-# Add required components
-npx shadcn-ui@latest add alert avatar badge button calendar checkbox command dialog dropdown-menu form input label popover select separator skeleton sonner table
+# Install all required components in one command
+npx shadcn@latest add alert avatar badge button calendar checkbox command dialog dropdown-menu form input label popover select separator skeleton sonner table
 ```
 
 #### 5. Copy Custom Components
