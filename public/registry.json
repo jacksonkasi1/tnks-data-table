@@ -166,12 +166,7 @@
         "lucide-react",
         "class-variance-authority"
       ],
-      "registryDependencies": [
-        "button",
-        "calendar",
-        "popover",
-        "select"
-      ],
+      "registryDependencies": ["button", "calendar", "popover", "select"],
       "files": [
         {
           "path": "registry/default/components/calendar-date-picker.tsx",

@@ -1,9 +1,40 @@
 // ** import core packages
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useState, useEffect, useRef, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 // ** import utils
 import { isDeepEqual } from "./deep-utils";
+import { DATA_TABLE_URL_STATE_EVENT } from "./url-events";
+import { ensureUrlStateHistoryPatched } from "./history-sync";
+
+function canUseDOM(): boolean {
+  return (
+    typeof window !== "undefined" && typeof window.location !== "undefined"
+  );
+}
+
+function getCurrentSearchParams(): URLSearchParams {
+  if (!canUseDOM()) return new URLSearchParams();
+  return new URLSearchParams(window.location.search);
+}
+
+function replaceCurrentUrlSearchParams(params: URLSearchParams): void {
+  if (!canUseDOM()) return;
+
+  // Ensure we get a signal for ANY URL updates (router, other components, etc).
+  ensureUrlStateHistoryPatched();
+
+  const newParamsString = params.toString();
+  const pathname = window.location.pathname;
+  const hash = window.location.hash;
+  const nextUrl = `${pathname}${newParamsString ? `?${newParamsString}` : ""}${hash}`;
+  const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+  // Avoid doing work (and triggering re-renders) if the URL would not change.
+  if (nextUrl === currentUrl) return;
+
+  window.history.replaceState(window.history.state, "", nextUrl);
+}
 
 // Batch update state management with instance tracking to prevent race conditions
 interface BatchUpdateState {
@@ -27,14 +58,8 @@ const batchUpdateState: BatchUpdateState = {
 };
 
 // Timeout to prevent stuck batch updates
-let batchTimeoutId: NodeJS.Timeout | null = null;
+let batchTimeoutId: ReturnType<typeof setTimeout> | null = null;
 const BATCH_TIMEOUT = 100; // 100ms timeout for batch updates
-
-// Track the last URL update to ensure it's properly applied
-const lastUrlUpdate = {
-  timestamp: 0,
-  params: new URLSearchParams(),
-};
 
 /**
  * Custom hook for managing URL-based state
@@ -46,11 +71,54 @@ export function useUrlState<T>(
   options: {
     serialize?: (value: T) => string;
     deserialize?: (value: string) => T;
-  } = {}
+    enabled?: boolean;
+  } = {},
 ) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const enabled = options.enabled ?? true;
+  const nextSearchParams = useSearchParams();
+
+  const [searchParams, setSearchParams] = useState<URLSearchParams>(() => {
+    if (enabled && nextSearchParams) {
+      return new URLSearchParams(nextSearchParams.toString());
+    }
+    return enabled ? getCurrentSearchParams() : new URLSearchParams();
+  });
+
+  // Keep searchParams in sync with Next.js router
+  useEffect(() => {
+    if (enabled && nextSearchParams) {
+      setSearchParams((prev) => {
+        const nextParams = new URLSearchParams(nextSearchParams.toString());
+        return prev.toString() === nextParams.toString() ? prev : nextParams;
+      });
+    }
+  }, [enabled, nextSearchParams]);
+
+  // Keep searchParams in sync with the real URL.
+  // - popstate: back/forward navigation
+  // - DATA_TABLE_URL_STATE_EVENT: our own URL updates
+  useEffect(() => {
+    if (!enabled || !canUseDOM()) return;
+
+    // Patch once so we observe `pushState`/`replaceState` (e.g. Next router).
+    ensureUrlStateHistoryPatched();
+
+    const handleUrlChange = () => {
+      const nextParams = getCurrentSearchParams();
+      const nextString = nextParams.toString();
+      setSearchParams((prev) =>
+        prev.toString() === nextString ? prev : nextParams,
+      );
+    };
+
+    window.addEventListener("popstate", handleUrlChange);
+    window.addEventListener(DATA_TABLE_URL_STATE_EVENT, handleUrlChange);
+
+    return () => {
+      window.removeEventListener("popstate", handleUrlChange);
+      window.removeEventListener(DATA_TABLE_URL_STATE_EVENT, handleUrlChange);
+    };
+  }, [enabled]);
 
   // Use ref to track if we're currently updating URL
   // This prevents recursive updates when router changes trigger effects
@@ -114,10 +182,12 @@ export function useUrlState<T>(
 
   // Get the initial value from URL or use default
   const getValueFromUrl = useCallback(() => {
+    if (!enabled) return defaultValue;
+
     // Check if we have a pending update for this key that hasn't been applied yet
     if (batchUpdateState.pendingUpdates.has(key)) {
       const pendingUpdate = batchUpdateState.pendingUpdates.get(key);
-      if (pendingUpdate && typeof pendingUpdate.value !== 'undefined') {
+      if (pendingUpdate && typeof pendingUpdate.value !== "undefined") {
         return pendingUpdate.value as T;
       }
     }
@@ -133,7 +203,7 @@ export function useUrlState<T>(
     }
 
     return deserialize(paramValue);
-  }, [searchParams, key, deserialize, defaultValue]);
+  }, [enabled, searchParams, key, deserialize, defaultValue]);
 
   // State to store the current value
   const [value, setValue] = useState<T>(getValueFromUrl);
@@ -153,7 +223,7 @@ export function useUrlState<T>(
 
   // Keep a ref to track the current value to avoid dependency on the state variable
   const currentValueRef = useRef<T>(value);
-  
+
   // Update currentValueRef whenever value changes
   useEffect(() => {
     currentValueRef.current = value;
@@ -186,7 +256,7 @@ export function useUrlState<T>(
     // Check if this is a value we just set ourselves
     // Using refs to track state without creating dependencies
     if (
-      !areEqual(lastSetValue.current, newValue) && 
+      !areEqual(lastSetValue.current, newValue) &&
       !areEqual(currentValueRef.current, newValue)
     ) {
       // Prevent immediate re-triggering of this effect due to state update
@@ -194,7 +264,10 @@ export function useUrlState<T>(
       setValue(newValue);
     } else if (
       batchUpdateState.pendingUpdates.has(key) &&
-      areEqual(batchUpdateState.pendingUpdates.get(key)?.value as unknown as T, newValue)
+      areEqual(
+        batchUpdateState.pendingUpdates.get(key)?.value as unknown as T,
+        newValue,
+      )
     ) {
       // If our pending update has been applied, we can remove it from the map
       batchUpdateState.pendingUpdates.delete(key);
@@ -204,23 +277,19 @@ export function useUrlState<T>(
   // Synchronously update URL now instead of waiting
   const updateUrlNow = useCallback(
     (params: URLSearchParams) => {
-      const now = Date.now();
-      lastUrlUpdate.timestamp = now;
-      lastUrlUpdate.params = params;
+      if (!enabled) {
+        isUpdatingUrl.current = false;
+        return Promise.resolve(params);
+      }
 
-      // Update the URL immediately
-      const newParamsString = params.toString();
-      router.replace(
-        `${pathname}${newParamsString ? `?${newParamsString}` : ""}`
-      );
-
-      // Clear the updating flag after URL update
+      // Update the URL immediately (framework-agnostic).
+      replaceCurrentUrlSearchParams(params);
       isUpdatingUrl.current = false;
 
       // Return the params for Promise chaining
       return Promise.resolve(params);
     },
-    [router, pathname]
+    [enabled],
   );
 
   // Update the URL when the state changes
@@ -230,6 +299,11 @@ export function useUrlState<T>(
         typeof newValue === "function"
           ? (newValue as (prev: T) => T)(value)
           : newValue;
+
+      if (!enabled) {
+        setValue(resolvedValue);
+        return Promise.resolve(new URLSearchParams());
+      }
 
       // Skip update if value is the same (deep comparison for objects)
       if (areEqual(value, resolvedValue)) {
@@ -259,13 +333,19 @@ export function useUrlState<T>(
         // We need to ensure this "page" entry has appropriate functions.
         // For now, assume standard defaults for "page" if it's not already managed by its own useUrlState.
         // A more robust solution might involve a shared registry or context for URL state configurations.
-        const pageEntry: PendingUpdateEntry<number> = batchUpdateState.pendingUpdates.get("page") as PendingUpdateEntry<number> || {
+        const pageEntry: PendingUpdateEntry<number> =
+          (batchUpdateState.pendingUpdates.get(
+            "page",
+          ) as PendingUpdateEntry<number>) || {
+            value: 1,
+            defaultValue: 1, // Assuming default page is 1
+            serialize: (v: number) => String(v),
+            areEqual: (a: number, b: number) => a === b,
+          };
+        batchUpdateState.pendingUpdates.set("page", {
+          ...pageEntry,
           value: 1,
-          defaultValue: 1, // Assuming default page is 1
-          serialize: (v: number) => String(v),
-          areEqual: (a: number, b: number) => a === b,
-        };
-        batchUpdateState.pendingUpdates.set("page", { ...pageEntry, value: 1 } as PendingUpdateEntry<unknown>);
+        } as PendingUpdateEntry<unknown>);
       }
 
       // If we're in a batch update, delay URL change
@@ -290,26 +370,35 @@ export function useUrlState<T>(
           if (currentBatchId !== batchUpdateState.batchId) {
             return;
           }
-          // Start with the current search params as a base
-          const params = new URLSearchParams(searchParams.toString());
+          // Start with the current search params as a base - fetch directly from URL
+          // to ensure we have the most up-to-date state, especially if other components
+          // or resetUrlState have modified the URL synchronously.
+          const currentParams = getCurrentSearchParams();
+          const params = new URLSearchParams(currentParams.toString());
           let pageSizeChangedInBatch = false;
 
           // Keep track if any sort parameters are in the current batch
           let sortByInBatch = false;
           let sortOrderInBatch = false;
-          
+
           // Check if sortBy/sortOrder are already in the URL
           const sortByInURL = params.has("sortBy");
           const defaultSortOrder = "desc"; // Match the default from the component
-          
+
           // First pass: identify which sort parameters are being updated
-          for (const [updateKey, _] of batchUpdateState.pendingUpdates.entries()) {
+          for (const [
+            updateKey,
+            _,
+          ] of batchUpdateState.pendingUpdates.entries()) {
             if (updateKey === "sortBy") sortByInBatch = true;
             if (updateKey === "sortOrder") sortOrderInBatch = true;
           }
-          
+
           // Iterate over all pending updates and apply them to the params
-          for (const [updateKey, entry] of batchUpdateState.pendingUpdates.entries()) {
+          for (const [
+            updateKey,
+            entry,
+          ] of batchUpdateState.pendingUpdates.entries()) {
             const {
               value: updateValue,
               defaultValue: entryDefaultValue,
@@ -321,30 +410,26 @@ export function useUrlState<T>(
             if (updateKey === "sortBy") {
               // When setting sortBy, always include it in URL
               params.set(updateKey, entrySerialize(updateValue));
-              
+
               // If sortOrder isn't being updated in this batch, ensure it's included
               if (!sortOrderInBatch) {
                 // Get current sortOrder value from URL or use default
-                const currentSortOrder = params.get("sortOrder") || defaultSortOrder;
+                const currentSortOrder =
+                  params.get("sortOrder") || defaultSortOrder;
                 params.set("sortOrder", currentSortOrder);
               }
-            } 
-            else if (updateKey === "sortOrder") {
+            } else if (updateKey === "sortOrder") {
               // Always include sortOrder when sortBy is present (either in URL or in this batch)
               if (sortByInURL || sortByInBatch) {
                 params.set(updateKey, entrySerialize(updateValue));
-              }
-              else if (entryAreEqual(updateValue, entryDefaultValue)) {
+              } else if (entryAreEqual(updateValue, entryDefaultValue)) {
                 params.delete(updateKey);
-              }
-              else {
+              } else {
                 params.set(updateKey, entrySerialize(updateValue));
               }
-            }
-            else if (entryAreEqual(updateValue, entryDefaultValue)) {
+            } else if (entryAreEqual(updateValue, entryDefaultValue)) {
               params.delete(updateKey);
-            } 
-            else {
+            } else {
               // Special handling for search parameter to preserve spaces
               if (updateKey === "search" && typeof updateValue === "string") {
                 // Use encodeURIComponent to properly encode spaces as %20 instead of +
@@ -364,7 +449,7 @@ export function useUrlState<T>(
           if (pageSizeChangedInBatch) {
             params.set("page", "1");
           }
-          
+
           // Clear all pending updates as they've been processed
           batchUpdateState.pendingUpdates.clear();
 
@@ -389,14 +474,15 @@ export function useUrlState<T>(
       });
     },
     [
+      enabled,
       searchParams,
       key,
       serialize,
       value,
       defaultValue,
       updateUrlNow,
-      areEqual
-    ]
+      areEqual,
+    ],
   );
 
   return [value, updateValue] as const;

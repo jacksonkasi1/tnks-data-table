@@ -10,10 +10,6 @@
       "description": "A highly configurable and feature-rich data table component built on top of Shadcn UI and TanStack Table with server-side processing, hierarchical subrows support, row selection, export functionality, and more.",
       "dependencies": [
         "@tanstack/react-table",
-        "@tanstack/react-query",
-        "@hookform/resolvers",
-        "react-hook-form",
-        "zod",
         "sonner",
         "date-fns",
         "date-fns-tz",
@@ -23,7 +19,7 @@
         "tailwind-merge",
         "lucide-react",
         "react-day-picker",
-        "cmdk"
+        "@radix-ui/react-icons"
       ],
       "registryDependencies": [
         "button",
@@ -35,7 +31,10 @@
         "dropdown-menu",
         "separator",
         "table",
-        "command"
+        "command",
+        "skeleton",
+        "alert",
+        "calendar-date-picker"
       ],
       "files": [
         {
@@ -142,6 +141,16 @@
           "path": "registry/default/components/data-table/utils/url-state.ts",
           "type": "registry:lib",
           "target": "components/data-table/utils/url-state.ts"
+        },
+        {
+          "path": "registry/default/components/data-table/utils/url-events.ts",
+          "type": "registry:lib",
+          "target": "components/data-table/utils/url-events.ts"
+        },
+        {
+          "path": "registry/default/components/data-table/utils/history-sync.ts",
+          "type": "registry:lib",
+          "target": "components/data-table/utils/history-sync.ts"
         }
       ]
     },
@@ -157,12 +166,7 @@
         "lucide-react",
         "class-variance-authority"
       ],
-      "registryDependencies": [
-        "button",
-        "calendar",
-        "popover",
-        "select"
-      ],
+      "registryDependencies": ["button", "calendar", "popover", "select"],
       "files": [
         {
           "path": "registry/default/components/calendar-date-picker.tsx",
