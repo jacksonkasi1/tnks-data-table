@@ -142,6 +142,16 @@
           "path": "registry/default/components/data-table/utils/url-state.ts",
           "type": "registry:lib",
           "target": "components/data-table/utils/url-state.ts"
+        },
+        {
+          "path": "registry/default/components/data-table/utils/url-events.ts",
+          "type": "registry:lib",
+          "target": "components/data-table/utils/url-events.ts"
+        },
+        {
+          "path": "registry/default/components/data-table/utils/history-sync.ts",
+          "type": "registry:lib",
+          "target": "components/data-table/utils/history-sync.ts"
         }
       ]
     },
