@@ -17,11 +17,17 @@ export function createConditionalStateHook(enableUrlState: boolean) {
   return function useConditionalState<T>(
     key: string, 
     defaultValue: T, 
-    options = {}
+    options: {
+      serialize?: (value: T) => string;
+      deserialize?: (value: string) => T;
+    } = {}
   ): readonly [T, SetStateWithPromise<T>] {
     // Always call both hooks to satisfy React hooks rules
     const [regularState, setRegularState] = useState<T>(defaultValue);
-    const [urlState, setUrlState] = useUrlState<T>(key, defaultValue, options);
+    const [urlState, setUrlState] = useUrlState<T>(key, defaultValue, {
+      ...options,
+      enabled: enableUrlState,
+    });
     
     // Create a compatible setState function for regular state that matches the SetStateWithPromise signature
     const setRegularStateWrapper = useCallback((valueOrUpdater: T | ((prevValue: T) => T)) => {
