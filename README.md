@@ -233,8 +233,7 @@ By following this structure, you can easily maintain and extend your data tables
 
 ### Prerequisites
 
-- **Next.js 15+** with App Router
-- **React 19+**
+- **React 19+** (Compatible with Next.js, Vite, Remix, etc.)
 - **TypeScript 5+**
 - **Tailwind CSS**
 - **Shadcn UI components**
@@ -343,7 +342,231 @@ pnpm add @tanstack/react-table @tanstack/react-query @hookform/resolvers react-h
 bun add @tanstack/react-table @tanstack/react-query @hookform/resolvers react-hook-form zod sonner date-fns date-fns-tz xlsx class-variance-authority clsx tailwind-merge lucide-react @radix-ui/react-avatar @radix-ui/react-checkbox @radix-ui/react-dialog @radix-ui/react-dropdown-menu @radix-ui/react-icons @radix-ui/react-label @radix-ui/react-popover @radix-ui/react-select @radix-ui/react-separator @radix-ui/react-slot react-day-picker cmdk @types/xlsx
 ```
 
-#### 2. Set Up Utility Functions
+#### 2. Configure Styles
+
+Add the following styles to your global CSS file (e.g., `src/styles/globals.css` or `src/index.css`). This is crucial for table resizing and interactive elements.
+
+```css
+/* ------------------ TABLE STYLES ------------------ */
+
+/* Custom cursor pointer for interactive elements in the data table */
+button,
+.rdp-button,
+.rdp-day,
+select,
+input[type="checkbox"],
+input[type="radio"],
+[role="button"],
+[role="tab"],
+.react-day-picker button,
+[data-slot="select-trigger"],
+[data-slot="checkbox"],
+.day-range-start,
+.day-range-end,
+.day-range-middle,
+[data-radix-collection-item],
+[data-slot="button"],
+[data-slot="day"],
+[data-slot="select-item"] {
+  cursor: pointer !important;
+}
+
+/* Fix specifically for calendar date picker buttons and elements */
+.rdp-button,
+.rdp-nav_button,
+.rdp-month-dropdown-button,
+.rdp-dropdown_option,
+[data-testid="rdp-nav-button-previous"],
+[data-testid="rdp-nav-button-next"],
+[data-slot="day"],
+[data-slot="day_button"],
+[data-slot="day_selected"],
+[data-slot="day_range"],
+[data-slot="day_today"],
+[data-slot="day_outside"],
+[data-slot="day_disabled"],
+[data-slot="day_hidden"],
+.day-outside,
+.day-range-start,
+.day-range-end,
+.day-selected,
+div[data-testid="calendar"] button {
+  cursor: pointer !important;
+}
+
+/* Fix for pagination buttons and components */
+.flex-1 button,
+.h-8.w-8.p-0,
+nav button,
+[data-state="active"],
+[data-state="inactive"],
+[data-orientation="horizontal"],
+[data-orientation="vertical"] {
+  cursor: pointer !important;
+}
+
+/* Fixes for Select elements and dropdowns */
+[data-radix-select-trigger],
+[data-radix-popper-content-wrapper] *,
+[data-state="open"] *,
+[data-radix-collection-item],
+[data-value],
+[role="combobox"],
+[role="listbox"],
+[role="option"] {
+  cursor: pointer !important;
+}
+
+/* Fix for checkbox in table rows and other inputs */
+[data-state="checked"],
+[data-state="unchecked"],
+[data-state="indeterminate"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="time"],
+input[type="week"] {
+  cursor: pointer !important;
+}
+
+/* Fix for calendar date picker component specifically */
+[id^="calendar-date-picker"],
+[id^="calendar-date-picker"] *,
+[id="rdp-1"],
+[id="rdp-1"] *,
+[id="rdp-2"],
+[id="rdp-2"] * {
+  cursor: pointer !important;
+}
+
+/* Table column resizer styles */
+@layer components {
+  .resizer {
+    @apply absolute right-0 top-0 h-full w-1.5 cursor-col-resize select-none touch-none opacity-0 hover:opacity-100 hover:bg-primary/50 group-hover:block;
+  }
+
+  .resizer.isResizing {
+    @apply opacity-100 bg-primary;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  .resizable-table {
+    @apply table-fixed relative;
+  }
+
+  .resizable-table th {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .resizable-table th,
+  .resizable-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Table column resizing styles - ENHANCED VERSION */
+@layer components {
+  /* Prevent layout shifts during resize */
+  .resizable-table {
+    table-layout: fixed;
+    width: 100%;
+    will-change: contents;
+  }
+
+  /* Use hardware acceleration for smoother transitions */
+  .resizable-table th {
+    position: relative;
+    overflow: hidden;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    transition: width 0ms linear;
+  }
+
+  /* Prevent text selection when resizing */
+  body[data-resizing="true"] {
+    cursor: col-resize !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    touch-action: none !important;
+    pointer-events: none !important;
+  }
+
+  body[data-resizing="true"] * {
+    cursor: col-resize !important;
+  }
+
+  /* Remove transition during active resize for instant feedback */
+  .resizable-table th[data-column-resizing="true"] {
+    transition: none !important;
+  }
+
+  /* Better hover interaction for resize handles */
+  .resizable-table th:hover [data-resizing] {
+    opacity: 0.8;
+  }
+
+  /* Enhanced visual feedback during resize */
+  .resizable-table [data-resizing="true"] {
+    opacity: 1 !important;
+  }
+}
+
+/* Custom cursor for column resizing */
+@layer components {
+  /* Better cursor for column resize */
+  .cursor-col-resize {
+    cursor: col-resize;
+  }
+
+  /* Apply the cursor to the resize handle and its children */
+  [data-resizing],
+  [data-resizing] * {
+    cursor: col-resize !important;
+  }
+
+  /* Ensure the resize handle is always on top */
+  [data-resizing] {
+    z-index: 10;
+  }
+}
+
+/* Custom hover and interaction styles for the resizer */
+@layer components {
+  /* Resize handle hover effects */
+  .resizable-table [data-resizing] {
+    transition: opacity 0.15s ease, transform 0.1s ease;
+  }
+
+  .resizable-table [data-resizing]:hover {
+    transform: scaleX(1.5);
+    opacity: 1 !important;
+  }
+
+  /* Active state during resize */
+  .resizable-table [data-resizing="true"] {
+    transform: scaleX(1.5) !important;
+  }
+
+  /* Ensure the grip icon is positioned correctly */
+  .resizable-table [data-resizing] svg {
+    transition: opacity 0.15s ease, color 0.15s ease;
+  }
+
+  .resizable-table [data-resizing]:hover svg {
+    opacity: 1 !important;
+    color: hsl(var(--primary)) !important;
+  }
+}
+```
+
+#### 3. Set Up Utility Functions
 
 Create the utility function file:
 
@@ -357,7 +580,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 ```
 
-#### 3. Copy Required UI Components
+#### 4. Copy Required UI Components
 
 You need to have the following Shadcn UI components in your `src/components/ui/` directory:
 
@@ -391,7 +614,7 @@ npx shadcn-ui@latest init
 npx shadcn-ui@latest add alert avatar badge button calendar checkbox command dialog dropdown-menu form input label popover select separator skeleton sonner table
 ```
 
-#### 4. Copy Custom Components
+#### 5. Copy Custom Components
 
 Create these custom components in your project:
 
@@ -439,7 +662,7 @@ src/components/data-table/
 // Copy from: src/utils/format.ts in this repository
 ```
 
-#### 5. Set up React Query Provider
+#### 6. Set up React Query Provider
 
 Wrap your app with React Query provider:
 
@@ -476,7 +699,7 @@ export default function RootLayout({
 }
 ```
 
-#### 6. Configure Toast Notifications
+#### 7. Configure Toast Notifications
 
 Add the Sonner toaster to your layout:
 
@@ -502,7 +725,7 @@ export default function RootLayout({
 }
 ```
 
-#### 7. Set Up API Layer
+#### 8. Set Up API Layer
 
 Create your API directory structure:
 
@@ -515,7 +738,7 @@ src/api/
     └── fetch-entities-by-ids.ts # Bulk fetch by IDs
 ```
 
-#### 8. Create Your First Data Table
+#### 9. Create Your First Data Table
 
 Follow the [Basic Usage](#basic-usage) section to create your first data table implementation.
 
@@ -551,7 +774,8 @@ Here's what each major dependency does:
 4. **Export functionality not working**: Check that `xlsx` and `@types/xlsx` are installed
 
 **Version Compatibility:**
-- This data table is built for Next.js 15+ and React 19+
+- This data table is built for React 19+
+- Works with any React framework (Next.js, Vite, etc.)
 - For older versions, you may need to adjust some dependencies
 - All Radix UI components should be on their latest versions for best compatibility
 
