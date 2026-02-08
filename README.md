@@ -100,7 +100,7 @@ This documentation provides comprehensive guidance on how to implement, configur
 
 ## Server
 
-Check out the API development document to understand the default configuration for this table. [👉 Click here](./src/SERVER.md)
+Check out the [API development document](./src/SERVER.md) to understand the default configuration for this table.
 
 ### Key Benefits
 
@@ -349,12 +349,10 @@ pnpm add @tanstack/react-table @tanstack/react-query @hookform/resolvers react-h
 # Using Bun
 bun add @tanstack/react-table @tanstack/react-query @hookform/resolvers react-hook-form zod sonner date-fns date-fns-tz xlsx class-variance-authority clsx tailwind-merge lucide-react @radix-ui/react-avatar @radix-ui/react-checkbox @radix-ui/react-dialog @radix-ui/react-dropdown-menu @radix-ui/react-icons @radix-ui/react-label @radix-ui/react-popover @radix-ui/react-select @radix-ui/react-separator @radix-ui/react-slot react-day-picker cmdk @types/xlsx
 ```
-**Note:** The registry will handle installing the data-table specific components, but you need to have the base Shadcn UI components installed first.
+**Note:** The registry will handle installing the data-table-specific components, but you need to have the base Shadcn UI components installed first.
 
 **Important:** You must add the table styles to your `globals.css` for proper functionality.
 [👉 Copy the styles from here](#2-configure-styles)
-
-#### Configure Styles
 
 #### 2. Configure Styles
 
