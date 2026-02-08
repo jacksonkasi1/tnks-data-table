@@ -3,7 +3,6 @@
 import { Cross2Icon } from "@radix-ui/react-icons";
 import type { Table } from "@tanstack/react-table";
 import { useEffect, useState, useRef, useCallback } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Settings, Undo2, TrashIcon, EyeOff, CheckSquare, MoveHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -48,6 +47,8 @@ const getButtonSizeClass = (size: 'sm' | 'default' | 'lg', isIcon = false) => {
 
 interface DataTableToolbarProps<TData extends ExportableData> {
   table: Table<TData>;
+  search: string;
+  dateRange: { from_date: string; to_date: string };
   setSearch: (value: string | ((prev: string) => string)) => void;
   setDateRange: (
     value:
@@ -90,6 +91,8 @@ interface DataTableToolbarProps<TData extends ExportableData> {
 
 export function DataTableToolbar<TData extends ExportableData>({
   table,
+  search,
+  dateRange,
   setSearch,
   setDateRange,
   totalSelectedItems = 0,
@@ -115,11 +118,6 @@ export function DataTableToolbar<TData extends ExportableData>({
   enableExcel = true,
   subRowExportConfig,
 }: DataTableToolbarProps<TData>) {
-  // Get router and pathname for URL state reset
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
   const tableFiltered = table.getState().columnFilters.length > 0;
 
   // Calculate parent and subrow selections
@@ -131,41 +129,26 @@ export function DataTableToolbar<TData extends ExportableData>({
   const parentCount = totalParentCountProp !== undefined ? totalParentCountProp : parents.length;
   const subrowCount = totalSubrowCountProp !== undefined ? totalSubrowCountProp : subrows.length;
 
-  // Get search value directly from URL query parameter
-  const searchParamFromUrl = searchParams.get("search") || "";
-  // Decode URL-encoded search parameter
-  const decodedSearchParam = searchParamFromUrl
-    ? decodeURIComponent(searchParamFromUrl)
-    : "";
-
   // Get search value from table state as fallback
   const currentSearchFromTable =
     (table.getState().globalFilter as string) || "";
 
-  // Initialize local search state with URL value or table state
-  const [localSearch, setLocalSearch] = useState(
-    decodedSearchParam || currentSearchFromTable
-  );
+  // Local (debounced) search input state. Source of truth is the parent `search` state.
+  const [localSearch, setLocalSearch] = useState(search || currentSearchFromTable);
 
   // Track if the search is being updated locally
   const isLocallyUpdatingSearch = useRef(false);
 
-  // Update local search when URL param changes
+  // Update local search when external state changes (URL state / parent state)
   useEffect(() => {
     // Skip if local update is in progress
     if (isLocallyUpdatingSearch.current) {
       return;
     }
-
-    const searchFromUrl = searchParams.get("search") || "";
-    const decodedSearchFromUrl = searchFromUrl
-      ? decodeURIComponent(searchFromUrl)
-      : "";
-
-    if (decodedSearchFromUrl !== localSearch) {
-      setLocalSearch(decodedSearchFromUrl);
+    if (search !== localSearch) {
+      setLocalSearch(search);
     }
-  }, [searchParams, localSearch]);
+  }, [search, localSearch]);
 
   const tableSearch = (table.getState().globalFilter as string) || "";
   // Also update local search when table globalFilter changes
@@ -194,34 +177,18 @@ export function DataTableToolbar<TData extends ExportableData>({
     from: Date | undefined;
     to: Date | undefined;
   } => {
-    // If we're in the middle of an update, don't parse from URL to avoid cycles
+    // If we're in the middle of an update, don't re-parse to avoid cycles
     if (isUpdatingDates.current) {
       return lastSetDates.current;
     }
 
-    const dateRangeParam = searchParams.get("dateRange");
-    if (dateRangeParam) {
-      try {
-        const parsed = JSON.parse(dateRangeParam);
-        
-        // Parse dates from URL param
-        const fromDate = parsed?.from_date ? parseDateFromUrl(parsed.from_date) : undefined;
-        const toDate = parsed?.to_date ? parseDateFromUrl(parsed.to_date) : undefined;
-        
-        // Cache these values
-        lastSetDates.current = { from: fromDate, to: toDate };
-        
-        return {
-          from: fromDate,
-          to: toDate,
-        };
-      } catch (e) {
-        console.warn("Error parsing dateRange from URL:", e);
-        return { from: undefined, to: undefined };
-      }
-    }
-    return { from: undefined, to: undefined };
-  }, [searchParams]);
+    const fromDate = dateRange?.from_date ? parseDateFromUrl(dateRange.from_date) : undefined;
+    const toDate = dateRange?.to_date ? parseDateFromUrl(dateRange.to_date) : undefined;
+
+    lastSetDates.current = { from: fromDate, to: toDate };
+
+    return { from: fromDate, to: toDate };
+  }, [dateRange?.from_date, dateRange?.to_date]);
 
   // Initial state with date values from URL
   const [dates, setDates] = useState<{
@@ -234,20 +201,11 @@ export function DataTableToolbar<TData extends ExportableData>({
     !!dates.from || !!dates.to
   );
 
-  // Load initial date range from URL params only once on component mount
-  useEffect(() => {
-    const initialDates = getInitialDates();
-    if (initialDates.from || initialDates.to) {
-      setDates(initialDates);
-      setDatesModified(true);
-    }
-  }, [getInitialDates]); // Include memoized function as dependency
-
   // Determine if any filters are active
   const isFiltered = tableFiltered || !!localSearch || datesModified;
 
   // Create a ref to store the debounce timer
-  const searchDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const searchDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cleanup timers when component unmounts
   useEffect(() => {
@@ -356,6 +314,13 @@ export function DataTableToolbar<TData extends ExportableData>({
     // Reset table filters
     table.resetColumnFilters();
 
+    // Cancel any in-flight debounced search update so reset can't be overridden later.
+    if (searchDebounceTimerRef.current) {
+      clearTimeout(searchDebounceTimerRef.current);
+      searchDebounceTimerRef.current = null;
+    }
+    isLocallyUpdatingSearch.current = false;
+
     // Reset search
     setLocalSearch("");
     setSearch("");
@@ -373,7 +338,7 @@ export function DataTableToolbar<TData extends ExportableData>({
 
     // Reset URL state by removing all query parameters, but only if URL state is enabled
     if (config.enableUrlState) {
-      resetUrlState(router, pathname);
+      resetUrlState();
     }
   };
 

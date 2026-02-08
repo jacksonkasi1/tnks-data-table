@@ -1142,6 +1142,8 @@ export function DataTable<TData extends ExportableData, TValue>({
       {tableConfig.enableToolbar && (
         <DataTableToolbar
           table={table}
+          search={search}
+          dateRange={dateRange}
           setSearch={setSearch}
           setDateRange={setDateRange}
           totalSelectedItems={totalSelectedItems}
