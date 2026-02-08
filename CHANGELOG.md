@@ -19,6 +19,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.5.0] - 2026-02-08
+
+### Added
+- **Framework Support**: Added documentation for Vite integration and framework compatibility
+- **CSS Setup**: Added CSS installation steps for manual setup
+
+### Changed
+- **UI Components**: Major update to UI components foundation
+- **Documentation**: Clarified manual installation steps and updated framework support details
+
+### Fixed
+- **Hydration Error**: Fixed hydration mismatch error by adding `suppressHydrationWarning` to body
+- **Accessibility**:
+  - Fixed input-group accessibility issues
+  - Updated PopoverTitle to use correct heading element
+- **Imports**: Corrected Radix UI imports in dialog component
+- **Registry**: Fixed registry dependencies for correct component installation
+
+### Chore
+- **Dependencies**: Updated project dependencies to latest versions
+
 ## [0.4.0] - 2025-11-18
 
 ### Added

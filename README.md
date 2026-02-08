@@ -7,8 +7,8 @@
 
 > **📖 Complete Documentation:** **[tnks-docs.vercel.app/docs](https://tnks-docs.vercel.app/docs)** - Comprehensive guides, API reference, and interactive examples built with Fumadocs.
 
-**Version:** 0.4.0
-**Updated:** 2025-11-18
+**Version:** 0.5.0
+**Updated:** 2026-02-08
 **Author:** Jackson Kasi
 
 ---
