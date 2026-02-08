@@ -1,5 +1,8 @@
 # Advanced Data Table Component
 
+**Compatible with:** Next.js, Vite, Remix, TanStack Start, and all modern React frameworks.  
+👉 **Check out the [Vite Example Repository](https://github.com/jacksonkasi1/tnks-table-vite-example) for a quick integration guide.**
+
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jacksonkasi1/tnks-data-table)
 
 > **📖 Complete Documentation:** **[tnks-docs.vercel.app/docs](https://tnks-docs.vercel.app/docs)** - Comprehensive guides, API reference, and interactive examples built with Fumadocs.
@@ -46,6 +49,8 @@ npx shadcn@latest add https://tnks-data-table.vercel.app/r/data-table.json
 npx shadcn@latest add https://tnks-data-table.vercel.app/r/calendar-date-picker.json
 ```
 
+**Important:** You must add the table styles to your `globals.css` for proper functionality. [Get the styles here](#2-configure-styles).
+
 That's it! See [Installation & Setup](#installation--setup) for detailed installation options.
 
 ---
@@ -89,9 +94,9 @@ That's it! See [Installation & Setup](#installation--setup) for detailed install
 
 ## Introduction
 
-The Advanced Data Table component is a highly configurable and feature-rich table implementation built on top of Shadcn UI components and TanStack Table (React Table v8). It's designed to handle enterprise-level requirements including complex data operations, server-side processing, and customizable UI elements.
+The Advanced Data Table component is a highly configurable and feature-rich table implementation built on top of Shadcn UI components and TanStack Table (React Table v8). It is fully compatible with all modern React frameworks including **Next.js**, **Vite**, **Remix**, **TanStack Start**, and others. It's designed to handle enterprise-level requirements including complex data operations, server-side processing, and customizable UI elements.
 
-This documentation provides comprehensive guidance on how to implement, configure, and extend the data table for your specific needs.
+This documentation provides comprehensive guidance on how to implement, configure, and extend the data table for your specific needs regardless of your chosen framework.
 
 ## Server
 
@@ -99,6 +104,7 @@ Check out the API development document to understand the default configuration f
 
 ### Key Benefits
 
+- **Framework Agnostic**: Works seamlessly with Next.js, Vite, Remix, TanStack Start, etc.
 - **TypeScript Support**: Fully typed components for better developer experience
 - **Modular Architecture**: Easily extendable and customizable
 - **Server Integration**: Built-in support for server-side operations
@@ -304,6 +310,8 @@ npx shadcn@latest add button checkbox input select popover calendar dropdown-men
 
 **Note:** The registry will handle installing the data-table specific components, but you need to have the base Shadcn UI components installed first.
 
+**Important:** You must add the table styles to your `globals.css` for proper functionality. [Get the styles here](#2-configure-styles).
+
 ---
 
 ### Method 2: Manual Installation
@@ -341,6 +349,12 @@ pnpm add @tanstack/react-table @tanstack/react-query @hookform/resolvers react-h
 # Using Bun
 bun add @tanstack/react-table @tanstack/react-query @hookform/resolvers react-hook-form zod sonner date-fns date-fns-tz xlsx class-variance-authority clsx tailwind-merge lucide-react @radix-ui/react-avatar @radix-ui/react-checkbox @radix-ui/react-dialog @radix-ui/react-dropdown-menu @radix-ui/react-icons @radix-ui/react-label @radix-ui/react-popover @radix-ui/react-select @radix-ui/react-separator @radix-ui/react-slot react-day-picker cmdk @types/xlsx
 ```
+**Note:** The registry will handle installing the data-table specific components, but you need to have the base Shadcn UI components installed first.
+
+**Important:** You must add the table styles to your `globals.css` for proper functionality.
+[👉 Copy the styles from here](#2-configure-styles)
+
+#### Configure Styles
 
 #### 2. Configure Styles
 
