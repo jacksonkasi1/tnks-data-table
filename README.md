@@ -1,5 +1,8 @@
 # Advanced Data Table Component
 
+> [!IMPORTANT]
+> **Recommendation:** Check out **[TableCraft](https://github.com/jacksonkasi1/TableCraft)**! It is the spiritual successor to this repository, offering almost all the same functionality but with a vastly simplified, adapter-driven architecture that is easier to use and maintain.
+
 **Compatible with:** Next.js, Vite, Remix, TanStack Start, and all modern React frameworks.  
 👉 **Check out the [Vite Example Repository](https://github.com/jacksonkasi1/tnks-table-vite-example) for a quick integration guide.**
 
